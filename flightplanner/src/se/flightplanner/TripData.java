@@ -17,13 +17,18 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import se.flightplanner.Project.LatLon;
 
 import android.content.Context;
 import android.location.Location;
@@ -33,6 +38,9 @@ public class TripData implements Serializable {
 	private static final long serialVersionUID = -6626110951719722186L;
 	static String[] get_trips(String user,String pass) throws Exception
 	{		
+		
+		//rh.
+		
 		JSONObject obj = post("/api/get_trips",user, pass, new ArrayList<NameValuePair>());	
 		
 		ArrayList<String> out=new ArrayList<String>();
@@ -78,9 +86,7 @@ public class TripData implements Serializable {
 	
 	private static JSONObject post(String path,String user, String pass,
 			ArrayList<NameValuePair> nvps) throws Exception {
-		JSONObject obj;
-		StringBuilder bd=new StringBuilder();
-		DefaultHttpClient cli=new DefaultHttpClient();
+		
 		byte[] md5pass=MessageDigest.getInstance("MD5").
 			digest(pass.getBytes());
 		StringBuilder hd=new StringBuilder();
@@ -93,6 +99,20 @@ public class TripData implements Serializable {
 		nvps.add(new BasicNameValuePair("user",user));
 		nvps.add(new BasicNameValuePair("password",hd.toString()));
 		HttpPost req=new HttpPost("http://10.0.2.2:5000"+path);
+		UrlEncodedFormEntity postparams=new UrlEncodedFormEntity(nvps,"UTF8");
+		req.setEntity(postparams);
+
+		DefaultHttpClient cli=new DefaultHttpClient();
+		BasicResponseHandler rh=new BasicResponseHandler();
+		String str=cli.execute(req,rh);
+		JSONObject obj=new JSONObject(str);
+		if (obj.has("error"))
+		{
+			throw new RuntimeException("Error:"+obj.getString("error"));
+		}
+		return obj;
+		/*
+		JSONObject obj;
 		UrlEncodedFormEntity postparams=new UrlEncodedFormEntity(nvps,"UTF8");
 		req.setEntity(postparams);
 		
@@ -122,15 +142,18 @@ public class TripData implements Serializable {
 			throw new RuntimeException("Error:"+obj.getString("error"));
 		}
 		return obj;
+		*/
 	}
 	String trip;
 	static public class Waypoint implements Serializable
 	{
 		private static final long serialVersionUID = 4282439811657511726L;
-		public double lat;
-		public double lon;
+		public LatLon latlon;
 		public double altitude;
 		public String name;
+		public String legpart;
+		public String what;
+		public int lastsub;
 	}
 	ArrayList<Waypoint> waypoints;
 	static TripData get_trip(String user,String pass,String trip) throws Exception
@@ -151,10 +174,13 @@ public class TripData implements Serializable {
 			JSONObject wpobj=jsonwps.getJSONObject(i);
 			
 			Waypoint wp=new Waypoint();
-			wp.lat=wpobj.getDouble("lat");
-			wp.lon=wpobj.getDouble("lon");
+			wp.latlon=new LatLon(wpobj.getDouble("lat"),
+					wpobj.getDouble("lon"));
 			wp.altitude=wpobj.getDouble("altitude");
 			wp.name=wpobj.getString("name");
+			wp.legpart=wpobj.getString("legpart");
+			wp.what=wpobj.getString("what");
+			wp.lastsub=wpobj.getInt("lastsub");
 			td.waypoints.add(wp);
 		}		
 		return td;

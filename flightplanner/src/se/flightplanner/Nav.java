@@ -14,6 +14,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ImageView;
@@ -29,7 +30,17 @@ public class Nav extends Activity implements LocationListener {
 	private LocationManager locman;
 	
 	
-
+	public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+       	 	map.zoom(1);
+    		return true;
+        }
+        if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+        	map.zoom(-1);
+    		return true;
+        }
+         return false;
+    }
 	public boolean onCreateOptionsMenu(Menu menu) {
 	    menu.add(0, MENU_LOGIN, 0, "Load Trip");
 	    return true;
@@ -159,14 +170,18 @@ public class Nav extends Activity implements LocationListener {
     		RookieHelper.showmsg(this, e.toString());
     	}
     	
-        map=new MovingMap(this);        
+        map=new MovingMap(this);
+        map.update_tripdata(tripdata);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
-		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0,0, this);
-        setContentView(map);
+		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 50,1, this);
+        
+		setContentView(map);
     }
     
 	public void onLocationChanged(Location location) {
 		map.gps_update(location);
+		//RookieHelper.showmsg(this, ""+location.getLatitude()+","+location.getLongitude());
+		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0,0, this);
 	}
 	public void onProviderDisabled(String provider) {
 		map.gps_disabled();
