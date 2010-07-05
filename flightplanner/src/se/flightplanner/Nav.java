@@ -24,9 +24,11 @@ public class Nav extends Activity implements LocationListener {
     /** Called when the activity is first created. */
 	MovingMap map;
 	TripData tripdata;
+	Airspace airspace;
 	final static int MENU_LOGIN=0;
 	final static int SETUP_INFO=1;
 	final static int SETTINGS_DIALOG=2;
+	final static int MENU_DOWNLOAD_AIRSPACE=3;
 	private LocationManager locman;
 	
 	
@@ -43,6 +45,7 @@ public class Nav extends Activity implements LocationListener {
     }
 	public boolean onCreateOptionsMenu(Menu menu) {
 	    menu.add(0, MENU_LOGIN, 0, "Load Trip");
+	    menu.add(0, MENU_DOWNLOAD_AIRSPACE, 0, "Download Map");
 	    return true;
 	}
 	@Override
@@ -132,6 +135,13 @@ public class Nav extends Activity implements LocationListener {
 	    	startActivityForResult(intent,SETUP_INFO);
 	    	//showDialog(SETTINGS_DIALOG);
 	    	return true;
+	    case MENU_DOWNLOAD_AIRSPACE:
+	    	try {
+				airspace=Airspace.download();
+			} catch (Exception e) {
+				RookieHelper.showmsg(this,e.toString());
+			}
+	    	return true;
 	    }
 	    return false;
 	}
@@ -170,8 +180,18 @@ public class Nav extends Activity implements LocationListener {
     		RookieHelper.showmsg(this, e.toString());
     	}
     	
+    	try
+    	{
+    		airspace=Airspace.deserialize_from_file(this,"airspace.bin");
+    	}
+    	catch (Throwable e)
+    	{
+    		RookieHelper.showmsg(this, e.toString());
+    	}
+    	
         map=new MovingMap(this);
         map.update_tripdata(tripdata);
+        map.update_airspace(airspace);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
 		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 50,1, this);
         

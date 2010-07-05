@@ -1,8 +1,12 @@
 package se.flightplanner;
 
+import java.util.ArrayList;
+
+import se.flightplanner.Airspace.AirspaceArea;
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
 import se.flightplanner.TripData.Waypoint;
+import se.flightplanner.vector.Vector;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -17,6 +21,7 @@ import android.view.View;
 
 public class MovingMap extends View {
 	private TripData tripdata;
+	private Airspace airspace;
 	private Location mylocation;
 	private Location lastpos;
 	private int background;
@@ -102,7 +107,28 @@ public class MovingMap extends View {
 			double px=rot_x(m.x-center.x,m.y-center.y)+ox;
 			double py=rot_y(m.x-center.x,m.y-center.y)+oy;
 			canvas.drawText(wp.name, (int)(px), (int)(py), textpaint);
-
+		}
+		for(AirspaceArea as:airspace.getSpaces())
+		{/*
+			boolean all_left=true;
+			boolean all_right=true;
+			boolean all_above=true;
+			boolean all_below=true;
+			int l=as.points*/
+			ArrayList<Vector> vs=new ArrayList<Vector>();
+			for(LatLon latlon : as.points)
+			{
+				Merc m=Project.latlon2merc(latlon,zoomlevel);
+				double px=rot_x(m.x-center.x,m.y-center.y)+ox;
+				double py=rot_y(m.x-center.x,m.y-center.y)+oy;
+				vs.add(new Vector(px,py));
+			}
+			for(int i=0;i<vs.size();++i)
+			{
+				Vector a=vs.get(i);
+				Vector b=vs.get((i+1)%vs.size());
+				canvas.drawLine((float)a.getx(),(float)a.gety(),(float)b.getx(),(float)b.gety(),linepaint);
+			}
 		}
 		if (tripdata.waypoints.size()>=2)
 		{
@@ -204,5 +230,10 @@ public class MovingMap extends View {
 		if (zoomlevel>15)
 			zoomlevel=15;		
 		invalidate();		
+	}
+
+	public void update_airspace(Airspace pairspace) {
+		airspace=pairspace;
+		invalidate();
 	}
 }
