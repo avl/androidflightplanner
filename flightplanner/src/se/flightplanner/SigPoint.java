@@ -5,6 +5,7 @@ package se.flightplanner;
 
 import java.io.Serializable;
 
+import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
 
 public class SigPoint implements Serializable
@@ -14,4 +15,5 @@ public class SigPoint implements Serializable
 	String name;
 	String kind; //interned
 	double alt;
+	LatLon latlon;
 }

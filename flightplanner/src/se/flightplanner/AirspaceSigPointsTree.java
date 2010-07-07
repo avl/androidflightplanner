@@ -2,6 +2,8 @@ package se.flightplanner;
 
 import java.util.ArrayList;
 
+import android.util.Log;
+
 import se.flightplanner.vector.BoundingBox;
 import se.flightplanner.vector.BspTree;
 import se.flightplanner.vector.Vector;
@@ -30,6 +32,7 @@ public class AirspaceSigPointsTree {
 			Wrapper w=new Wrapper();
 			w.payload=point;
 			w.where=new Vector(point.pos.x,point.pos.y);
+			//Log.i("fplan","Adding point: "+point.name+" at "+w.where);
 			wps[idx++]=w;
 		}
 		bsp=new BspTree(wps);

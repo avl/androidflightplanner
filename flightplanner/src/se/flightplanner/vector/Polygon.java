@@ -1,12 +1,14 @@
 package se.flightplanner.vector;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 
-public class Polygon {
+public class Polygon implements Serializable {
 
+	private static final long serialVersionUID = -4421004724531424354L;
 	private ArrayList<Vector> points;
 	
 	/**

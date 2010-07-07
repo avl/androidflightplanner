@@ -79,7 +79,7 @@ public class BspTree implements Serializable {
 	{
 		if (!box.overlaps(curbox))
 			return;
-		System.out.println(String.format("Considering box %s (belonging to %s)",curbox,pivot.payload()));
+		//System.out.println(String.format("Considering box %s (belonging to %s)",curbox,pivot.payload()));
 		out.add(pivot);
 		//System.out.println(String.format("exploring %s, bounding box %s",pivot.vec(),curbox));
 		BoundingBox left=curbox;

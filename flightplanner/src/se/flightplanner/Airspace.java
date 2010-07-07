@@ -19,12 +19,14 @@ import se.flightplanner.vector.Vector;
 
 import android.app.Activity;
 import android.content.Context;
+import android.util.Log;
 
 public class Airspace implements Serializable{
 
 	ArrayList<AirspaceArea> spaces;
 	ArrayList<SigPoint> points;
 	
+	/*
 	AirspaceAreaTree areaTree;
 	AirspaceSigPointsTree pointTree;
 	
@@ -36,6 +38,7 @@ public class Airspace implements Serializable{
 	{
 		return pointTree.findall(box);
 	}
+	*/
 	
 	public Airspace()
 	{
@@ -48,10 +51,12 @@ public class Airspace implements Serializable{
 	
 	static Airspace download() throws Exception
 	{		
+		Log.i("fplan","Start post operation");
 		Airspace airspace=new Airspace();		
-		airspace.spaces=new ArrayList<AirspaceArea>();
-		JSONObject allobj = DataDownloader.post("/api/get_airspaces",null, null, new ArrayList<NameValuePair>());
+		JSONObject allobj = DataDownloader.post("/api/get_airspaces",null, null, new ArrayList<NameValuePair>(),false);
 		JSONArray pointsarr2=allobj.getJSONArray("points");
+		Log.i("fplan","Finished post operation, start parse");
+		airspace.points=new ArrayList<SigPoint>(pointsarr2.length());
 		for(int i=0;i<pointsarr2.length();++i)
 		{
 			JSONObject jsonpoint=pointsarr2.getJSONObject(i);
@@ -61,12 +66,15 @@ public class Airspace implements Serializable{
 			LatLon latlon=new LatLon(lat,lon);
 			Merc merc=Project.latlon2merc(latlon, 13);
 			point.pos=merc;
+			point.latlon=new LatLon(lat,lon);
 			point.name=jsonpoint.getString("name");
 			point.alt=jsonpoint.getDouble("alt");
 			point.kind=jsonpoint.getString("kind").intern();
+			airspace.points.add(point);
 		}
 		
 		JSONArray spacearr=allobj.getJSONArray("airspaces");
+		airspace.spaces=new ArrayList<AirspaceArea>(spacearr.length());
 		if (spacearr==null) throw new RuntimeException("spacearr==null");
 		for(int i=0;i<spacearr.length();++i)
 		{
@@ -108,10 +116,11 @@ public class Airspace implements Serializable{
 			area.ceiling=areaobj.getString("ceiling");
 			airspace.spaces.add(area);
 		}
-		
+		/*
 		airspace.pointTree=new AirspaceSigPointsTree(airspace.points);
 		airspace.areaTree=new AirspaceAreaTree(airspace.spaces);
-		
+		*/
+		Log.i("fplan","Finish download operation");
 		return airspace;
 	}
 		

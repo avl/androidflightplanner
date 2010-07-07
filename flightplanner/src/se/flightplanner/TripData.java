@@ -36,7 +36,7 @@ public class TripData implements Serializable {
 		
 		//rh.
 		
-		JSONObject obj = DataDownloader.post("/api/get_trips",user, pass, new ArrayList<NameValuePair>());	
+		JSONObject obj = DataDownloader.post("/api/get_trips",user, pass, new ArrayList<NameValuePair>(),false);	
 		
 		ArrayList<String> out=new ArrayList<String>();
 		JSONArray jsontrips=obj.getJSONArray("trips");
@@ -95,7 +95,7 @@ public class TripData implements Serializable {
 	{		
 		ArrayList<NameValuePair> nvps=new ArrayList<NameValuePair>();
 		nvps.add(new BasicNameValuePair("trip",trip));
-		JSONObject obj = DataDownloader.post("/api/get_trip",user, pass, nvps);	
+		JSONObject obj = DataDownloader.post("/api/get_trip",user, pass, nvps,false);	
 		if (!obj.has("waypoints"))
 			throw new RuntimeException("Fetched obj has no waypoints. Obj: "+obj.toString());
 		JSONArray jsonwps=obj.getJSONArray("waypoints");

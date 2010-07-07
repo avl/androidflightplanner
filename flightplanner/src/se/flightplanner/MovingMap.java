@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
 import se.flightplanner.TripData.Waypoint;
+import se.flightplanner.vector.BoundingBox;
 import se.flightplanner.vector.Vector;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -16,11 +17,14 @@ import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.OvalShape;
 import android.location.Location;
 import android.location.LocationManager;
+import android.util.Log;
 import android.view.View;
 
 public class MovingMap extends View {
 	private TripData tripdata;
 	private Airspace airspace;
+	AirspaceAreaTree areaTree;
+	AirspaceSigPointsTree sigPointTree;
 	private Location mylocation;
 	private Location lastpos;
 	private int background;
@@ -28,10 +32,13 @@ public class MovingMap extends View {
 	private int zoomlevel;
 	private Paint textpaint;
 	private Paint linepaint;
+	private Paint trippaint;
+
+	
 	public MovingMap(Context context)
 	{
 		super(context);
-		zoomlevel=2;
+		zoomlevel=7;
 		background=Color.BLACK;
 		foreground=Color.WHITE;
 		textpaint = new Paint();
@@ -47,6 +54,12 @@ public class MovingMap extends View {
 		linepaint.setStrokeWidth(5);
 		linepaint.setColor(Color.RED);
 		linepaint.setStrokeCap(Paint.Cap.ROUND);
+
+		trippaint = new Paint();
+		trippaint.setAntiAlias(true);
+		trippaint.setStrokeWidth(5);
+		trippaint.setColor(Color.YELLOW);
+		trippaint.setStrokeCap(Paint.Cap.ROUND);
 		//textpaint.set
 		mylocation=null;
 		lastpos=null;
@@ -94,9 +107,20 @@ public class MovingMap extends View {
 		//canvas.drawText("TRIP", 10, 100, textpaint);
 	}
 	private void draw_actual_map(Canvas canvas, int sizex, int sizey) {
+		if (zoomlevel>13) throw new RuntimeException("zoomlevel must be <=13");
+		int zoomgap=13-zoomlevel;
 		Merc center=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),zoomlevel);
+		Merc center13=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),13);
 		int ox=sizex/2;
 		int oy=sizey/2;
+		double diagonal13=((1<<zoomgap)*(Math.sqrt(ox*ox+oy*oy)+50))+1;
+		Why is artificially large bounding box needed?
+		BoundingBox bb13=new BoundingBox(
+				center13.x-diagonal13,center13.y-diagonal13,
+				center13.x+diagonal13,center13.y+diagonal13);
+		//bb13=new BoundingBox(-1e20,-1e20,1e20,1e20);		
+		Log.i("fplan","BB13: "+bb13);
+		
 		
 		for(Waypoint wp : tripdata.waypoints)
 		{
@@ -107,7 +131,30 @@ public class MovingMap extends View {
 			double py=rot_y(m.x-center.x,m.y-center.y)+oy;
 			canvas.drawText(wp.name, (int)(px), (int)(py), textpaint);
 		}
-		for(AirspaceArea as:airspace.getSpaces())
+		
+		for(SigPoint sp : this.sigPointTree.findall(bb13))
+		{
+			/*
+			Merc m=null;
+			if (sp.latlon!=null)
+			{
+				m=Project.latlon2merc(sp.latlon,zoomlevel);
+			}
+			else
+			{
+				LatLon ll=Project.merc2latlon(sp.pos,13);
+				m=Project.latlon2merc(ll,zoomlevel);
+			}*/
+			double x=sp.pos.x/(1<<zoomgap);
+			double y=sp.pos.y/(1<<zoomgap);
+			//Log.i("fplan",String.format("sigp: %s: %f %f",sp.name,sp.pos.x,sp.pos.y));
+			double px=rot_x(x-center.x,y-center.y)+ox;
+			double py=rot_y(x-center.x,y-center.y)+oy;
+			//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
+			canvas.drawText(sp.name, (float)(px), (float)(py), textpaint);			
+		}
+		
+		for(AirspaceArea as:this.areaTree.get_areas(bb13))
 		{/*
 			boolean all_left=true;
 			boolean all_right=true;
@@ -156,7 +203,7 @@ public class MovingMap extends View {
 				lines[4*i+2]=(float) rot_x(x,y)+ox;
 				lines[4*i+3]=(float) rot_y(x,y)+oy;
 			}
-			canvas.drawLines(lines,linepaint);
+			canvas.drawLines(lines,trippaint);
 		}
 	}
 
@@ -231,8 +278,10 @@ public class MovingMap extends View {
 		invalidate();		
 	}
 
-	public void update_airspace(Airspace pairspace) {
+	public void update_airspace(Airspace pairspace, AirspaceAreaTree pareaTree, AirspaceSigPointsTree psigPointTree) {
 		airspace=pairspace;
+		areaTree=pareaTree;
+		sigPointTree=psigPointTree;
 		invalidate();
 	}
 }

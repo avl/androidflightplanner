@@ -1,5 +1,6 @@
 package se.flightplanner;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
 import se.flightplanner.vector.BBTree;
@@ -7,11 +8,13 @@ import se.flightplanner.vector.BoundingBox;
 import se.flightplanner.vector.Vector;
 import se.flightplanner.vector.BBTree.Item;
 
-public class AirspaceAreaTree {
+public class AirspaceAreaTree implements Serializable {
 
+	private static final long serialVersionUID = 5554335431911565203L;
 	private BBTree tree;
-	public class Wrapper implements BBTree.Item
+	public class Wrapper implements BBTree.Item,Serializable
 	{
+		private static final long serialVersionUID = -5472167214569625920L;
 		public BoundingBox bb;
 		public AirspaceArea space;
 		public BoundingBox bb() {
@@ -54,7 +57,7 @@ public class AirspaceAreaTree {
 			Wrapper wrap=new Wrapper();
 			wrap.bb=bb;
 			wrap.space=area;
-			System.out.println("Adding area/poly: "+bb);
+			//System.out.println("Adding area/poly: "+bb);
 			treeitems.add(wrap);
 		}
 		tree=new BBTree(treeitems,0.1);

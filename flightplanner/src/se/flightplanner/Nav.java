@@ -14,6 +14,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -25,6 +26,8 @@ public class Nav extends Activity implements LocationListener {
 	MovingMap map;
 	TripData tripdata;
 	Airspace airspace;
+	AirspaceAreaTree areaTree;
+	AirspaceSigPointsTree sigPointTree;
 	final static int MENU_LOGIN=0;
 	final static int SETUP_INFO=1;
 	final static int SETTINGS_DIALOG=2;
@@ -138,6 +141,14 @@ public class Nav extends Activity implements LocationListener {
 	    case MENU_DOWNLOAD_AIRSPACE:
 	    	try {
 				airspace=Airspace.download();
+				airspace.serialize_to_file(this,"airspace.bin");
+				
+				Log.i("fplan","Building BSP-trees");
+		    	areaTree=new AirspaceAreaTree(airspace.getSpaces());
+		    	sigPointTree=new AirspaceSigPointsTree(airspace.getPoints());
+				Log.i("fplan","BSP-trees finished");
+		        map.update_airspace(airspace,areaTree,sigPointTree);
+		        
 			} catch (Exception e) {
 				RookieHelper.showmsg(this,e.toString());
 			}
@@ -190,8 +201,10 @@ public class Nav extends Activity implements LocationListener {
     	}
     	
         map=new MovingMap(this);
+    	areaTree=new AirspaceAreaTree(airspace.getSpaces());
+    	sigPointTree=new AirspaceSigPointsTree(airspace.getPoints());
+        map.update_airspace(airspace,areaTree,sigPointTree);
         map.update_tripdata(tripdata);
-        map.update_airspace(airspace);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
 		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 50,1, this);
         
