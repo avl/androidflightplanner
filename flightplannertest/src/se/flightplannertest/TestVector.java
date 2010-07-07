@@ -18,7 +18,6 @@ public class TestVector {
 		Assert.assertEquals(new Vector(43,3).getx(), 43.0);
 		
 	}
-
 	@Test
 	public void testEquals()
 	{

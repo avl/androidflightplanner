@@ -13,6 +13,7 @@ import org.json.JSONObject;
 
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
+import se.flightplanner.vector.BoundingBox;
 import se.flightplanner.vector.Polygon;
 import se.flightplanner.vector.Vector;
 
@@ -22,14 +23,49 @@ import android.content.Context;
 public class Airspace implements Serializable{
 
 	ArrayList<AirspaceArea> spaces;
+	ArrayList<SigPoint> points;
 	
+	AirspaceAreaTree areaTree;
+	AirspaceSigPointsTree pointTree;
 	
+	ArrayList<AirspaceArea> getAirSpaces(BoundingBox box)
+	{
+		return areaTree.get_areas(box);
+	}
+	ArrayList<SigPoint> getPoints(BoundingBox box)
+	{
+		return pointTree.findall(box);
+	}
+	
+	public Airspace()
+	{
+		spaces=new ArrayList<AirspaceArea>();
+	}
+	public Airspace(ArrayList<AirspaceArea> pspaces)
+	{
+		spaces=pspaces;
+	}
 	
 	static Airspace download() throws Exception
 	{		
 		Airspace airspace=new Airspace();		
 		airspace.spaces=new ArrayList<AirspaceArea>();
 		JSONObject allobj = DataDownloader.post("/api/get_airspaces",null, null, new ArrayList<NameValuePair>());
+		JSONArray pointsarr2=allobj.getJSONArray("points");
+		for(int i=0;i<pointsarr2.length();++i)
+		{
+			JSONObject jsonpoint=pointsarr2.getJSONObject(i);
+			SigPoint point=new SigPoint();
+			double lat=jsonpoint.getDouble("lat");
+			double lon=jsonpoint.getDouble("lon");
+			LatLon latlon=new LatLon(lat,lon);
+			Merc merc=Project.latlon2merc(latlon, 13);
+			point.pos=merc;
+			point.name=jsonpoint.getString("name");
+			point.alt=jsonpoint.getDouble("alt");
+			point.kind=jsonpoint.getString("kind").intern();
+		}
+		
 		JSONArray spacearr=allobj.getJSONArray("airspaces");
 		if (spacearr==null) throw new RuntimeException("spacearr==null");
 		for(int i=0;i<spacearr.length();++i)
@@ -37,13 +73,13 @@ public class Airspace implements Serializable{
 			AirspaceArea area=new AirspaceArea();
 			JSONObject areaobj=spacearr.getJSONObject(i);
 			if (areaobj==null) throw new RuntimeException("areaobj==null");
-			JSONArray pointsarr=areaobj.getJSONArray("points");
-			if (pointsarr==null) throw new RuntimeException("pointsarr==null");
+			JSONArray areapointsarr=areaobj.getJSONArray("points");
+			if (areapointsarr==null) throw new RuntimeException("areapointsarr==null");
 			ArrayList<Vector> pointsvec=new ArrayList<Vector>();
 			area.points=new ArrayList<LatLon>();
-			for(int j=0;j<pointsarr.length();++j)
+			for(int j=0;j<areapointsarr.length();++j)
 			{
-				JSONObject point=pointsarr.getJSONObject(j);
+				JSONObject point=areapointsarr.getJSONObject(j);
 				if (point==null) throw new RuntimeException("point==null");
 				double lat=point.getDouble("lat");
 				double lon=point.getDouble("lon");
@@ -73,20 +109,13 @@ public class Airspace implements Serializable{
 			airspace.spaces.add(area);
 		}
 		
+		airspace.pointTree=new AirspaceSigPointsTree(airspace.points);
+		airspace.areaTree=new AirspaceAreaTree(airspace.spaces);
+		
 		return airspace;
 	}
 		
 	private static final long serialVersionUID = 4162260268270562095L;
-	public static class AirspaceArea implements Serializable 
-	{
-		private static final long serialVersionUID = -4964236460301544582L;
-		Polygon poly;
-		String name;
-		ArrayList<LatLon> points;
-		ArrayList<String> freqs;
-		String floor;
-		String ceiling;
-	}
 	void serialize_to_file(Context context,String filename) throws Exception
 	{
 		OutputStream ofstream=context.openFileOutput(filename,Context.MODE_PRIVATE);
@@ -120,6 +149,9 @@ public class Airspace implements Serializable{
 	}
 	public ArrayList<AirspaceArea> getSpaces() {
 		return spaces;
+	}
+	public ArrayList<SigPoint> getPoints() {
+		return points;
 	}
 	
 }

@@ -11,6 +11,7 @@ import se.flightplanner.vector.Vector;
 
 public class TestPolygon {
 
+	
 	@Test
 	public void testCalc_area() 
 	{

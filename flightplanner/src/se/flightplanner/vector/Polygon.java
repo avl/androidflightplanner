@@ -1,11 +1,25 @@
 package se.flightplanner.vector;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 
 public class Polygon {
 
 	private ArrayList<Vector> points;
 	
+	/**
+	 * Get the points of the Polygon.
+	 * The returned points is not a copy, but
+	 * the internal list kept by the Polygon object.
+	 * If you modify the returned arraylist, the
+	 * polygon changes!
+	 */
+	public ArrayList<Vector> get_points()
+	{
+		return points;
+	}
 	/**
 	 * Points must form a counter-clockwise, non-intersecting polygon.
 	 * An implicit edge is formed between the last and first point.
@@ -15,6 +29,18 @@ public class Polygon {
 		if (ppoints.size()==0)
 			throw new RuntimeException("Empty polygons (without points) are not supported");
 		points=ppoints;
+	}
+	/**
+	 * Points must form a counter-clockwise, non-intersecting polygon.
+	 * An implicit edge is formed between the last and first point.
+	 */
+	public Polygon(Vector[] ppoints)
+	{		
+		if (ppoints.length==0)
+			throw new RuntimeException("Empty polygons (without points) are not supported");
+		points=new ArrayList<Vector>();
+		for(Vector v:ppoints)
+			points.add(v);
 	}
 	
 	/**

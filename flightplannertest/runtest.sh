@@ -12,3 +12,9 @@ java -classpath .:/home/anders/junit4.8.2/junit-4.8.2.jar:/home/anders/workspace
 java -classpath .:/home/anders/junit4.8.2/junit-4.8.2.jar:/home/anders/workspace/flightplanner/bin/ \
     org.junit.runner.JUnitCore se.flightplannertest.TestBspTree
 
+java -classpath .:/home/anders/junit4.8.2/junit-4.8.2.jar:/home/anders/workspace/flightplanner/bin/ \
+    org.junit.runner.JUnitCore se.flightplannertest.TestBBTree
+
+java -classpath .:/home/anders/junit4.8.2/junit-4.8.2.jar:/home/anders/workspace/flightplanner/bin/ \
+    org.junit.runner.JUnitCore se.flightplannertest.TestAirspaceTree
+

@@ -2,7 +2,6 @@ package se.flightplanner;
 
 import java.util.ArrayList;
 
-import se.flightplanner.Airspace.AirspaceArea;
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
 import se.flightplanner.TripData.Waypoint;

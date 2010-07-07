@@ -1,6 +1,10 @@
 package se.flightplanner.vector;
 
-public class Vector {
+import java.io.Serializable;
+
+public class Vector implements Serializable {
+	
+	private static final long serialVersionUID = -299765696841273686L;
 	private double x; 
 	private double y;
 	public Vector()

@@ -92,6 +92,7 @@ public class TestLine {
 		Assert.assertNull(p1);		
 		Assert.assertNull(p2);		
 	}
+	
 	@Test
 	public void testIntersect3()
 	{

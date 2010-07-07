@@ -1,11 +1,14 @@
 package se.flightplanner.vector;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 
-public class BspTree {
+public class BspTree implements Serializable {
+
+	private static final long serialVersionUID = 4620924507085436649L;
 
 	public static interface Item
 	{
@@ -38,8 +41,15 @@ public class BspTree {
 	private BspTree b;
 	private Item pivot;
 	private int axis;
+	public BspTree(Item[] items)
+	{
+		init(items,0,items.length,0);
+	}
 	public BspTree(Item[] points,int idx1,int idx2,int startaxis)
 	{
+		init(points, idx1, idx2, startaxis);
+	}
+	private void init(Item[] points, int idx1, int idx2, int startaxis) {
 		if (idx2-idx1<=0)
 			throw new RuntimeException("no points in BspTree");
 		Arrays.sort(points,idx1,idx2,new AxisSorter(startaxis));
@@ -58,32 +68,38 @@ public class BspTree {
 		return items;
 	}
 	
-	static class BoundingBox implements Cloneable
+	public ArrayList<Item> items_whose_dominating_area_overlaps(BoundingBox box)
 	{
-		public double x1;
-		public double y1;
-		public double x2;
-		public double y2;
-		public BoundingBox(double px1,double py1,double px2,double py2)
-		{
-			x1=px1;
-			y1=py1;
-			x2=px2;
-			y2=py2;			
-		}
-		public BoundingBox clone()
-		{
-			BoundingBox ret=new BoundingBox(x1,y1,x2,y2);
-			return ret;
-		}
-		public boolean covers(BoundingBox other)
-		{
-			if (x1<=other.x1 && x2>=other.x2 &&
-				y1<=other.y1 && y2>=other.y2)
-				return true;
-			return false;
-		}
+		ArrayList<Item> out=new ArrayList<Item>();
+		BoundingBox curbox=new BoundingBox(-1e30,-1e30,1e30,1e30);
+		items_whose_dominating_area_overlaps_impl(box,curbox,out);
+		return out;
 	}
+	public void items_whose_dominating_area_overlaps_impl(BoundingBox box,BoundingBox curbox,ArrayList<Item> out)
+	{
+		if (!box.overlaps(curbox))
+			return;
+		System.out.println(String.format("Considering box %s (belonging to %s)",curbox,pivot.payload()));
+		out.add(pivot);
+		//System.out.println(String.format("exploring %s, bounding box %s",pivot.vec(),curbox));
+		BoundingBox left=curbox;
+		BoundingBox right=curbox.clone();
+		if (axis==0)
+		{
+			left.x2=pivot.vec().getx();			
+			right.x1=pivot.vec().getx();			
+		}
+		else
+		{
+			left.y2=pivot.vec().gety();
+			right.y1=pivot.vec().gety();			
+		}
+		if (a!=null)
+			a.items_whose_dominating_area_overlaps_impl(box,left,out);
+		if (b!=null)
+			b.items_whose_dominating_area_overlaps_impl(box,right,out);
+	}
+	
 	//finds the highest (closest to root) item in the 
     //tree whose two belonging sub-boxes taken together
 	//completely cover the given box.
@@ -92,15 +108,10 @@ public class BspTree {
 		BoundingBox curbox=new BoundingBox(-1e30,-1e30,1e30,1e30);
 		return find_item_dominating_impl(box,curbox);
 	}
-	
-	public ArrayList<Item> items_whose_dominating_area_overlaps(BoundingBox box)
-	{
-		error
-	}
-	
 	private Item find_item_dominating_impl(BoundingBox box,BoundingBox curbox)
 	{ 
-		if (box.covers(curbox)==false)
+		//System.out.println(String.format("finding %s, bounding box %s",pivot.vec(),curbox));
+		if (curbox.covers(box)==false)
 			return null;
 		BoundingBox left=curbox;
 		BoundingBox right=curbox.clone();
@@ -114,8 +125,11 @@ public class BspTree {
 			left.y2=pivot.vec().gety();
 			right.y1=pivot.vec().gety();			
 		}
-		Item leftdom=find_item_dominating_impl(box,left);
-		Item rightdom=find_item_dominating_impl(box,left);
+		Item leftdom=null;
+		Item rightdom=null;
+		if (a!=null) leftdom=a.find_item_dominating_impl(box,left);
+		if (b!=null) rightdom=b.find_item_dominating_impl(box,left);
+
 		if (leftdom!=null) return leftdom;
 		if (rightdom!=null) return rightdom;
 		return pivot;
