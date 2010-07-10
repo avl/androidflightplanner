@@ -26,8 +26,9 @@ public class Nav extends Activity implements LocationListener {
 	MovingMap map;
 	TripData tripdata;
 	Airspace airspace;
-	AirspaceAreaTree areaTree;
-	AirspaceSigPointsTree sigPointTree;
+	AirspaceLookup lookup;
+	//AirspaceAreaTree areaTree;
+	//AirspaceSigPointsTree sigPointTree;
 	final static int MENU_LOGIN=0;
 	final static int SETUP_INFO=1;
 	final static int SETTINGS_DIALOG=2;
@@ -42,6 +43,14 @@ public class Nav extends Activity implements LocationListener {
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
         	map.zoom(-1);
+    		return true;
+        }
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+       	 	map.sideways(-1);
+    		return true;
+        }
+        if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+        	map.sideways(+1);
     		return true;
         }
          return false;
@@ -103,7 +112,7 @@ public class Nav extends Activity implements LocationListener {
 	    	{
 		        final Nav nav=this;
 		    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		    	builder.setTitle("Choose Trip/"+user+"/"+password);
+		    	builder.setTitle("Choose Trip");
 		    	builder.setItems(trips, new DialogInterface.OnClickListener() {
 		    	    public void onClick(DialogInterface dialog, int item) {	    	        
 				    	try {
@@ -144,10 +153,11 @@ public class Nav extends Activity implements LocationListener {
 				airspace.serialize_to_file(this,"airspace.bin");
 				
 				Log.i("fplan","Building BSP-trees");
-		    	areaTree=new AirspaceAreaTree(airspace.getSpaces());
-		    	sigPointTree=new AirspaceSigPointsTree(airspace.getPoints());
+				lookup=new AirspaceLookup(airspace);
+		    	//areaTree=new AirspaceAreaTree(airspace.getSpaces());
+		    	//sigPointTree=new AirspaceSigPointsTree(airspace.getPoints());
 				Log.i("fplan","BSP-trees finished");
-		        map.update_airspace(airspace,areaTree,sigPointTree);
+		        map.update_airspace(airspace,lookup);
 		        
 			} catch (Exception e) {
 				RookieHelper.showmsg(this,e.toString());
@@ -201,14 +211,14 @@ public class Nav extends Activity implements LocationListener {
     	}
     	
         map=new MovingMap(this);
-    	areaTree=new AirspaceAreaTree(airspace.getSpaces());
-    	sigPointTree=new AirspaceSigPointsTree(airspace.getPoints());
-        map.update_airspace(airspace,areaTree,sigPointTree);
+        lookup=new AirspaceLookup(airspace);
+        map.update_airspace(airspace,lookup);
         map.update_tripdata(tripdata);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
 		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 50,1, this);
         
 		setContentView(map);
+		map.gps_update(null);
     }
     
 	public void onLocationChanged(Location location) {

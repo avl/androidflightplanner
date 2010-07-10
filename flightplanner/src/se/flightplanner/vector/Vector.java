@@ -67,4 +67,7 @@ public class Vector implements Serializable {
 	{
 		return x*o.x+y*o.y;
 	}
+	public double taxinorm() {
+		return Math.abs(x)+Math.abs(y);
+	}
 }

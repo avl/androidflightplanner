@@ -69,5 +69,4 @@ public class TestAirspaceTree {
 		Airspace space=new Airspace(areas);
 		return space;
 	}
-
 }

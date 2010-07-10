@@ -37,13 +37,15 @@ public class TripData implements Serializable {
 		//rh.
 		
 		JSONObject obj = DataDownloader.post("/api/get_trips",user, pass, new ArrayList<NameValuePair>(),false);	
+		Log.i("fplan","downloaded trips, about to parse:"+obj);
 		
 		ArrayList<String> out=new ArrayList<String>();
 		JSONArray jsontrips=obj.getJSONArray("trips");
 		for(int i=0;i<jsontrips.length();++i)
 		{
 			out.add(jsontrips.getString(i));
-		}		
+		}
+		Log.i("fplan","parsed trips"+out);
 		return out.toArray(new String[]{});
 	}
 	

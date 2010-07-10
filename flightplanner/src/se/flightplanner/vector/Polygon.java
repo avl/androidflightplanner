@@ -152,4 +152,15 @@ public class Polygon implements Serializable {
 		}
 		throw new RuntimeException("Unexpected error in Polygon");
 	}
+	public ArrayList<Line> getLines() {
+		ArrayList<Line> res=new ArrayList<Line>();
+		for(int i=0;i<points.size();++i)
+		{
+			Vector a=points.get(i);
+			Vector b=points.get((i+1)%points.size());
+			Line l=new Line(a,b);
+			res.add(l);
+		}
+		return res;
+	}
 }

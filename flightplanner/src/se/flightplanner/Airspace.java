@@ -1,6 +1,7 @@
 package se.flightplanner;
 
 import java.io.InputStream;
+
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
@@ -49,13 +50,25 @@ public class Airspace implements Serializable{
 		spaces=pspaces;
 	}
 	
-	static Airspace download() throws Exception
+	public static Airspace download() throws Exception
+	{
+		return download(null);
+	}
+	public static Airspace download(String fakeDataForTest) throws Exception
 	{		
-		Log.i("fplan","Start post operation");
-		Airspace airspace=new Airspace();		
-		JSONObject allobj = DataDownloader.post("/api/get_airspaces",null, null, new ArrayList<NameValuePair>(),false);
+		System.out.println("Start post operation");
+		Airspace airspace=new Airspace();
+		JSONObject allobj;
+		if (fakeDataForTest==null)
+		{
+			allobj = DataDownloader.post("/api/get_airspaces",null, null, new ArrayList<NameValuePair>(),false);
+		}
+		else
+		{
+			allobj = new JSONObject(fakeDataForTest);			
+		}
 		JSONArray pointsarr2=allobj.getJSONArray("points");
-		Log.i("fplan","Finished post operation, start parse");
+		System.out.println("Finished post operation, start parse");
 		airspace.points=new ArrayList<SigPoint>(pointsarr2.length());
 		for(int i=0;i<pointsarr2.length();++i)
 		{
@@ -120,7 +133,7 @@ public class Airspace implements Serializable{
 		airspace.pointTree=new AirspaceSigPointsTree(airspace.points);
 		airspace.areaTree=new AirspaceAreaTree(airspace.spaces);
 		*/
-		Log.i("fplan","Finish download operation");
+		System.out.println("Finish download operation");
 		return airspace;
 	}
 		

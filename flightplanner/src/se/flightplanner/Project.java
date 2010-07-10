@@ -2,6 +2,8 @@ package se.flightplanner;
 
 import java.io.Serializable;
 
+import se.flightplanner.vector.Vector;
+
 public class Project {
 	static double sec(double x)
 	{
@@ -21,7 +23,7 @@ public class Project {
 		private static final long serialVersionUID = 591341378114851064L;
 		public double lat;
 		public double lon;
-		LatLon(double plat,double plon)
+		public LatLon(double plat,double plon)
 		{
 			lat=plat;
 			lon=plon;
@@ -38,15 +40,33 @@ public class Project {
 			y=py;
 		}
 	}
+
+	static public Merc latlon2merc(double lat,double lon,int zoomlevel)
+	{
+	    double factor=Math.pow(2.0,zoomlevel);
+	    return new Merc(
+	    		(factor*256.0*(lon+180.0)/360.0),
+	    		(128*factor-128*factor*merc(lat)/merc(85.05113)));		
+	}
+	static public Vector latlon2mercvec(double lat,double lon,int zoomlevel)
+	{
+	    double factor=Math.pow(2.0,zoomlevel);
+	    return new Vector(
+	    		(factor*256.0*(lon+180.0)/360.0),
+	    		(128*factor-128*factor*merc(lat)/merc(85.05113)));		
+	}
 	
 	static public Merc latlon2merc(LatLon latlon,int zoomlevel)
 	{
 		double lat=latlon.lat;
 		double lon=latlon.lon;
-	    double factor=Math.pow(2.0,zoomlevel);
-	    return new Merc(
-	    		(factor*256.0*(lon+180.0)/360.0),
-	    		(128*factor-128*factor*merc(lat)/merc(85.05113)));
+		return latlon2merc(lat,lon,zoomlevel);
+	}
+	static public Vector latlon2mercvec(LatLon latlon,int zoomlevel)
+	{
+		double lat=latlon.lat;
+		double lon=latlon.lon;
+		return latlon2mercvec(lat,lon,zoomlevel);
 	}
 	static public LatLon merc2latlon(Merc merc,int zoomlevel)
 	{
@@ -63,12 +83,30 @@ public class Project {
     This scale is only valid at the latitude of the given mercator coords. 
     */  
 	static public double approx_scale(Merc merc_coords,int zoomlevel,double length_in_nautical_miles)
+	{
+		return approx_scale(merc_coords.y,zoomlevel,length_in_nautical_miles);
+	}
+	static public double approx_scale(double merc_coords_y,int zoomlevel,double length_in_nautical_miles)
 	{	    
 	    double factor=(Math.pow(2.0,(zoomlevel)));
-	    double lat=unmerc((128*factor-merc_coords.y)/128.0/factor*merc(85.05113));
+	    double lat=unmerc((128*factor-merc_coords_y)/128.0/factor*merc(85.05113));
 	    double latrad=lat/(180.0/Math.PI);
 	    double scale_diff=Math.cos(latrad);
 	    return 256*factor*((double)(length_in_nautical_miles)/(360*60.0))/scale_diff;
+	}
+	public static double vector2heading(double dx, double dy) {
+		double tt=90-(Math.atan2(-dy,dx)*180.0/Math.PI);
+		if (tt<0) tt+=360.0;
+		return tt;
+	}
+	public static double vector2heading(Vector v) {
+		return vector2heading(v.getx(),v.gety());
+	}
+	public static Vector heading2vector(double ang) {
+		double rad=Math.PI*(90-ang)/180.0;
+		double dx=Math.cos(rad);
+		double dy=-Math.sin(rad);
+		return new Vector(dx,dy);
 	}
 
 }

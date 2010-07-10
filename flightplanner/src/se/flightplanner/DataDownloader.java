@@ -44,7 +44,9 @@ public class DataDownloader {
 		{
 			nvps.add(new BasicNameValuePair("user",user));
 		}
-		HttpPost req=new HttpPost("http://10.0.2.2:5000"+path);
+		//String addr="http://10.0.2.2:5000";
+		String addr="http://192.168.1.104:5000";
+		HttpPost req=new HttpPost(addr+path);
 		UrlEncodedFormEntity postparams=new UrlEncodedFormEntity(nvps,"UTF8");
 		req.setEntity(postparams);
 	
@@ -77,9 +79,31 @@ public class DataDownloader {
 		else
 		{
 			BasicResponseHandler rh=new BasicResponseHandler();
+			//Log.i("fplan","About to execute response handler");
 			strres=cli.execute(req,rh);
+			/*HttpResponse resp = cli.execute(req);
+			Log.i("fplan","Log after execute");
+			HttpEntity ent=resp.getEntity();
+			if (ent==null)
+			{
+				throw new RuntimeException("No request body");
+			}
+			InputStream str=ent.getContent();
+			InputStreamReader rd=new InputStreamReader(str,"UTF-8");
+			char[] buf=new char[1024];
+			StringBuilder bd=new StringBuilder();
+			for(;;)
+			{
+				int r=rd.read(buf,0,1024);
+				if (r>0)
+					bd.append(buf,0,r);
+				if (r<=0)
+					break;
+			}
+			strres=bd.toString();
+			 */
 		}
-		Log.i("fplan","Start JSON parse:"+strres.substring(0,100));
+		Log.i("fplan","Start JSON parse:"+strres.substring(0,Math.min(100,strres.length())));
 		JSONObject obj=new JSONObject(strres);
 		Log.i("fplan","JSON Parse complete");
 

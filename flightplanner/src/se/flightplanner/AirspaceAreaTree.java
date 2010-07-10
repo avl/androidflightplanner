@@ -57,7 +57,7 @@ public class AirspaceAreaTree implements Serializable {
 			Wrapper wrap=new Wrapper();
 			wrap.bb=bb;
 			wrap.space=area;
-			//System.out.println("Adding area/poly: "+bb);
+			//System.out.println("Adding area/poly: "+area.name+": "+bb);
 			treeitems.add(wrap);
 		}
 		tree=new BBTree(treeitems,0.1);

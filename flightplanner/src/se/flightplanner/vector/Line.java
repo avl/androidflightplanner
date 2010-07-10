@@ -12,7 +12,10 @@ public class Line {
 		a = pa;
 		b = pb;
 	}
-
+	public Vector dir()
+	{
+		return b.minus(a).normalized();
+	}
 	/**
 	 * If the line intersects a horizontal line with y-coordinate y, return the
 	 * intersection point of the line with the horizontal line. Otherwise return
@@ -41,7 +44,15 @@ public class Line {
 		}
 		return null;
 	}
-
+	public BoundingBox boundingBox()
+	{
+		return new BoundingBox(
+				Math.min(a.getx(),b.getx()),
+				Math.min(a.gety(),b.gety()),
+				Math.max(a.getx(),b.getx()),
+				Math.max(a.gety(),b.gety())
+				);
+	}
 	/**
 	 * return which side of the line the point p is. -1 = left +1 = right (or on
 	 * line)
@@ -73,6 +84,11 @@ public class Line {
 		Vector dir2 = dir.normalized();
 		double along = dir2.scalarprod(frontrel);
 		return a.plus(dir2.mul(along));
+	}
+	public double distance(Vector p)
+	{
+		Vector clo=closest(p);
+		return clo.minus(p).length();
 	}
 	/**
 	 * Which direction does the bend of the line a-b-c, at 

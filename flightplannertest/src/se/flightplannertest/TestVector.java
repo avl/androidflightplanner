@@ -4,6 +4,7 @@ import junit.framework.Assert;
 
 import org.junit.Test;
 
+import se.flightplanner.Project;
 import se.flightplanner.vector.Vector;
 
 public class TestVector {
@@ -11,6 +12,20 @@ public class TestVector {
 	@Test
 	public void testGetx() {
 		Assert.assertEquals(new Vector(42,2).getx(), 42.0);
+	}
+	@Test
+	public void vectorheading()
+	{
+		Assert.assertTrue(Project.heading2vector(0).almostEquals(new Vector(0,-1), 1e-8));
+		Assert.assertTrue(Project.heading2vector(90).almostEquals(new Vector(1,0), 1e-8));
+		Assert.assertTrue(Project.heading2vector(180).almostEquals(new Vector(0,1), 1e-8));
+		Assert.assertTrue(Project.heading2vector(270).almostEquals(new Vector(-1,0), 1e-8));
+		for(int i=0;i<8;++i)
+		{
+			double ang=(360/8.0)*i;
+			Assert.assertEquals(ang,
+					Project.vector2heading(Project.heading2vector(ang)),1e-8);
+		}		
 	}
 
 	@Test

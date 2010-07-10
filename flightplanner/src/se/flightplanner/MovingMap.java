@@ -1,30 +1,37 @@
 package se.flightplanner;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.TimeZone;
 
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
 import se.flightplanner.TripData.Waypoint;
+import se.flightplanner.TripState.WarningEvent;
 import se.flightplanner.vector.BoundingBox;
 import se.flightplanner.vector.Vector;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.Typeface;
 import android.graphics.Paint.Style;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.OvalShape;
 import android.location.Location;
 import android.location.LocationManager;
+import android.text.format.Time;
 import android.util.Log;
 import android.view.View;
 
 public class MovingMap extends View {
 	private TripData tripdata;
+	private TripState tripstate;
 	private Airspace airspace;
-	AirspaceAreaTree areaTree;
-	AirspaceSigPointsTree sigPointTree;
+	private AirspaceLookup lookup;
 	private Location mylocation;
 	private Location lastpos;
 	private int background;
@@ -33,12 +40,15 @@ public class MovingMap extends View {
 	private Paint textpaint;
 	private Paint linepaint;
 	private Paint trippaint;
-
-	
+	private Paint seltrippaint;
+	private Paint arrowpaint;
+	private Paint backgroundpaint;
+	private TimeZone utctz;
 	public MovingMap(Context context)
 	{
 		super(context);
-		zoomlevel=7;
+		utctz = TimeZone.getTimeZone("UTC");		 
+		zoomlevel=9;
 		background=Color.BLACK;
 		foreground=Color.WHITE;
 		textpaint = new Paint();
@@ -60,6 +70,24 @@ public class MovingMap extends View {
 		trippaint.setStrokeWidth(5);
 		trippaint.setColor(Color.YELLOW);
 		trippaint.setStrokeCap(Paint.Cap.ROUND);
+
+		seltrippaint = new Paint();
+		seltrippaint.setAntiAlias(true);
+		seltrippaint.setStrokeWidth(5);
+		seltrippaint.setColor(Color.WHITE);
+		seltrippaint.setStrokeCap(Paint.Cap.ROUND);
+
+		backgroundpaint = new Paint();
+		backgroundpaint.setStyle(Style.FILL);
+		backgroundpaint.setARGB(0x80,0x80,0x80,0x80);
+
+
+		arrowpaint = new Paint();
+		arrowpaint.setAntiAlias(true);
+		arrowpaint.setStyle(Style.FILL);
+		arrowpaint.setStrokeWidth(5);
+		arrowpaint.setColor(Color.BLUE);
+		arrowpaint.setStrokeCap(Paint.Cap.ROUND);
 		//textpaint.set
 		mylocation=null;
 		lastpos=null;
@@ -69,27 +97,27 @@ public class MovingMap extends View {
 	public void update_tripdata(TripData ptripdata)
 	{
 		tripdata=ptripdata;
+		tripstate=new TripState(tripdata,lookup);
 		invalidate();
 	}
 	protected void onDraw(Canvas canvas) {
         canvas.drawColor(background);
 		if (tripdata==null)
 		{
-			canvas.drawText("No trip loaded.", this.getLeft(), this.getTop()+textpaint.getTextSize(), textpaint);
-			return;
+			//canvas.drawText("No trip loaded.", this.getLeft(), this.getTop()+textpaint.getTextSize(), textpaint);
+			//return;
 		}
 		else if (mylocation==null)
 		{
-			canvas.drawText("No GPS-fix.", this.getLeft(), this.getTop()+textpaint.getTextSize(), textpaint);			
+			//canvas.drawText("No GPS-fix.", this.getLeft(), this.getTop()+textpaint.getTextSize(), textpaint);			
 		}
-		canvas.drawText("Zoom:"+zoomlevel, this.getLeft(), this.getTop()+textpaint.getTextSize()+80, textpaint);			
 		if (lastpos!=null)
 		{
-			canvas.drawText(String.format("Pos: %.4f,%.4f hdg: %03.0f %.1f km/h",lastpos.getLatitude(),lastpos.getLongitude(),lastpos.getBearing(),lastpos.getSpeed()*3.6), this.getLeft(), this.getTop()+textpaint.getTextSize(), textpaint);
 			canvas.translate(this.getLeft(),this.getTop());
 			draw_actual_map(canvas,
 					this.getRight()-this.getLeft(),
 					this.getBottom()-this.getTop());
+
 		}
         /*
 		int x = 10;
@@ -113,48 +141,24 @@ public class MovingMap extends View {
 		Merc center13=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),13);
 		int ox=sizex/2;
 		int oy=sizey/2;
+		double nm=Project.approx_scale(center13.y,13,5);
 		double diagonal13=((1<<zoomgap)*(Math.sqrt(ox*ox+oy*oy)+50))+1;
-		Why is artificially large bounding box needed?
 		BoundingBox bb13=new BoundingBox(
-				center13.x-diagonal13,center13.y-diagonal13,
-				center13.x+diagonal13,center13.y+diagonal13);
+				center13.x,center13.y,
+				center13.x,center13.y).expand(diagonal13);
+
+		BoundingBox smbb13=new BoundingBox(center13.x,center13.y,
+				center13.x,center13.y).expand(nm);
+				
 		//bb13=new BoundingBox(-1e20,-1e20,1e20,1e20);		
-		Log.i("fplan","BB13: "+bb13);
+		/*ShapeDrawable mDrawable = new ShapeDrawable(new OvalShape());
+		mDrawable.getPaint().setColor(0xff74AC23);
+		mDrawable.setBounds(x, y, x + width, y + height);
+		mDrawable.draw(canvas);*/
+
 		
-		
-		for(Waypoint wp : tripdata.waypoints)
-		{
-			if (wp.lastsub==0)
-				continue; //Only draw actual waypoints, not climb- or descent-events. 
-			Merc m=Project.latlon2merc(wp.latlon,zoomlevel);
-			double px=rot_x(m.x-center.x,m.y-center.y)+ox;
-			double py=rot_y(m.x-center.x,m.y-center.y)+oy;
-			canvas.drawText(wp.name, (int)(px), (int)(py), textpaint);
-		}
-		
-		for(SigPoint sp : this.sigPointTree.findall(bb13))
-		{
-			/*
-			Merc m=null;
-			if (sp.latlon!=null)
-			{
-				m=Project.latlon2merc(sp.latlon,zoomlevel);
-			}
-			else
-			{
-				LatLon ll=Project.merc2latlon(sp.pos,13);
-				m=Project.latlon2merc(ll,zoomlevel);
-			}*/
-			double x=sp.pos.x/(1<<zoomgap);
-			double y=sp.pos.y/(1<<zoomgap);
-			//Log.i("fplan",String.format("sigp: %s: %f %f",sp.name,sp.pos.x,sp.pos.y));
-			double px=rot_x(x-center.x,y-center.y)+ox;
-			double py=rot_y(x-center.x,y-center.y)+oy;
-			//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
-			canvas.drawText(sp.name, (float)(px), (float)(py), textpaint);			
-		}
-		
-		for(AirspaceArea as:this.areaTree.get_areas(bb13))
+		//sigPointTree.verify();
+		for(AirspaceArea as:lookup.areas.get_areas(bb13))
 		{/*
 			boolean all_left=true;
 			boolean all_right=true;
@@ -176,9 +180,43 @@ public class MovingMap extends View {
 				canvas.drawLine((float)a.getx(),(float)a.gety(),(float)b.getx(),(float)b.gety(),linepaint);
 			}
 		}
-		if (tripdata.waypoints.size()>=2)
+
+		for(SigPoint sp : lookup.allObstacles.findall(smbb13))
+		{
+			double x=sp.pos.x/(1<<zoomgap);
+			double y=sp.pos.y/(1<<zoomgap);
+			//Log.i("fplan",String.format("sigp: %s: %f %f",sp.name,sp.pos.x,sp.pos.y));
+			double px=rot_x(x-center.x,y-center.y)+ox;
+			double py=rot_y(x-center.x,y-center.y)+oy;
+			//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
+			//textpaint.setARGB(0, 255,255,255);
+			textpaint.setColor(Color.WHITE);
+			canvas.drawText(String.format("%s %.0fft",sp.name,sp.alt), (float)(px), (float)(py), textpaint);			
+				linepaint.setColor(Color.GREEN);
+			canvas.drawPoint((float)px,(float)py,linepaint);
+		}
+		
+		for(SigPoint sp : lookup.allAirfields.findall(bb13))
+		{
+			double x=sp.pos.x/(1<<zoomgap);
+			double y=sp.pos.y/(1<<zoomgap);
+			//Log.i("fplan",String.format("sigp: %s: %f %f",sp.name,sp.pos.x,sp.pos.y));
+			double px=rot_x(x-center.x,y-center.y)+ox;
+			double py=rot_y(x-center.x,y-center.y)+oy;
+			//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
+			textpaint.setColor(Color.GREEN);
+			canvas.drawText(sp.name, (float)(px), (float)(py), textpaint);
+			linepaint.setColor(Color.GREEN);
+			canvas.drawPoint((float)px,(float)py,linepaint);
+		}
+		linepaint.setColor(Color.RED);
+		
+		if (tripdata!=null && tripdata.waypoints.size()>=2)
 		{
 			float[] lines=new float[4*(tripdata.waypoints.size()-1)];
+			int curwp=-1;
+			if (tripstate!=null)
+				curwp=tripstate.get_target();
 			for(int i=0;i<tripdata.waypoints.size()-1;++i)
 			{
 				String part=tripdata.waypoints.get(i+1).legpart;
@@ -202,9 +240,79 @@ public class MovingMap extends View {
 				double y=m2.y-center.y;
 				lines[4*i+2]=(float) rot_x(x,y)+ox;
 				lines[4*i+3]=(float) rot_y(x,y)+oy;
+		
 			}
-			canvas.drawLines(lines,trippaint);
+			for(int i=0;i<tripdata.waypoints.size()-1;++i)
+			{
+				Paint p;
+				if (i==curwp) p=seltrippaint;
+				else p=trippaint;
+				canvas.drawLine(
+						lines[4*i+0],
+						lines[4*i+1],
+						lines[4*i+2],
+						lines[4*i+3],						
+						p);	
+			}
+			for(Waypoint wp : tripdata.waypoints)
+			{
+				if (wp.lastsub==0)
+					continue; //Only draw actual waypoints, not climb- or descent-events. 
+				Merc m=Project.latlon2merc(wp.latlon,zoomlevel);
+				double px=rot_x(m.x-center.x,m.y-center.y)+ox;
+				double py=rot_y(m.x-center.x,m.y-center.y)+oy;
+				canvas.drawText(wp.name, (int)(px), (int)(py), textpaint);
+			}
 		}
+		if (tripstate!=null)
+		{
+			WarningEvent we=tripstate.getCurrentWarning();
+			if (we!=null)
+			{
+				float tsy=textpaint.getTextSize()+2;
+				float y=this.getBottom();//
+				float rx=this.getRight();
+				textpaint.setColor(Color.WHITE);
+				int when=we.getWhen();
+				String whenstr;
+				if (when!=0)
+				{
+					whenstr=String.format("%d:%02d",when/60,when%60);
+				}
+				else
+				{
+					whenstr="--:--";
+				}
+				int lines=1+we.getDetails().length;
+				int y1=(int)(y-tsy*(lines-1))-2;
+				
+				canvas.drawRect(0, y-tsy*lines-4, rx, y, backgroundpaint);
+				canvas.drawText(String.format("%.1fNM",we.getDistance()), 2,y1,textpaint);
+				canvas.drawText(String.format("T:%s",whenstr), 75,y1,textpaint);
+				canvas.drawText(we.getTitle(), 150,y1,textpaint);
+				for(int i=0;i<lines-1;++i)
+				{
+					canvas.drawText(we.getDetails()[i], 2,y1+tsy+i*tsy,textpaint);					
+				}
+				//canvas.drawText(String.format("%03.0f°",lastpos.getBearing()), 50, y, textpaint);
+				//canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),150,y,textpaint);
+				
+			}
+		}
+
+		float y=textpaint.getTextSize();
+		textpaint.setColor(Color.WHITE);
+		canvas.drawRect(0, 0, getRight(), y+2, backgroundpaint);
+		canvas.drawText(String.format("Z%d",zoomlevel), 0,y,textpaint);
+		canvas.drawText(String.format("%03.0f°",lastpos.getBearing()), 50, y, textpaint);
+		canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),150,y,textpaint);
+		
+		Path path=new Path();
+		path.moveTo(ox-5,oy);
+		path.lineTo(ox+5,oy);
+		path.lineTo(ox,oy-10);
+		path.close();
+		canvas.drawPath(path,arrowpaint);
 	}
 
 	private double rot_x(double x,double y) {
@@ -227,6 +335,14 @@ public class MovingMap extends View {
 
 	public void gps_update(Location loc)
 	{
+		if (loc==null)
+		{ //just for debug
+			loc=new Location("gps");
+			loc.setLatitude(59.333);
+			loc.setLongitude(18);
+			loc.setBearing(0);
+			loc.setSpeed(50);
+		}
 		mylocation=loc;
 		if (lastpos!=null && (!mylocation.hasSpeed() || !mylocation.hasBearing()))
 		{
@@ -255,14 +371,16 @@ public class MovingMap extends View {
 			}
 			if (!mylocation.hasBearing())
 			{
-				double tt=90-(Math.atan2(-dy,dx)*180.0/Math.PI);
-				if (tt<0) tt+=360.0;
+				double tt = Project.vector2heading(dx, dy);
 				mylocation.setBearing((float) tt);
 			}
 		}
 		lastpos=mylocation;
+		if (tripstate!=null)
+			tripstate.update_target(lastpos);
 		invalidate();
 	}
+
 	public void gps_disabled() {
 		mylocation=null;
 		invalidate();		
@@ -273,15 +391,28 @@ public class MovingMap extends View {
 		if (zoomlevel<0)
 			zoomlevel=0;
 		else
-		if (zoomlevel>15)
-			zoomlevel=15;		
+		if (zoomlevel>13)
+			zoomlevel=13;		
 		invalidate();		
 	}
 
-	public void update_airspace(Airspace pairspace, AirspaceAreaTree pareaTree, AirspaceSigPointsTree psigPointTree) {
-		airspace=pairspace;
-		areaTree=pareaTree;
-		sigPointTree=psigPointTree;
+	public void update_airspace(Airspace pairspace, AirspaceLookup plookup) {
+		lookup=plookup;
+		tripstate=new TripState(tripdata,lookup);
+		if (lastpos!=null)
+			tripstate.update_target(lastpos);
 		invalidate();
+	}
+
+	public void sideways(int i) {
+		if (tripstate!=null)
+		{
+			if (i==-1)
+				tripstate.left();
+			if (i==1)
+				tripstate.right();
+			invalidate();
+		}
+		
 	}
 }

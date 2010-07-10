@@ -3,6 +3,9 @@ package se.flightplannertest;
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Random;
 
 import junit.framework.Assert;
 
@@ -14,7 +17,13 @@ import se.flightplanner.vector.Vector;
 import se.flightplanner.vector.BspTree.Item;
 
 public class TestBspTree {
-
+	@Test 
+	public void testEmptyTree()
+	{
+		BspTree bsp=new BspTree(new Item[]{});
+		Assert.assertEquals(0,bsp.findall(0,0,100,100).size());
+		Assert.assertNull(bsp.find_item_dominating(new BoundingBox(0,0,100,100)));
+	}
 	@Test
 	public void testFindall() {
 		Item[] items=new Item[4];
@@ -33,9 +42,69 @@ public class TestBspTree {
 		bsp.findall(-0.5,-1,4.5,1,res2);
 		Assert.assertTrue(res2.size()==4);
 		Assert.assertEquals("B",res2.get(1).payload());
-		
-		
-		
+	}
+	@Test public void testFindAllBruteForce()
+	{
+		Random rg=new Random(42);
+		final int cnt=1000;
+		Item[] vs=new Item[cnt];
+		for(int i=0;i<cnt;++i)
+		{
+			final int ii=i;
+			final Vector v=new Vector(rg.nextDouble()*1000,rg.nextDouble()*1000);
+			//System.out.println("Generated "+v);
+			vs[i]=new Item()
+			{
+				public Object payload() {
+					return ii;
+				}
+				public Vector vec() {
+					return v;
+				}				
+			};
+		}
+		BspTree bsp=new BspTree(vs);
+		for(int i=0;i<4;++i)
+		{
+			Vector dx1=new Vector(rg.nextDouble()*2000-500,rg.nextDouble()*2000-500);
+			Vector dx2=new Vector(rg.nextDouble()*2000-500,rg.nextDouble()*2000-500);
+			BoundingBox bb=new BoundingBox(dx1,dx1.plus(dx2));
+			//System.out.println("BB: "+bb);
+			ArrayList<Item> was=bsp.findall(bb);
+			ArrayList<Item> should=new ArrayList<Item>();
+			for(int j=0;j<cnt;++j)
+				if (bb.covers(vs[j].vec()))
+				{
+					should.add(vs[j]);
+				}
+			Assert.assertEquals(was.size(),should.size());
+			Comparator<Item> cmp=new Comparator<Item>(){
+				public int compare(Item arg0, Item arg1) {
+					Vector v1=arg0.vec();
+					Vector v2=arg1.vec();
+					if (v1.getx()<v2.getx()) return -1;
+					if (v1.getx()>v2.getx()) return +1;
+					if (v1.gety()<v2.gety()) return -1;
+					if (v1.gety()>v2.gety()) return +1;
+					return 0;
+				}};
+			Collections.sort(should,cmp);
+			Collections.sort(was,cmp);
+			for(Item item:should)
+			{
+				//System.out.println("Should: "+item.vec());
+			}
+			for(Item item:was)
+			{
+				//System.out.println("Was: "+item.vec());
+			}
+			for(int j=0;j<was.size();++j)
+			{
+				///System.out.println("Comparing "+was.get(j).vec()+" and "+should.get(j).vec());
+				Assert.assertTrue(was.get(j).vec().almostEquals(should.get(j).vec(), 0.01));
+			}
+			
+		}
 	}
 
 	@Test

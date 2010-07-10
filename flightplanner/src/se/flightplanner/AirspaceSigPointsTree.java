@@ -47,4 +47,8 @@ public class AirspaceSigPointsTree {
 		}		
 		return res;
 	}
+	public void verify() {
+		bsp.verify(null);
+		
+	}
 }
