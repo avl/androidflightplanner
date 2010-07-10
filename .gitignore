@@ -20,3 +20,5 @@ gmap_cache
 fplan/fplan/development.db
 flightplanner/bin
 flightplanner/gen
+flightplannertest/bin/
+*.class
