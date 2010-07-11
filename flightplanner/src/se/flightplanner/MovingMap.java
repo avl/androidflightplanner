@@ -39,6 +39,7 @@ public class MovingMap extends View {
 	private int zoomlevel;
 	private Paint textpaint;
 	private Paint linepaint;
+	private Paint thinlinepaint;
 	private Paint trippaint;
 	private Paint seltrippaint;
 	private Paint arrowpaint;
@@ -65,6 +66,13 @@ public class MovingMap extends View {
 		linepaint.setColor(Color.RED);
 		linepaint.setStrokeCap(Paint.Cap.ROUND);
 
+		thinlinepaint = new Paint();
+		thinlinepaint.setAntiAlias(true);
+		thinlinepaint.setStrokeWidth(2);
+		thinlinepaint.setStyle(Style.STROKE);
+		thinlinepaint.setColor(Color.RED);
+		thinlinepaint.setStrokeCap(Paint.Cap.ROUND);
+
 		trippaint = new Paint();
 		trippaint.setAntiAlias(true);
 		trippaint.setStrokeWidth(5);
@@ -79,7 +87,7 @@ public class MovingMap extends View {
 
 		backgroundpaint = new Paint();
 		backgroundpaint.setStyle(Style.FILL);
-		backgroundpaint.setARGB(0x80,0x80,0x80,0x80);
+		backgroundpaint.setARGB(0xa0,0,0,0);
 
 
 		arrowpaint = new Paint();
@@ -98,6 +106,8 @@ public class MovingMap extends View {
 	{
 		tripdata=ptripdata;
 		tripstate=new TripState(tripdata,lookup);
+		if (lastpos!=null)
+			tripstate.update_target(lastpos);		
 		invalidate();
 	}
 	protected void onDraw(Canvas canvas) {
@@ -181,7 +191,7 @@ public class MovingMap extends View {
 			}
 		}
 
-		for(SigPoint sp : lookup.allObstacles.findall(smbb13))
+		for(SigPoint sp : lookup.allObstacles.findall(bb13))
 		{
 			double x=sp.pos.x/(1<<zoomgap);
 			double y=sp.pos.y/(1<<zoomgap);
@@ -190,9 +200,9 @@ public class MovingMap extends View {
 			double py=rot_y(x-center.x,y-center.y)+oy;
 			//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
 			//textpaint.setARGB(0, 255,255,255);
-			textpaint.setColor(Color.WHITE);
+			textpaint.setARGB(0xff, 0xff, 0xa0, 0xff);
 			canvas.drawText(String.format("%s %.0fft",sp.name,sp.alt), (float)(px), (float)(py), textpaint);			
-				linepaint.setColor(Color.GREEN);
+			linepaint.setARGB(0xff, 0xff, 0xa0, 0xff);
 			canvas.drawPoint((float)px,(float)py,linepaint);
 		}
 		
@@ -209,7 +219,6 @@ public class MovingMap extends View {
 			linepaint.setColor(Color.GREEN);
 			canvas.drawPoint((float)px,(float)py,linepaint);
 		}
-		linepaint.setColor(Color.RED);
 		
 		if (tripdata!=null && tripdata.waypoints.size()>=2)
 		{
@@ -254,6 +263,7 @@ public class MovingMap extends View {
 						lines[4*i+3],						
 						p);	
 			}
+			textpaint.setColor(Color.WHITE);
 			for(Waypoint wp : tripdata.waypoints)
 			{
 				if (wp.lastsub==0)
@@ -269,12 +279,23 @@ public class MovingMap extends View {
 			WarningEvent we=tripstate.getCurrentWarning();
 			if (we!=null)
 			{
+				
+				Vector p=Project.merc2merc(we.getPoint(),13,zoomlevel);
+				if (p!=null)
+				{
+					float px=(float)rot_x(p.getx()-center.x,p.gety()-center.y)+ox;
+					float py=(float)rot_y(p.getx()-center.x,p.gety()-center.y)+oy;
+					thinlinepaint.setColor(Color.BLUE);
+					canvas.drawCircle(px,py,10.0f,thinlinepaint);
+				}
+				
 				float tsy=textpaint.getTextSize()+2;
 				float y=this.getBottom();//
 				float rx=this.getRight();
 				textpaint.setColor(Color.WHITE);
 				int when=we.getWhen();
 				String whenstr;
+				Log.i("fplan","When: "+when);
 				if (when!=0)
 				{
 					whenstr=String.format("%d:%02d",when/60,when%60);
@@ -300,12 +321,15 @@ public class MovingMap extends View {
 			}
 		}
 
+		linepaint.setColor(Color.RED);
 		float y=textpaint.getTextSize();
 		textpaint.setColor(Color.WHITE);
 		canvas.drawRect(0, 0, getRight(), y+2, backgroundpaint);
 		canvas.drawText(String.format("Z%d",zoomlevel), 0,y,textpaint);
-		canvas.drawText(String.format("%03.0f°",lastpos.getBearing()), 50, y, textpaint);
-		canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),150,y,textpaint);
+		canvas.drawText(String.format("%03.0f°",lastpos.getBearing()), 40, y, textpaint);
+		canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),100,y,textpaint);
+		int td=tripstate.get_time_to_destination();
+		canvas.drawText(String.format("%dh%dm",td/3600,(td/60)%60),150,y,textpaint);
 		
 		Path path=new Path();
 		path.moveTo(ox-5,oy);
@@ -338,9 +362,10 @@ public class MovingMap extends View {
 		if (loc==null)
 		{ //just for debug
 			loc=new Location("gps");
-			loc.setLatitude(59.333);
-			loc.setLongitude(18);
-			loc.setBearing(0);
+			//, "alt": 30, "lon": 
+			loc.setLatitude(59.458333333299997);
+			loc.setLongitude(17.706666666699999);
+			loc.setBearing(150);
 			loc.setSpeed(50);
 		}
 		mylocation=loc;

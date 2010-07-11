@@ -91,6 +91,9 @@ public class TripData implements Serializable {
 		public String legpart;
 		public String what;
 		public int lastsub;
+		public double gs;
+		public double d;
+		public double tas;
 	}
 	ArrayList<Waypoint> waypoints;
 	static TripData get_trip(String user,String pass,String trip) throws Exception
@@ -118,6 +121,9 @@ public class TripData implements Serializable {
 			wp.legpart=wpobj.getString("legpart");
 			wp.what=wpobj.getString("what");
 			wp.lastsub=wpobj.getInt("lastsub");
+			wp.gs=wpobj.getDouble("gs");
+			wp.tas=wpobj.getDouble("tas");
+			wp.d=wpobj.getDouble("d");
 			td.waypoints.add(wp);
 		}		
 		return td;

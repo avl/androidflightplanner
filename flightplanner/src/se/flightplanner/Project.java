@@ -108,5 +108,17 @@ public class Project {
 		double dy=-Math.sin(rad);
 		return new Vector(dx,dy);
 	}
+	public static Vector merc2merc(Vector p, int srczoom, int trgzoom) {
+		int delta=trgzoom-srczoom;
+		if (delta==0) return p;
+		float f=(float) Math.pow(2.0, delta);
+		return new Vector(p.getx()*f,p.gety()*f);
+	}
+	public static Merc merc2merc(Merc p, int srczoom, int trgzoom) {
+		int delta=trgzoom-srczoom;
+		if (delta==0) return p;
+		float f=(float) Math.pow(2.0, delta);
+		return new Merc(p.x*f,p.y*f);
+	}
 
 }
