@@ -74,6 +74,7 @@ public class TripState {
 		public double getDistance();
 		public Vector getPoint();
 		public boolean isApprox(WarningEvent warningEvent);
+		public String[] getExtraDetails();
 	}
 	static public class AirspaceWarning implements WarningEvent
 	{
@@ -82,6 +83,7 @@ public class TripState {
 		double distance;
 		String title;
 		String[] details;
+		String[] extradetails;
 		public double getDistance()
 		{
 			return distance;
@@ -90,16 +92,21 @@ public class TripState {
 		{
 			return point;
 		}
-		public AirspaceWarning(Vector ppoint,int pwhen,double pdistance,String ptitle,String[] pdetails)
+		public AirspaceWarning(Vector ppoint,int pwhen,double pdistance,String ptitle,String[] pdetails,String[] pextradetails)
 		{
 			point=ppoint;
 			when=pwhen;
 			distance=pdistance;
 			title=ptitle;
 			details=pdetails;
+			extradetails=pextradetails;
 		}
 		public String[] getDetails() {
 			return details;
+		}
+		public String[] getExtraDetails()
+		{
+		    return extradetails;
 		}
 		public String getTitle() {
 			return title;
@@ -166,16 +173,21 @@ public class TripState {
 		
 		{
 			warnings=new ArrayList<WarningEvent>();
-			ArrayList<String> details = get_airspace_details(abit,
-					mypos);			
+			ArrayList<String> details = new ArrayList<String>(); 
+			ArrayList<String> extradetails = new ArrayList<String>(); 
+			get_airspace_details(abit,
+					mypos,details,extradetails);			
 			if (details.size()==0)
 			{
 				details.add("0 ft-FL 095: Uncontrolled Airspace");
+				extradetails.add("0 ft-FL 095: Uncontrolled Airspace");
 			}
 			warnings.add(
 				new AirspaceWarning(mypos,0,0,
 						"Current Position",
-						details.toArray(new String[details.size()])));
+						details.toArray(new String[details.size()]),
+						extradetails.toArray(new String[extradetails.size()])
+						));
 		}
 
 		
@@ -204,14 +216,17 @@ public class TripState {
 					when=(int)((3600.0*distnm)/speed);//time in seconds						
 				}
 				Vector just_a_bit_in=point.plus(heading.mul(2.0*abit));
-									
-				ArrayList<String> details = get_airspace_details(abit,
-						just_a_bit_in);
+				ArrayList<String> details = new ArrayList<String>();
+				ArrayList<String> extradetails = new ArrayList<String>();
+				get_airspace_details(abit,
+						just_a_bit_in,details,extradetails);
 				
 				warnings.add(
 					new AirspaceWarning(point,when,distnm,
 							"New Airspace",
-							details.toArray(new String[details.size()])));
+							details.toArray(new String[details.size()]),
+							extradetails.toArray(new String[extradetails.size()])
+							));
 				
 			}
 		}
@@ -233,7 +248,7 @@ public class TripState {
 				double distance=line.distance(mypos);
 				
 				double tpoints=0;
-				tpoints-=(nm-distance)/nm;
+				tpoints-=(distance)/nm;
 				tpoints+=rightheading;
 				if (i==target_wp)
 					tpoints+=0.1; //get an extra point for the current waypoint
@@ -283,10 +298,11 @@ public class TripState {
 				accum_time+=ttimesec;								
 				Log.i("fplan","accum_time:"+accum_time);
 				final int timesec=(int)accum_time;
+				final String[] details=new String[]{};
 				warnings.add(new WarningEvent()
 				{
 					public String[] getDetails() {
-						return new String[]{};
+						return details;
 					}
 					public double getDistance() {
 						return distance;
@@ -298,12 +314,15 @@ public class TripState {
 						return timesec;
 					}
 					public boolean isApprox(WarningEvent warningEvent) {
-						if (warningEvent.getDetails().length!=0) return false;
+						if (warningEvent.getDetails().length!=details.length) return false;
 						return wp.name.equals(warningEvent.getTitle());
 					}
 					public Vector getPoint() {
 						// TODO Auto-generated method stub
 						return mv1;
+					}
+					public String[] getExtraDetails() {
+						return details;
 					}
 				});				
 			}
@@ -357,11 +376,11 @@ public class TripState {
 				}
 			}
 		}
+		Log.i("fplan","Autoselect warnings:"+current_warning);
 	}
 
-	private ArrayList<String> get_airspace_details(double abit,
-			Vector just_a_bit_in) {
-		ArrayList<String> details=new ArrayList<String>();
+	private void get_airspace_details(double abit,
+			Vector just_a_bit_in,ArrayList<String> details,ArrayList<String> extradetails) {
 		for(AirspaceArea inarea:lookup.areas.get_areas(BoundingBox.aroundpoint(just_a_bit_in, abit)))
 		{
 			
@@ -369,10 +388,11 @@ public class TripState {
 			//double cd=r.closest.minus(point).length();
 			if (r.isinside) //our polygons are clockwise, because the Y-axis points down - this inverts the meaning of inside and outside
 			{ //If _INSIDE_ polygon
-				details.add(inarea.floor+"-"+inarea.ceiling+": "+inarea.name);
+				String det=inarea.floor+"-"+inarea.ceiling+": "+inarea.name;
+				details.add(det);
+				extradetails.add("extra"+det);
 			}
 		}
-		return details;
 	}
 
 	public int get_target() {

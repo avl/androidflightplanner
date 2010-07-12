@@ -25,6 +25,7 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.text.format.Time;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 
 public class MovingMap extends View {
@@ -45,9 +46,46 @@ public class MovingMap extends View {
 	private Paint arrowpaint;
 	private Paint backgroundpaint;
 	private TimeZone utctz;
+	
+	@Override
+	public boolean onTouchEvent(MotionEvent ev)
+	{
+		float x=ev.getX();
+		float y=ev.getY();
+		float b=getBottom();
+		float r=getRight();
+		float w=getRight()-getLeft();
+		float h=getBottom()-getTop();
+		if (y>b-0.2*h)
+		{
+			if (x<0.33*w)
+				sideways(-1);
+			else
+			if (x>r-0.33*w)
+				sideways(+1);
+			else
+				showextrainfo();
+		}
+		else
+		{
+			hideextrainfo();
+		}
+		return false;
+	}
+	private boolean extrainfo;
+	private void hideextrainfo() {
+		extrainfo=false;		
+		invalidate();
+	}
+	private void showextrainfo() {
+		extrainfo=true;
+		invalidate();
+		
+	}
 	public MovingMap(Context context)
 	{
 		super(context);
+		
 		utctz = TimeZone.getTimeZone("UTC");		 
 		zoomlevel=9;
 		background=Color.BLACK;
@@ -191,7 +229,7 @@ public class MovingMap extends View {
 			}
 		}
 
-		for(SigPoint sp : lookup.allObstacles.findall(bb13))
+		for(SigPoint sp : lookup.allObstacles.findall(smbb13))
 		{
 			double x=sp.pos.x/(1<<zoomgap);
 			double y=sp.pos.y/(1<<zoomgap);
@@ -304,7 +342,12 @@ public class MovingMap extends View {
 				{
 					whenstr="--:--";
 				}
-				int lines=1+we.getDetails().length;
+				String[] details;
+				if (extrainfo)
+					details=we.getExtraDetails();
+				else
+					details=we.getDetails();
+				int lines=1+details.length;
 				int y1=(int)(y-tsy*(lines-1))-2;
 				
 				canvas.drawRect(0, y-tsy*lines-4, rx, y, backgroundpaint);
@@ -313,7 +356,7 @@ public class MovingMap extends View {
 				canvas.drawText(we.getTitle(), 150,y1,textpaint);
 				for(int i=0;i<lines-1;++i)
 				{
-					canvas.drawText(we.getDetails()[i], 2,y1+tsy+i*tsy,textpaint);					
+					canvas.drawText(details[i], 2,y1+tsy+i*tsy,textpaint);					
 				}
 				//canvas.drawText(String.format("%03.0f°",lastpos.getBearing()), 50, y, textpaint);
 				//canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),150,y,textpaint);

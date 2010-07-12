@@ -44,9 +44,9 @@ public class DataDownloader {
 		{
 			nvps.add(new BasicNameValuePair("user",user));
 		}
-		String addr="http://10.0.2.2:5000";
+		//String addr="http://10.0.2.2:5000";
 		//String addr="http://192.168.1.104:5000";
-		//String addr="http://79.99.0.86:5000";
+		String addr="http://79.99.0.86:5000";
 		HttpPost req=new HttpPost(addr+path);
 		UrlEncodedFormEntity postparams=new UrlEncodedFormEntity(nvps,"UTF8");
 		req.setEntity(postparams);
