@@ -64,11 +64,15 @@ public class MovingMap extends View {
 			if (x>r-0.33*w)
 				sideways(+1);
 			else
-				showextrainfo();
+			{
+				if (extrainfo)
+					hideextrainfo();
+				else
+					showextrainfo();
+			}
 		}
 		else
 		{
-			hideextrainfo();
 		}
 		return false;
 	}
@@ -138,6 +142,8 @@ public class MovingMap extends View {
 		mylocation=null;
 		lastpos=null;
 		tripdata=null;		
+		
+		setKeepScreenOn(true);
 	}
 	
 	public void update_tripdata(TripData ptripdata)
@@ -292,7 +298,7 @@ public class MovingMap extends View {
 			for(int i=0;i<tripdata.waypoints.size()-1;++i)
 			{
 				Paint p;
-				if (i==curwp) p=seltrippaint;
+				if (i==curwp-1) p=seltrippaint;
 				else p=trippaint;
 				canvas.drawLine(
 						lines[4*i+0],

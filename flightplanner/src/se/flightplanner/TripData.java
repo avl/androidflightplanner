@@ -86,7 +86,8 @@ public class TripData implements Serializable {
 	{
 		private static final long serialVersionUID = 4282439811657511726L;
 		public LatLon latlon;
-		public double altitude;
+		public double startalt;
+		public double endalt;
 		public String name;
 		public String legpart;
 		public String what;
@@ -116,7 +117,8 @@ public class TripData implements Serializable {
 			Waypoint wp=new Waypoint();
 			wp.latlon=new LatLon(wpobj.getDouble("lat"),
 					wpobj.getDouble("lon"));
-			wp.altitude=wpobj.getDouble("altitude");
+			wp.startalt=wpobj.getDouble("startalt");
+			wp.endalt=wpobj.getDouble("endalt");
 			wp.name=wpobj.getString("name");
 			wp.legpart=wpobj.getString("legpart");
 			wp.what=wpobj.getString("what");

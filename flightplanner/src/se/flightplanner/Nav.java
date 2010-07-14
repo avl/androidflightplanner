@@ -35,6 +35,22 @@ public class Nav extends Activity implements LocationListener {
 	final static int MENU_DOWNLOAD_AIRSPACE=3;
 	private LocationManager locman;
 	
+	static class NavData
+	{
+		TripData tripdata;
+		Airspace airspace;
+		AirspaceLookup lookup;
+	}
+	
+	@Override
+	public Object onRetainNonConfigurationInstance() {
+	    final NavData data = new NavData();
+	    data.tripdata=tripdata;
+	    data.airspace=airspace;
+	    data.lookup=lookup;
+	    return data;
+	}
+	
 	
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
@@ -149,6 +165,7 @@ public class Nav extends Activity implements LocationListener {
 	    	return true;
 	    case MENU_DOWNLOAD_AIRSPACE:
 	    	try {
+	    		///RookieHelper.showmsg(this,"Airspace data for Sweden will now be downloaded. This can take several minutes, and your phone may become unresponsive. Turn on internet access, click ok, and have patience!");
 				airspace=Airspace.download();
 				airspace.serialize_to_file(this,"airspace.bin");
 				
@@ -192,23 +209,33 @@ public class Nav extends Activity implements LocationListener {
     @Override
     public void onCreate(Bundle savedInstanceState) {
     	super.onCreate(savedInstanceState);
-    	try
-    	{
-    		tripdata=TripData.deserialize_from_file(this,"tripdata.bin");
-    	}
-    	catch (Throwable e)
-    	{
-    		RookieHelper.showmsg(this, e.toString());
-    	}
     	
-    	try
-    	{
-    		airspace=Airspace.deserialize_from_file(this,"airspace.bin");
-    	}
-    	catch (Throwable e)
-    	{
-    		RookieHelper.showmsg(this, e.toString());
-    	}
+    	final NavData data = (NavData) getLastNonConfigurationInstance();
+        if (data != null) {
+        	tripdata=data.tripdata;
+        	airspace=data.airspace;
+        	lookup=data.lookup;
+        }
+        else
+        {
+	
+	    	try
+	    	{
+	    		tripdata=TripData.deserialize_from_file(this,"tripdata.bin");
+	    	}
+	    	catch (Throwable e)
+	    	{
+	    		RookieHelper.showmsg(this, e.toString());
+	    	}	    	
+	    	try
+	    	{
+	    		airspace=Airspace.deserialize_from_file(this,"airspace.bin");
+	    	}
+	    	catch (Throwable e)
+	    	{
+	    		RookieHelper.showmsg(this, e.toString());
+	    	}
+        }
     	
         map=new MovingMap(this);
         lookup=new AirspaceLookup(airspace);

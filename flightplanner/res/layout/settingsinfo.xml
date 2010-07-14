@@ -7,7 +7,7 @@
  <TextView android:id="@+id/label" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
-              android:text="First create account on www.flightplanner.se !" />                
+              android:text="First create account on www.swflightplanner.se !" />                
   
  <TextView android:id="@+id/label" 
               android:layout_width="fill_parent" 

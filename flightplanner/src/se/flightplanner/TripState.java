@@ -233,8 +233,8 @@ public class TripState {
 		
 		if (tripdata!=null)
 		{
-			double best_points=0;
-			int best_points_i=-1;
+			double best_points=-1e30;
+			int best_points_i=0;
 			for(int i=0;i<tripdata.waypoints.size()-1;++i)
 			{
 				Waypoint wp=tripdata.waypoints.get(i);
@@ -255,14 +255,13 @@ public class TripState {
 				if (i==target_wp+1)
 					tpoints+=0.2; //get even more extra points for the next waypoint.
 				Log.i("fplan","Item "+wp.name+" head: "+rightheading+" dist: "+distance+" points: "+tpoints);
-				if (best_points>tpoints || best_points_i==-1)
+				if (tpoints>best_points || best_points_i==-1)
 				{
 					best_points=tpoints;
-					best_points_i=i;
+					best_points_i=i+1;
 				}
 			}
-			if (best_points_i!=-1)
-				target_wp=best_points_i+1;
+			target_wp=best_points_i;
 			Log.i("fplan","New best target_wp: "+target_wp+" waypoints: "+tripdata.waypoints.size());
 			double accum_time=0;
 			double accum_distance=0;
@@ -276,29 +275,87 @@ public class TripState {
 				expected_gs=cur.gs;
 				actual_gs=mylocation.getSpeed()*3.6/1.852;
 			}
-			for(int i=target_wp+1;i<tripdata.waypoints.size();++i)
+			/*
+			Waypoint prevwp=null;
+			if (tripdata.waypoints.size()>=1)
+			{
+				prevwp=tripdata.waypoints.get(0);
+				if (target_wp>0 && target_wp<=tripdata.waypoints.size())					
+					prevwp=tripdata.waypoints.get(target_wp-1);
+			}*/
+			for(int i=target_wp;i<tripdata.waypoints.size();++i)
 			{
 				final Waypoint wp=tripdata.waypoints.get(i);
 				Merc m1=Project.latlon2merc(wp.latlon,13);
 				final Vector mv1=new Vector(m1.x,m1.y);				
 				double tdistance=0;
-				if (i==target_wp+1)
+				double used_gs;
+				if (i==target_wp)
 				{
 					tdistance=mypos.minus(mv1).length()/onenm;
+					used_gs=actual_gs;
 				}
 				else
 				{
 					tdistance=wp.d;
+					used_gs=wp.gs;
 				}
 				accum_distance+=tdistance;
 				final double distance=accum_distance;
-				double ttimesec=0;
-				if (wp.gs>1e-3)
-					ttimesec=(3600.0*tdistance)/wp.gs;
+				double ttimesec;
+				if (used_gs>1e-3)
+					ttimesec=(3600.0*tdistance)/used_gs;
+				else
+					ttimesec=3600*9999;
 				accum_time+=ttimesec;								
 				Log.i("fplan","accum_time:"+accum_time);
 				final int timesec=(int)accum_time;
-				final String[] details=new String[]{};
+				String whatdesc="";
+				String ttitle="Unknown";
+				Waypoint nextwp=tripdata.waypoints.get(tripdata.waypoints.size()-1);
+				if (i+1<tripdata.waypoints.size()) nextwp=tripdata.waypoints.get(i+1);
+
+				if (wp.lastsub!=0)
+				{
+					ttitle=wp.name;
+					whatdesc=String.format("%.0f ft",wp.endalt);
+				}
+				else
+				{
+					if (wp.what.equals("climb"))
+					{
+						ttitle="Climb complete";
+						whatdesc="Altitude "+String.format("%.0f ft",wp.endalt);
+					}
+					if (wp.what.equals("cruise"))
+					{
+						Log.i("fplan","Nextwp:"+nextwp.what);
+						if (nextwp.what.equals("climb"))
+						{
+							ttitle="Start climb";
+							whatdesc="To "+nextwp.name+" "+String.format("%.0f ft",nextwp.endalt);
+						}
+						else
+						if (nextwp.what.equals("descent"))
+						{
+							ttitle="Start descent";
+							whatdesc="To "+nextwp.name+" "+String.format("%.0f ft",nextwp.endalt);
+						}
+					}
+					if (wp.what.equals("descent"))
+					{
+						ttitle="Descent complete";
+						whatdesc="Altitude "+String.format("%.0f ft",wp.endalt);
+					}
+				}
+				
+			
+				
+				final String title=ttitle;
+
+				final String[] details=new String[]{
+						whatdesc
+				};
 				warnings.add(new WarningEvent()
 				{
 					public String[] getDetails() {
@@ -308,13 +365,16 @@ public class TripState {
 						return distance;
 					}
 					public String getTitle() {
-						return wp.name;
+						return title;
 					}
 					public int getWhen() {
 						return timesec;
 					}
 					public boolean isApprox(WarningEvent warningEvent) {
-						if (warningEvent.getDetails().length!=details.length) return false;
+						String[] odet=warningEvent.getDetails();
+						if (odet.length!=details.length) return false;
+						for(int i=0;i<details.length;++i)
+							if (!odet[i].equals(details[i])) return false;
 						return wp.name.equals(warningEvent.getTitle());
 					}
 					public Vector getPoint() {
@@ -351,16 +411,20 @@ public class TripState {
 
 	ArrayList<WarningEvent> warnings_seen;
 	private void autoselect_warnings() {
-		if (current_warning>=warnings.size())
+		if (current_warning>=warnings.size() || current_warning<0)
 			current_warning=-1;
+		
 		if (current_warning>0)
 		{
 			if (warnings_seen!=null)
 			{
 				for(int i=0;i<current_warning;++i)
 				{
-					if (i>=warnings_seen.size() || warnings_seen.get(i).isApprox(warnings.get(i)))
+					if (i>=warnings_seen.size() || !warnings_seen.get(i).isApprox(warnings.get(i)))
 					{
+						if (i<warnings_seen.size())
+							Log.i("fplan","Warning "+warnings_seen.get(i).getDetails()+" == " +
+								warnings.get(i).getDetails()+" => "+warnings_seen.get(i).isApprox(warnings.get(i)));
 						warnings_seen=null;
 						current_warning=i;
 						break;
@@ -369,13 +433,15 @@ public class TripState {
 			}
 			if (warnings_seen==null)
 			{
-				warnings_seen=new ArrayList<WarningEvent>();				
-				for(int i=0;i<current_warning;++i)
+				warnings_seen=new ArrayList<WarningEvent>();
+				for(int i=0;i<warnings.size();++i)
 				{
 					warnings_seen.add(warnings.get(i));
 				}
+				
 			}
 		}
+		
 		Log.i("fplan","Autoselect warnings:"+current_warning);
 	}
 
@@ -390,7 +456,15 @@ public class TripState {
 			{ //If _INSIDE_ polygon
 				String det=inarea.floor+"-"+inarea.ceiling+": "+inarea.name;
 				details.add(det);
-				extradetails.add("extra"+det);
+				extradetails.add(det);
+				for(String fre : inarea.freqs)
+				{
+					if (fre.length()>0)
+					{
+						Log.i("fplan","Adding airspace detail "+fre);
+						extradetails.add(fre);
+					}
+				}
 			}
 		}
 	}

@@ -2,6 +2,8 @@ package se.flightplanner;
 
 import java.io.InputStream;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
@@ -91,9 +93,14 @@ public class Airspace implements Serializable{
 		if (spacearr==null) throw new RuntimeException("spacearr==null");
 		for(int i=0;i<spacearr.length();++i)
 		{
-			AirspaceArea area=new AirspaceArea();
 			JSONObject areaobj=spacearr.getJSONObject(i);
 			if (areaobj==null) throw new RuntimeException("areaobj==null");
+			AirspaceArea area=new AirspaceArea();
+			
+			area.name=areaobj.getString("name");
+			area.floor=areaobj.getString("floor");
+			area.ceiling=areaobj.getString("ceiling");
+			
 			JSONArray areapointsarr=areaobj.getJSONArray("points");
 			if (areapointsarr==null) throw new RuntimeException("areapointsarr==null");
 			ArrayList<Vector> pointsvec=new ArrayList<Vector>();
@@ -111,6 +118,8 @@ public class Airspace implements Serializable{
 			}
 			area.poly=new Polygon(pointsvec);
 			area.freqs=new ArrayList<String>();
+			if (area.name.contains("BROMMA"))
+				Log.i("fplan","Parsing freqs");
 			if (areaobj.has("freqs"))
 			{
 				JSONArray freqsarr=areaobj.getJSONArray("freqs");
@@ -119,14 +128,17 @@ public class Airspace implements Serializable{
 					JSONArray tuple=freqsarr.getJSONArray(k);
 					if (tuple==null) throw new RuntimeException("Missing freq tuple");
 					area.freqs.add(String.format("%s: %.3f", tuple.getString(0),tuple.getDouble(1)));
+					if (area.name.contains("BROMMA"))
+					{
+						Log.i("fplan","Adding "+String.format("%s: %.3f", tuple.getString(0),tuple.getDouble(1)));
+					}
 				}
-			}
+			}	
+			if (area.name.contains("BROMMA"))
+				Log.i("fplan","Parsing freq - result"+area.freqs);
 			if (!areaobj.has("name")) throw new RuntimeException("Missing name field");
 			if (!areaobj.has("floor")) throw new RuntimeException("Missing floor field");
 			if (!areaobj.has("ceiling")) throw new RuntimeException("Missing ceiling field");
-			area.name=areaobj.getString("name");
-			area.floor=areaobj.getString("floor");
-			area.ceiling=areaobj.getString("ceiling");
 			airspace.spaces.add(area);
 		}
 		/*
@@ -140,7 +152,7 @@ public class Airspace implements Serializable{
 	private static final long serialVersionUID = 4162260268270562095L;
 	void serialize_to_file(Context context,String filename) throws Exception
 	{
-		OutputStream ofstream=context.openFileOutput(filename,Context.MODE_PRIVATE);
+		OutputStream ofstream=new BufferedOutputStream(context.openFileOutput(filename,Context.MODE_PRIVATE));
 		try
 		{
 			ObjectOutputStream os=new ObjectOutputStream(ofstream);
@@ -155,7 +167,7 @@ public class Airspace implements Serializable{
 	}
 	static Airspace deserialize_from_file(Context context,String filename) throws Exception
 	{
-		InputStream ofstream=context.openFileInput(filename);
+		InputStream ofstream=new BufferedInputStream(context.openFileInput(filename));
 		Airspace data=null;
 		try
 		{
