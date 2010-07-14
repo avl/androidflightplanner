@@ -312,24 +312,70 @@ public class TripState {
 				final int timesec=(int)accum_time;
 				String whatdesc="";
 				String ttitle="Unknown";
-				Waypoint nextwp=tripdata.waypoints.get(tripdata.waypoints.size()-1);
+				
+				Waypoint nextwp=null;
 				if (i+1<tripdata.waypoints.size()) nextwp=tripdata.waypoints.get(i+1);
-
+				/*Waypoint prevwp=tripdata.waypoints.get(0);
+				if (i>0) prevwp=tripdata.waypoints.get(i-1);
+				*/
+				
+				if (i==0)
+				{
+					ttitle="Depart for "+wp.name;
+				}
+				else
+				if (i==tripdata.waypoints.size()-1)
+				{
+					ttitle="Arrive "+wp.name;
+				}
+				else
 				if (wp.lastsub!=0)
 				{
 					ttitle=wp.name;
-					whatdesc=String.format("%.0f ft",wp.endalt);
 				}
 				else
 				{
+					ttitle="Enroute "+wp.name;					
+				}
+				
+				if (nextwp==null)
+				{
+					whatdesc="";
+				}
+				else
+				{
+					if (nextwp.what.equals("climb"))
+					{
+						whatdesc=String.format("Begin climb %.0f ft to %.0f ft",nextwp.startalt,nextwp.endalt);
+					}
+					else
+					if (nextwp.what.equals("descent"))
+					{
+						whatdesc=String.format("Begin descent %.0f ft to %.0f ft",nextwp.startalt,nextwp.endalt);
+					}
+					else
+					{
+						if (wp.what.equals("cruise"))
+							whatdesc=String.format("Level flight %.0f ft",nextwp.endalt);
+						else
+							whatdesc=String.format("Level-out at %.0f ft",nextwp.endalt);
+					}
+				}
+				/*}
+				else
+				{
+					if (wp.what.equals("descent"))
+					{
+						ttitle="Descent complete";
+						whatdesc="From "+prevwp.name+" to "+String.format("%.0f ft",wp.endalt);
+					}
 					if (wp.what.equals("climb"))
 					{
 						ttitle="Climb complete";
-						whatdesc="Altitude "+String.format("%.0f ft",wp.endalt);
+						whatdesc="From "+prevwp.name+" to "+String.format("%.0f ft",wp.endalt);
 					}
 					if (wp.what.equals("cruise"))
 					{
-						Log.i("fplan","Nextwp:"+nextwp.what);
 						if (nextwp.what.equals("climb"))
 						{
 							ttitle="Start climb";
@@ -342,12 +388,7 @@ public class TripState {
 							whatdesc="To "+nextwp.name+" "+String.format("%.0f ft",nextwp.endalt);
 						}
 					}
-					if (wp.what.equals("descent"))
-					{
-						ttitle="Descent complete";
-						whatdesc="Altitude "+String.format("%.0f ft",wp.endalt);
-					}
-				}
+				}*/
 				
 			
 				
@@ -397,8 +438,8 @@ public class TripState {
 			Collections.sort(warnings,new Comparator<WarningEvent>()
 					{
 						public int compare(WarningEvent arg0, WarningEvent arg1) {
-							double dist0=arg0.getPoint().minus(mypos).length();
-							double dist1=arg1.getPoint().minus(mypos).length();
+							double dist0=arg0.getDistance();
+							double dist1=arg1.getDistance();
 							if (dist0<dist1) return -1;
 							if (dist0>dist1) return 1;
 							return 0;

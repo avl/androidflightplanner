@@ -357,9 +357,9 @@ public class MovingMap extends View {
 				int y1=(int)(y-tsy*(lines-1))-2;
 				
 				canvas.drawRect(0, y-tsy*lines-4, rx, y, backgroundpaint);
-				canvas.drawText(String.format("%.1fNM",we.getDistance()), 2,y1,textpaint);
-				canvas.drawText(String.format("T:%s",whenstr), 75,y1,textpaint);
-				canvas.drawText(we.getTitle(), 150,y1,textpaint);
+				canvas.drawText(String.format("%.1fnm",we.getDistance()), 2,y1,textpaint);
+				canvas.drawText(String.format("T:%s",whenstr), 70,y1,textpaint);
+				canvas.drawText(we.getTitle(), 140,y1,textpaint);
 				for(int i=0;i<lines-1;++i)
 				{
 					canvas.drawText(details[i], 2,y1+tsy+i*tsy,textpaint);					
