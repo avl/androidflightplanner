@@ -234,8 +234,22 @@ public class MovingMap extends View {
 				canvas.drawLine((float)a.getx(),(float)a.gety(),(float)b.getx(),(float)b.gety(),linepaint);
 			}
 		}
+		for(SigPoint sp : lookup.allOthers.findall(bb13))
+		{
+			double x=sp.pos.x/(1<<zoomgap);
+			double y=sp.pos.y/(1<<zoomgap);
+			//Log.i("fplan",String.format("sigp: %s: %f %f",sp.name,sp.pos.x,sp.pos.y));
+			double px=rot_x(x-center.x,y-center.y)+ox;
+			double py=rot_y(x-center.x,y-center.y)+oy;
+			//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
+			//textpaint.setARGB(0, 255,255,255);
+			textpaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
+			canvas.drawText(sp.name, (float)(px), (float)(py), textpaint);			
+			linepaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
+			canvas.drawPoint((float)px,(float)py,linepaint);
+		}
 
-		for(SigPoint sp : lookup.allObstacles.findall(smbb13))
+		for(SigPoint sp : lookup.allObst.findall(smbb13))
 		{
 			double x=sp.pos.x/(1<<zoomgap);
 			double y=sp.pos.y/(1<<zoomgap);
