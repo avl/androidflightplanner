@@ -23,10 +23,10 @@ import android.util.Log;
 public class DataDownloader {
 	static private String get_addr()
 	{
-		String addr="http://10.0.2.2:5000";
+		//String addr="http://10.0.2.2:5000";
 		//String addr="http://192.168.1.100:5000";
 		//String addr="http://79.99.0.86:5000";
-		//String addr="http://www.swflightplanner.se";
+		String addr="http://www.swflightplanner.se";
 		return addr;
 	}
 	static InputStream postRaw(String path,String user, String pass,
