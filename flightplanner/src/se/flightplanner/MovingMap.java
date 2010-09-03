@@ -212,70 +212,76 @@ public class MovingMap extends View {
 
 		
 		//sigPointTree.verify();
-		for(AirspaceArea as:lookup.areas.get_areas(bb13))
-		{/*
-			boolean all_left=true;
-			boolean all_right=true;
-			boolean all_above=true;
-			boolean all_below=true;
-			int l=as.points*/
-			ArrayList<Vector> vs=new ArrayList<Vector>();
-			for(LatLon latlon : as.points)
-			{
-				Merc m=Project.latlon2merc(latlon,zoomlevel);
-				double px=rot_x(m.x-center.x,m.y-center.y)+ox;
-				double py=rot_y(m.x-center.x,m.y-center.y)+oy;
-				vs.add(new Vector(px,py));
+		if (zoomlevel>=8)
+		{
+			for(AirspaceArea as:lookup.areas.get_areas(bb13))
+			{/*
+				boolean all_left=true;
+				boolean all_right=true;
+				boolean all_above=true;
+				boolean all_below=true;
+				int l=as.points*/
+				ArrayList<Vector> vs=new ArrayList<Vector>();
+				for(LatLon latlon : as.points)
+				{
+					Merc m=Project.latlon2merc(latlon,zoomlevel);
+					double px=rot_x(m.x-center.x,m.y-center.y)+ox;
+					double py=rot_y(m.x-center.x,m.y-center.y)+oy;
+					vs.add(new Vector(px,py));
+				}
+				for(int i=0;i<vs.size();++i)
+				{
+					Vector a=vs.get(i);
+					Vector b=vs.get((i+1)%vs.size());
+					canvas.drawLine((float)a.getx(),(float)a.gety(),(float)b.getx(),(float)b.gety(),linepaint);
+				}
 			}
-			for(int i=0;i<vs.size();++i)
+		}
+		if (zoomlevel>=9)
+		{
+			for(SigPoint sp : lookup.allOthers.findall(bb13))
 			{
-				Vector a=vs.get(i);
-				Vector b=vs.get((i+1)%vs.size());
-				canvas.drawLine((float)a.getx(),(float)a.gety(),(float)b.getx(),(float)b.gety(),linepaint);
+				double x=sp.pos.x/(1<<zoomgap);
+				double y=sp.pos.y/(1<<zoomgap);
+				//Log.i("fplan",String.format("sigp: %s: %f %f",sp.name,sp.pos.x,sp.pos.y));
+				double px=rot_x(x-center.x,y-center.y)+ox;
+				double py=rot_y(x-center.x,y-center.y)+oy;
+				//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
+				//textpaint.setARGB(0, 255,255,255);
+				textpaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
+				canvas.drawText(sp.name, (float)(px), (float)(py), textpaint);			
+				linepaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
+				canvas.drawPoint((float)px,(float)py,linepaint);
 			}
-		}
-		for(SigPoint sp : lookup.allOthers.findall(bb13))
-		{
-			double x=sp.pos.x/(1<<zoomgap);
-			double y=sp.pos.y/(1<<zoomgap);
-			//Log.i("fplan",String.format("sigp: %s: %f %f",sp.name,sp.pos.x,sp.pos.y));
-			double px=rot_x(x-center.x,y-center.y)+ox;
-			double py=rot_y(x-center.x,y-center.y)+oy;
-			//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
-			//textpaint.setARGB(0, 255,255,255);
-			textpaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
-			canvas.drawText(sp.name, (float)(px), (float)(py), textpaint);			
-			linepaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
-			canvas.drawPoint((float)px,(float)py,linepaint);
-		}
-
-		for(SigPoint sp : lookup.allObst.findall(smbb13))
-		{
-			double x=sp.pos.x/(1<<zoomgap);
-			double y=sp.pos.y/(1<<zoomgap);
-			//Log.i("fplan",String.format("sigp: %s: %f %f",sp.name,sp.pos.x,sp.pos.y));
-			double px=rot_x(x-center.x,y-center.y)+ox;
-			double py=rot_y(x-center.x,y-center.y)+oy;
-			//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
-			//textpaint.setARGB(0, 255,255,255);
-			textpaint.setARGB(0xff, 0xff, 0xa0, 0xff);
-			canvas.drawText(String.format("%s %.0fft",sp.name,sp.alt), (float)(px), (float)(py), textpaint);			
-			linepaint.setARGB(0xff, 0xff, 0xa0, 0xff);
-			canvas.drawPoint((float)px,(float)py,linepaint);
-		}
-		
-		for(SigPoint sp : lookup.allAirfields.findall(bb13))
-		{
-			double x=sp.pos.x/(1<<zoomgap);
-			double y=sp.pos.y/(1<<zoomgap);
-			//Log.i("fplan",String.format("sigp: %s: %f %f",sp.name,sp.pos.x,sp.pos.y));
-			double px=rot_x(x-center.x,y-center.y)+ox;
-			double py=rot_y(x-center.x,y-center.y)+oy;
-			//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
-			textpaint.setColor(Color.GREEN);
-			canvas.drawText(sp.name, (float)(px), (float)(py), textpaint);
-			linepaint.setColor(Color.GREEN);
-			canvas.drawPoint((float)px,(float)py,linepaint);
+	
+			for(SigPoint sp : lookup.allObst.findall(smbb13))
+			{
+				double x=sp.pos.x/(1<<zoomgap);
+				double y=sp.pos.y/(1<<zoomgap);
+				//Log.i("fplan",String.format("sigp: %s: %f %f",sp.name,sp.pos.x,sp.pos.y));
+				double px=rot_x(x-center.x,y-center.y)+ox;
+				double py=rot_y(x-center.x,y-center.y)+oy;
+				//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
+				//textpaint.setARGB(0, 255,255,255);
+				textpaint.setARGB(0xff, 0xff, 0xa0, 0xff);
+				canvas.drawText(String.format("%s %.0fft",sp.name,sp.alt), (float)(px), (float)(py), textpaint);			
+				linepaint.setARGB(0xff, 0xff, 0xa0, 0xff);
+				canvas.drawPoint((float)px,(float)py,linepaint);
+			}
+			
+			for(SigPoint sp : lookup.allAirfields.findall(bb13))
+			{
+				double x=sp.pos.x/(1<<zoomgap);
+				double y=sp.pos.y/(1<<zoomgap);
+				//Log.i("fplan",String.format("sigp: %s: %f %f",sp.name,sp.pos.x,sp.pos.y));
+				double px=rot_x(x-center.x,y-center.y)+ox;
+				double py=rot_y(x-center.x,y-center.y)+oy;
+				//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
+				textpaint.setColor(Color.GREEN);
+				canvas.drawText(sp.name, (float)(px), (float)(py), textpaint);
+				linepaint.setColor(Color.GREEN);
+				canvas.drawPoint((float)px,(float)py,linepaint);
+			}
 		}
 		
 		if (tripdata!=null && tripdata.waypoints.size()>=2)

@@ -28,7 +28,7 @@ public class AirspaceLookup {
 			if (po.kind.equals("obstacle"))
 				obsts.add(po);
 			else
-				others.add(po);				
+				others.add(po);					
 		}
 		allAirfields=new AirspaceSigPointsTree(airfields);
 		allObst=new AirspaceSigPointsTree(obsts);

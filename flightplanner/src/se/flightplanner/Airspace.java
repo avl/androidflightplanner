@@ -4,6 +4,9 @@ import java.io.InputStream;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
@@ -17,8 +20,6 @@ import org.json.JSONObject;
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
 import se.flightplanner.vector.BoundingBox;
-import se.flightplanner.vector.Polygon;
-import se.flightplanner.vector.Vector;
 
 import android.app.Activity;
 import android.content.Context;
@@ -26,9 +27,48 @@ import android.util.Log;
 
 public class Airspace implements Serializable{
 
-	ArrayList<AirspaceArea> spaces;
-	ArrayList<SigPoint> points;
-	
+	public ArrayList<AirspaceArea> spaces;
+	public ArrayList<SigPoint> points;
+
+	public static Airspace deserialize(DataInputStream is) throws IOException {
+		Airspace a=new Airspace();
+		
+		int magic=is.readInt();
+		int version=is.readInt();
+		if (magic!=0x8A31CDA)
+			throw new RuntimeException("Couldn't load stored data, bad magic. Was: "+magic+" should be: "+0x8A31CDA);
+		if (version!=1)
+			throw new RuntimeException("Couldn't load stored data, bad version");
+		
+		int numspaces=is.readInt();
+		if (numspaces>1000)
+			throw new RuntimeException("Too many airspace definitions: "+numspaces);
+		a.spaces=new ArrayList<AirspaceArea>();
+		for(int i=0;i<numspaces;++i)
+			a.spaces.add(AirspaceArea.deserialize(is));
+
+		int numpoints=is.readInt();
+		if (numpoints>10000)
+			throw new RuntimeException("Too many points: "+numpoints);
+		a.points=new ArrayList<SigPoint>();
+		for(int i=0;i<numpoints;++i)
+			a.points.add(SigPoint.deserialize(is));
+		
+		return a;
+	}
+	public void serialize(DataOutputStream os) throws IOException {
+		
+		int numspaces=spaces.size();
+		os.writeInt(0x8A31CDA);
+		os.writeInt(1);
+		os.writeInt(numspaces);
+		for(int i=0;i<numspaces;++i)
+			spaces.get(i).serialize(os);
+		int numpoints=points.size();
+		os.writeInt(numpoints);
+		for(int i=0;i<numpoints;++i)
+			points.get(i).serialize(os);
+	}
 	/*
 	AirspaceAreaTree areaTree;
 	AirspaceSigPointsTree pointTree;
@@ -58,17 +98,16 @@ public class Airspace implements Serializable{
 	}
 	public static Airspace download(String fakeDataForTest) throws Exception
 	{		
-		System.out.println("Start post operation");
-		Airspace airspace=new Airspace();
+		System.out.println("Start download operation");
+		InputStream inp=DataDownloader.postRaw("/api/get_airspaces",null, null, new ArrayList<NameValuePair>(),false);
+		Airspace airspace=deserialize(new DataInputStream(inp));
+		inp.close();
+		System.out.println("Finish download operation");
+		return airspace;
+		
+		/* Old style:
 		JSONObject allobj;
-		if (fakeDataForTest==null)
-		{
 			allobj = DataDownloader.post("/api/get_airspaces",null, null, new ArrayList<NameValuePair>(),false);
-		}
-		else
-		{
-			allobj = new JSONObject(fakeDataForTest);			
-		}
 		JSONArray pointsarr2=allobj.getJSONArray("points");
 		System.out.println("Finished post operation, start parse");
 		airspace.points=new ArrayList<SigPoint>(pointsarr2.length());
@@ -79,9 +118,8 @@ public class Airspace implements Serializable{
 			double lat=jsonpoint.getDouble("lat");
 			double lon=jsonpoint.getDouble("lon");
 			LatLon latlon=new LatLon(lat,lon);
-			Merc merc=Project.latlon2merc(latlon, 13);
-			point.pos=merc;
 			point.latlon=new LatLon(lat,lon);
+			point.calcMerc();
 			point.name=jsonpoint.getString("name");
 			point.alt=jsonpoint.getDouble("alt");
 			point.kind=jsonpoint.getString("kind").intern();
@@ -103,7 +141,6 @@ public class Airspace implements Serializable{
 			
 			JSONArray areapointsarr=areaobj.getJSONArray("points");
 			if (areapointsarr==null) throw new RuntimeException("areapointsarr==null");
-			ArrayList<Vector> pointsvec=new ArrayList<Vector>();
 			area.points=new ArrayList<LatLon>();
 			for(int j=0;j<areapointsarr.length();++j)
 			{
@@ -113,10 +150,8 @@ public class Airspace implements Serializable{
 				double lon=point.getDouble("lon");
 				LatLon latlon=new LatLon(lat,lon);
 				area.points.add(latlon);
-				Merc merc=Project.latlon2merc(latlon, 13);
-				pointsvec.add(new Vector(merc.x,merc.y));				
 			}
-			area.poly=new Polygon(pointsvec);
+			area.initPoly(area.points);
 			area.freqs=new ArrayList<String>();
 			if (area.name.contains("BROMMA"))
 				Log.i("fplan","Parsing freqs");
@@ -141,22 +176,26 @@ public class Airspace implements Serializable{
 			if (!areaobj.has("ceiling")) throw new RuntimeException("Missing ceiling field");
 			airspace.spaces.add(area);
 		}
+		*/
+		
 		/*
 		airspace.pointTree=new AirspaceSigPointsTree(airspace.points);
 		airspace.areaTree=new AirspaceAreaTree(airspace.spaces);
-		*/
+		
+		
 		System.out.println("Finish download operation");
 		return airspace;
+		 */
 	}
-		
+
 	private static final long serialVersionUID = 4162260268270562095L;
 	void serialize_to_file(Context context,String filename) throws Exception
 	{
 		OutputStream ofstream=new BufferedOutputStream(context.openFileOutput(filename,Context.MODE_PRIVATE));
 		try
 		{
-			ObjectOutputStream os=new ObjectOutputStream(ofstream);
-			os.writeObject(this);
+			DataOutputStream os=new DataOutputStream(ofstream);
+			serialize(os);
 			os.close();
 			ofstream.close();
 		}
@@ -165,14 +204,16 @@ public class Airspace implements Serializable{
 			ofstream.close();
 		}		
 	}
+	
 	static Airspace deserialize_from_file(Context context,String filename) throws Exception
 	{
 		InputStream ofstream=new BufferedInputStream(context.openFileInput(filename));
 		Airspace data=null;
 		try
 		{
-			ObjectInputStream os=new ObjectInputStream(ofstream);
-			data=(Airspace)os.readObject();
+			
+			DataInputStream os=new DataInputStream(ofstream);
+			data=Airspace.deserialize(os);//(Airspace)os.readObject();
 			os.close();		
 		}
 		finally

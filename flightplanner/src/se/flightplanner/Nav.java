@@ -217,8 +217,7 @@ public class Nav extends Activity implements LocationListener {
         	lookup=data.lookup;
         }
         else
-        {
-	
+        {	
 	    	try
 	    	{
 	    		tripdata=TripData.deserialize_from_file(this,"tripdata.bin");

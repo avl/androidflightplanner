@@ -1,5 +1,8 @@
 package se.flightplanner;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.Serializable;
 
 import se.flightplanner.vector.Vector;
@@ -28,6 +31,13 @@ public class Project {
 			lat=plat;
 			lon=plon;
 		}
+		public static LatLon deserialize(DataInputStream is) throws IOException {
+			return new LatLon(is.readFloat(),is.readFloat());
+		}
+		public void serialize(DataOutputStream os) throws IOException {
+			os.writeFloat((float)lat);
+			os.writeFloat((float)lon);
+		}
 	}
 	static public class Merc implements Serializable
 	{
@@ -38,6 +48,13 @@ public class Project {
 		{
 			x=px;
 			y=py;
+		}
+		public static Merc deserialize(DataInputStream is) throws IOException {
+			return new Merc(is.readFloat(),is.readFloat());
+		}
+		public void serialize(DataOutputStream os) throws IOException {
+			os.writeFloat((float)x);
+			os.writeFloat((float)y);
 		}
 	}
 

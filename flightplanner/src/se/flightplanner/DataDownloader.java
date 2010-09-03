@@ -2,7 +2,9 @@ package se.flightplanner;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.zip.InflaterInputStream;
 
@@ -19,39 +21,40 @@ import org.json.JSONObject;
 import android.util.Log;
 
 public class DataDownloader {
-
+	static private String get_addr()
+	{
+		String addr="http://10.0.2.2:5000";
+		//String addr="http://192.168.1.100:5000";
+		//String addr="http://79.99.0.86:5000";
+		//String addr="http://www.swflightplanner.se";
+		return addr;
+	}
+	static InputStream postRaw(String path,String user, String pass,
+			ArrayList<NameValuePair> nvps,boolean zip) throws Exception {
+		
+		nvps.add(new BasicNameValuePair("binary","1"));
+		
+		HttpPost req = httpConnect(path, user, pass, nvps, zip);
+		DefaultHttpClient cli=new DefaultHttpClient();
+		HttpResponse resp = cli.execute(req);
+		HttpEntity ent=resp.getEntity();
+		if (ent==null)
+		{
+			throw new RuntimeException("No request body");
+		}
+		InputStream str2=ent.getContent();
+		InputStream str;
+		if (zip)
+			str=new InflaterInputStream(str2);
+		else
+			str=str2;
+		return str;
+	}
+	
 	static JSONObject post(String path,String user, String pass,
 			ArrayList<NameValuePair> nvps,boolean zip) throws Exception {
 		
-		if (pass!=null)
-		{
-			byte[] md5pass=MessageDigest.getInstance("MD5").
-			digest(pass.getBytes());
-			StringBuilder hd=new StringBuilder();
-			for(int i=0;i<md5pass.length;++i)
-			{
-				byte b=md5pass[i];
-				hd.append(Character.forDigit((b>>4)&15,16));
-				hd.append(Character.forDigit(b&15,16));
-			}
-			nvps.add(new BasicNameValuePair("password",hd.toString()));
-		}
-		if (zip)
-		{
-			nvps.add(new BasicNameValuePair("zip","1"));
-		}
-		if (user!=null)
-		{
-			nvps.add(new BasicNameValuePair("user",user));
-		}
-		//String addr="http://10.0.2.2:5000";
-		String addr="http://192.168.1.100:5000";
-		//String addr="http://79.99.0.86:5000";
-		//String addr="http://www.swflightplanner.se";
-		HttpPost req=new HttpPost(addr+path);
-		UrlEncodedFormEntity postparams=new UrlEncodedFormEntity(nvps,"UTF8");
-		req.setEntity(postparams);
-	
+		HttpPost req = httpConnect(path, user, pass, nvps, zip);
 		DefaultHttpClient cli=new DefaultHttpClient();
 		String strres;
 
@@ -114,6 +117,40 @@ public class DataDownloader {
 			throw new RuntimeException("Error:"+obj.getString("error"));
 		}
 		return obj;
+	}
+
+	private static HttpPost httpConnect(String path, String user, String pass,
+			ArrayList<NameValuePair> nvps, boolean zip)
+			throws NoSuchAlgorithmException, UnsupportedEncodingException {
+		HttpPost req=new HttpPost(get_addr()+path);
+		{
+			if (pass!=null)
+			{
+				byte[] md5pass=MessageDigest.getInstance("MD5").
+				digest(pass.getBytes());
+				StringBuilder hd=new StringBuilder();
+				for(int i=0;i<md5pass.length;++i)
+				{
+					byte b=md5pass[i];
+					hd.append(Character.forDigit((b>>4)&15,16));
+					hd.append(Character.forDigit(b&15,16));
+				}
+				nvps.add(new BasicNameValuePair("password",hd.toString()));
+			}
+			if (zip)
+			{
+				nvps.add(new BasicNameValuePair("zip","1"));
+			}
+			if (user!=null)
+			{
+				nvps.add(new BasicNameValuePair("user",user));
+			}
+			
+			UrlEncodedFormEntity postparams=new UrlEncodedFormEntity(nvps,"UTF8");
+			req.setEntity(postparams);
+		
+		}
+		return req;
 	}
 
 }
