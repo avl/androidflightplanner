@@ -250,10 +250,10 @@ public class TripState {
 				double tpoints=0;
 				tpoints-=(distance)/nm;
 				tpoints+=rightheading;
-				if (i==target_wp)
-					tpoints+=0.1; //get an extra point for the current waypoint
-				if (i==target_wp+1)
-					tpoints+=0.2; //get even more extra points for the next waypoint.
+				if (i+1==target_wp)
+					tpoints+=0.125; //get an extra point for the current waypoint
+				if (i+1==target_wp+1)
+					tpoints+=0.1875; //get even more extra points for the next waypoint.
 				Log.i("fplan","Item "+wp.name+" head: "+rightheading+" dist: "+distance+" points: "+tpoints);
 				if (tpoints>best_points || best_points_i==-1)
 				{
@@ -361,34 +361,6 @@ public class TripState {
 							whatdesc=String.format("Level-out at %.0f ft",nextwp.endalt);
 					}
 				}
-				/*}
-				else
-				{
-					if (wp.what.equals("descent"))
-					{
-						ttitle="Descent complete";
-						whatdesc="From "+prevwp.name+" to "+String.format("%.0f ft",wp.endalt);
-					}
-					if (wp.what.equals("climb"))
-					{
-						ttitle="Climb complete";
-						whatdesc="From "+prevwp.name+" to "+String.format("%.0f ft",wp.endalt);
-					}
-					if (wp.what.equals("cruise"))
-					{
-						if (nextwp.what.equals("climb"))
-						{
-							ttitle="Start climb";
-							whatdesc="To "+nextwp.name+" "+String.format("%.0f ft",nextwp.endalt);
-						}
-						else
-						if (nextwp.what.equals("descent"))
-						{
-							ttitle="Start descent";
-							whatdesc="To "+nextwp.name+" "+String.format("%.0f ft",nextwp.endalt);
-						}
-					}
-				}*/
 				
 			
 				
