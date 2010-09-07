@@ -1,5 +1,6 @@
 package se.flightplanner;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -188,6 +189,43 @@ public class MovingMap extends View {
 		//canvas.drawText("TRIP", 10, this.getBottom(), textpaint);
 		//canvas.drawText("TRIP", 10, 100, textpaint);
 	}
+	
+	
+	int hsizex; //x position of observer in screen coordinates
+	int hsizey; //y position of observer in screen coordinates
+	Merc mypos; //Position of user
+	double hdgrad; //heading of user, in radians
+	/// Convert from merc to screen coordinates with 
+	/// north up on map
+	private Vector merc2northscreen(Merc m,int zoomlevel)
+	{
+		return new Vector(m.x-mypos.x+hsizex,-(m.y-mypos.y)+hsizey);
+	}
+	/// Convert from screen coordinates with 
+	/// north up on map to merc.
+	private Merc northscreen2merc(Vector n,int zoomlevel)
+	{
+		/*
+		s.x=m.x-mypos.x+hsizex
+		s.y=-m.y+mypos.y+hsizey
+		m.x=s.x+mypos.x-hsizex
+		m.y=mypos.y+hsizey-s.y
+		*/
+		return new Merc(n.getx()+mypos.x-hsizex,mypos.y+hsizey-n.gety());
+	}
+	private Vector northscreen2screen(Vector n,int zoomlevel)
+	{
+		Vector c=new Vector(n.getx()-hsizex,n.gety()-hsizey);
+		Vector r=c.unrot(hdgrad);
+		return new Vector(r.getx()+hsizex,r.gety()+hsizey);
+	}
+	private Vector screen2northscreen(Vector s,int zoomlevel)
+	{
+		Vector c=new Vector(s.getx()-hsizex,s.gety()-hsizey);
+		Vector r=c.rot(hdgrad);
+		return new Vector(r.getx()+hsizex,r.gety()+hsizey);
+	}
+	
 	private void draw_actual_map(Canvas canvas, int sizex, int sizey) {
 		if (zoomlevel>13) throw new RuntimeException("zoomlevel must be <=13");
 		int zoomgap=13-zoomlevel;
@@ -195,6 +233,12 @@ public class MovingMap extends View {
 		Merc center13=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),13);
 		int ox=sizex/2;
 		int oy=sizey/2;
+		hdgrad=0;
+		if (lastpos!=null && lastpos.hasBearing())
+		{
+			hdgrad=(-Math.PI/180.0)*lastpos.getBearing();
+		}
+		
 		double nm=Project.approx_scale(center13.y,13,5);
 		double diagonal13=((1<<zoomgap)*(Math.sqrt(ox*ox+oy*oy)+50))+1;
 		BoundingBox bb13=new BoundingBox(
@@ -360,14 +404,15 @@ public class MovingMap extends View {
 				int when=we.getWhen();
 				String whenstr;
 				Log.i("fplan","When: "+when);
-				if (when!=0)
-				{
-					whenstr=String.format("%d:%02d",when/60,when%60);
-				}
-				else
-				{
-					whenstr="--:--";
-				}
+				whenstr=fmttime(when);
+				
+/*				
+#error: Move position into base class of WarningEvent
+#Then move calculation of distance also to baseclass.
+#don't store time and distance, just store position.
+#Let moving map calculate time, based on distance (or even based on position?)
+*/			
+				
 				String[] details;
 				if (extrainfo)
 					details=we.getExtraDetails();
@@ -398,7 +443,18 @@ public class MovingMap extends View {
 		canvas.drawText(String.format("%03.0f°",lastpos.getBearing()), 40, y, textpaint);
 		canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),100,y,textpaint);
 		int td=tripstate.get_time_to_destination();
-		canvas.drawText(String.format("%dh%dm",td/3600,(td/60)%60),150,y,textpaint);
+		canvas.drawText(fmttime(td),150,y,textpaint);
+		if (lastpos.getTime()>3600*24*10*1000) //if significantly after 1970-0-01
+		{
+			Date d=new Date(lastpos.getTime());
+			SimpleDateFormat formatter = new SimpleDateFormat("hhmmss");
+			canvas.drawText("FIX:"+formatter.format(d)+"Z",220,y,textpaint);
+		}
+		else
+		{
+			canvas.drawText("NOFIX",220,y,textpaint);
+		}
+		
 		
 		Path path=new Path();
 		path.moveTo(ox-5,oy);
@@ -407,8 +463,13 @@ public class MovingMap extends View {
 		path.close();
 		canvas.drawPath(path,arrowpaint);
 	}
+	private String fmttime(int when) {
+		if (when==0 || when>3600*24*10)
+			return "--:--";
+		return String.format("%d:%02d",when/60,when%60);
+	}
 
-	private double rot_x(double x,double y) {
+/*	private double rot_x(double x,double y) {
 		double rad=0;
 		if (lastpos!=null && lastpos.hasBearing())
 		{
@@ -423,7 +484,7 @@ public class MovingMap extends View {
 			rad=(-Math.PI/180.0)*lastpos.getBearing();
 		}
 		return Math.sin(rad)*x + Math.cos(rad)*y;
-	}
+	}*/
 	
 
 	public void gps_update(Location loc)
@@ -490,6 +551,7 @@ public class MovingMap extends View {
 		invalidate();		
 	}
 
+	
 	public void update_airspace(Airspace pairspace, AirspaceLookup plookup) {
 		lookup=plookup;
 		tripstate=new TripState(tripdata,lookup);

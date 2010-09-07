@@ -70,4 +70,26 @@ public class Vector implements Serializable {
 	public double taxinorm() {
 		return Math.abs(x)+Math.abs(y);
 	}
+	
+	public Vector rot(double rad) {
+		double nx=Math.cos(rad)*x - Math.sin(rad)*y;
+		double ny=Math.sin(rad)*x + Math.cos(rad)*y;
+		return new Vector(nx,ny);
+	}
+	public Vector unrot(double rad) {
+		rad=-rad;
+		double nx=Math.cos(rad)*x - Math.sin(rad)*y;
+		double ny=Math.sin(rad)*x + Math.cos(rad)*y;
+		return new Vector(nx,ny);
+	}
+	/*
+	private double rot_y(double x,double y) {
+		double rad=0;
+		if (lastpos!=null && lastpos.hasBearing())
+		{
+			rad=(-Math.PI/180.0)*lastpos.getBearing();
+		}
+		return Math.sin(rad)*x + Math.cos(rad)*y;
+	}*/
+	
 }
