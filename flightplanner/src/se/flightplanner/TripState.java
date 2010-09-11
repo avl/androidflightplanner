@@ -329,7 +329,7 @@ public class TripState {
 					tpoints+=0.125; //get an extra point for the current waypoint
 				if (i+1==target_wp+1)
 					tpoints+=0.1875; //get even more extra points for the next waypoint.
-				Log.i("fplan","Item "+wp.name+" head: "+rightheading+" dist: "+distance+" points: "+tpoints);
+				//Log.i("fplan","Item "+wp.name+" head: "+rightheading+" dist: "+distance+" points: "+tpoints);
 				if (tpoints>best_points || best_points_i==-1)
 				{
 					best_points=tpoints;
@@ -337,7 +337,7 @@ public class TripState {
 				}
 			}
 			target_wp=best_points_i;
-			Log.i("fplan","New best target_wp: "+target_wp+" waypoints: "+tripdata.waypoints.size());
+			//Log.i("fplan","New best target_wp: "+target_wp+" waypoints: "+tripdata.waypoints.size());
 			double accum_time=0;
 			double accum_distance=0;
 			if (tripdata.waypoints.size()>0)
@@ -383,7 +383,7 @@ public class TripState {
 				else
 					ttimesec=3600*9999;
 				accum_time+=ttimesec;								
-				Log.i("fplan","accum_time:"+accum_time);
+				//Log.i("fplan","accum_time:"+accum_time);
 				int timesec=(int)accum_time;
 				if (i>=wp_warnings.size())
 					continue;
@@ -405,18 +405,15 @@ public class TripState {
 			ArrayList<String> extradetails = new ArrayList<String>(); 
 			get_airspace_details(abit,
 					mypos,details,extradetails);			
-			if (details.size()==0)
-			{
-				details.add("0 ft-FL 095: Uncontrolled Airspace");
-				extradetails.add("0 ft-FL 095: Uncontrolled Airspace");
-			}
-			Log.i("fplan","Actual GS for Current Position: "+actual_gs);
-			warnings.add(
-				new WarningEvent("moving","Current Position",
-						details.toArray(new String[details.size()]),
-						extradetails.toArray(new String[extradetails.size()]),
-						mypos,
-						mypos,actual_gs));						
+			//Log.i("fplan","Actual GS for Current Position: "+actual_gs);
+			WarningEvent cp=new WarningEvent("curpos","Current Position",
+					details.toArray(new String[details.size()]),
+					extradetails.toArray(new String[extradetails.size()]),
+					mypos,
+					mypos,actual_gs);
+			warnings.add(cp);
+			if (current_warning_obj!=null && current_warning_obj.getKind().equals("curpos"))
+				current_warning_obj=cp;
 		}
 		
 		if (warnings!=null)
@@ -435,11 +432,19 @@ public class TripState {
 			if (current_warning_obj!=null)
 			{
 				double curr_warn_dist=current_warning_obj.getDistance();
+				//Log.i("fplan","Curr_warn_dist:"+curr_warn_dist);
 				for(int i=0;i<warnings.size();++i)
 				{
 					double dist=warnings.get(i).getDistance();
-					if (dist>=curr_warn_dist)
-						current_warning_idx=i;
+					//Log.i("fplan","Warning "+i+" has dist: "+dist);
+					if (dist>=curr_warn_dist-1e-3)
+					{
+						if (dist>curr_warn_dist+0.5 && i!=0)						
+							current_warning_idx=i-1;
+						else
+							current_warning_idx=i;
+						break;
+					}
 				}
 			}
 		}
@@ -458,9 +463,25 @@ public class TripState {
 		if (current_warning_idx<0)
 			current_warning_idx=0;
 				
-		Log.i("fplan","Autoselect warnings:"+current_warning_idx);
+		//Log.i("fplan","Autoselect warnings:"+current_warning_idx);
 	}
 
+	void showInfo(LatLon about,LatLon mypos)
+	{
+		ArrayList<String> details = new ArrayList<String>(); 
+		ArrayList<String> extradetails = new ArrayList<String>();
+		Vector point=Project.latlon2mercvec(about,13);
+		get_airspace_details(1.0,
+				point,details,extradetails);			
+		//Log.i("fplan","Actual GS for Current Position: "+actual_gs);
+		WarningEvent cp=new WarningEvent("fixed","Show Airspace",
+				details.toArray(new String[details.size()]),
+				extradetails.toArray(new String[extradetails.size()]),
+				point,
+				Project.latlon2mercvec(mypos,13),actual_gs);
+		current_warning_obj=cp;
+		current_warning_idx=0;
+	}
 	private void get_airspace_details(double abit,
 			Vector just_a_bit_in,ArrayList<String> details,ArrayList<String> extradetails) {
 		for(AirspaceArea inarea:lookup.areas.get_areas(BoundingBox.aroundpoint(just_a_bit_in, abit)))
@@ -477,12 +498,18 @@ public class TripState {
 				{
 					if (fre.length()>0)
 					{
-						Log.i("fplan","Adding airspace detail "+fre);
+						//Log.i("fplan","Adding airspace detail "+fre);
 						extradetails.add(fre);
 					}
 				}
 			}
 		}
+		if (details.size()==0)
+		{
+			details.add("0 ft-FL 095: Uncontrolled Airspace");
+			extradetails.add("0 ft-FL 095: Uncontrolled Airspace");
+		}
+		
 	}
 
 	public int get_target() {

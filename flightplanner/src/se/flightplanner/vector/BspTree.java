@@ -103,8 +103,9 @@ public class BspTree implements Serializable {
 		if (b!=null)
 			b.items_whose_dominating_area_overlaps_impl(box,right,out);
 	}
+
 	
-	//finds the highest (closest to root) item in the 
+	//finds the lowest (furthest from root) item in the 
     //tree whose two belonging sub-boxes taken together
 	//completely cover the given box.
 	public Item find_item_dominating(BoundingBox box)

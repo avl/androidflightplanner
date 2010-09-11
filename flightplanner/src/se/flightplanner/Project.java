@@ -44,7 +44,12 @@ public class Project {
 		private static final long serialVersionUID = -790641290695521623L;
 		public double x;
 		public double y;
-		Merc(double px,double py)
+		public Merc(Vector v)
+		{
+			x=v.x;
+			y=v.y;
+		}
+		public Merc(double px,double py)
 		{
 			x=px;
 			y=py;
@@ -125,12 +130,13 @@ public class Project {
 		double dy=-Math.sin(rad);
 		return new Vector(dx,dy);
 	}
+	/*
 	public static Vector merc2merc(Vector p, int srczoom, int trgzoom) {
 		int delta=trgzoom-srczoom;
 		if (delta==0) return p;
 		float f=(float) Math.pow(2.0, delta);
 		return new Vector(p.getx()*f,p.gety()*f);
-	}
+	}*/
 	public static Merc merc2merc(Merc p, int srczoom, int trgzoom) {
 		int delta=trgzoom-srczoom;
 		if (delta==0) return p;

@@ -9,6 +9,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -59,6 +61,14 @@ public class Nav extends Activity implements LocationListener {
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
         	map.zoom(-1);
+    		return true;
+        }
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+        	map.zoom(1);
+    		return true;
+        }
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+       	 	map.zoom(-1);
     		return true;
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
@@ -211,6 +221,9 @@ public class Nav extends Activity implements LocationListener {
     	super.onCreate(savedInstanceState);
     	
     	final NavData data = (NavData) getLastNonConfigurationInstance();
+    	
+    	setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+    	
         if (data != null) {
         	tripdata=data.tripdata;
         	airspace=data.airspace;
@@ -224,7 +237,7 @@ public class Nav extends Activity implements LocationListener {
 	    	}
 	    	catch (Throwable e)
 	    	{
-	    		RookieHelper.showmsg(this, e.toString());
+	    		//RookieHelper.showmsg(this, e.toString());
 	    	}	    	
 	    	try
 	    	{
@@ -232,12 +245,14 @@ public class Nav extends Activity implements LocationListener {
 	    	}
 	    	catch (Throwable e)
 	    	{
-	    		RookieHelper.showmsg(this, e.toString());
+	    		RookieHelper.showmsg(this, "You have no airspace data. Select Menu->Download Map!");
+	    		//RookieHelper.showmsg(this, e.toString());
 	    	}
+	        lookup=new AirspaceLookup(airspace);
+
         }
     	
         map=new MovingMap(this);
-        lookup=new AirspaceLookup(airspace);
         map.update_airspace(airspace,lookup);
         map.update_tripdata(tripdata);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
@@ -246,6 +261,13 @@ public class Nav extends Activity implements LocationListener {
 		setContentView(map);
 		map.gps_update(null);
     }
+    
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+    	super.onConfigurationChanged(newConfig);
+    	map.invalidate();
+    }
+    
     
 	public void onLocationChanged(Location location) {
 		map.gps_update(location);

@@ -5,8 +5,8 @@ import java.io.Serializable;
 public class Vector implements Serializable {
 	
 	private static final long serialVersionUID = -299765696841273686L;
-	private double x; 
-	private double y;
+	public double x; //Public for performance (or does it not matter?)
+	public double y;
 	public Vector()
 	{
 		x=0;y=0;

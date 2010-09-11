@@ -32,7 +32,6 @@ import android.view.View;
 public class MovingMap extends View {
 	private TripData tripdata;
 	private TripState tripstate;
-	private Airspace airspace;
 	private AirspaceLookup lookup;
 	private Location mylocation;
 	private Location lastpos;
@@ -46,7 +45,7 @@ public class MovingMap extends View {
 	private Paint seltrippaint;
 	private Paint arrowpaint;
 	private Paint backgroundpaint;
-	private TimeZone utctz;
+	//private TimeZone utctz;
 	
 	@Override
 	public boolean onTouchEvent(MotionEvent ev)
@@ -74,8 +73,32 @@ public class MovingMap extends View {
 		}
 		else
 		{
+			if (lastpos!=null)
+			{
+				Transform tf = getTransform();
+				Merc m=tf.screen2merc(new Vector(x,y));
+				LatLon point=Project.merc2latlon(m,zoomlevel);
+				tripstate.showInfo(point,new LatLon(lastpos.getLatitude(),lastpos.getLongitude()));
+				invalidate();
+			}
 		}
 		return false;
+	}
+	private Transform getTransform() {
+		if (lastpos!=null)
+		{
+			Merc mypos=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),zoomlevel);
+			double hdg=0;
+			if (lastpos!=null && lastpos.hasBearing())
+			{
+				hdg=lastpos.getBearing();
+			}		
+			return new Transform(mypos,getArrow(),hdg,zoomlevel);
+		}
+		else
+		{
+			return new Transform(new Merc(128<<zoomlevel,128<<zoomlevel),getArrow(),0,zoomlevel);			
+		}
 	}
 	private boolean extrainfo;
 	private void hideextrainfo() {
@@ -91,7 +114,9 @@ public class MovingMap extends View {
 	{
 		super(context);
 		
-		utctz = TimeZone.getTimeZone("UTC");		 
+		
+		
+		//utctz = TimeZone.getTimeZone("UTC");		 
 		zoomlevel=9;
 		background=Color.BLACK;
 		foreground=Color.WHITE;
@@ -137,13 +162,14 @@ public class MovingMap extends View {
 		arrowpaint.setAntiAlias(true);
 		arrowpaint.setStyle(Style.FILL);
 		arrowpaint.setStrokeWidth(5);
-		arrowpaint.setColor(Color.BLUE);
+		arrowpaint.setColor(Color.WHITE);
 		arrowpaint.setStrokeCap(Paint.Cap.ROUND);
 		//textpaint.set
 		mylocation=null;
 		lastpos=null;
-		tripdata=null;		
+		tripdata=null;
 		
+
 		setKeepScreenOn(true);
 	}
 	
@@ -190,63 +216,95 @@ public class MovingMap extends View {
 		//canvas.drawText("TRIP", 10, 100, textpaint);
 	}
 	
-	
-	int hsizex; //x position of observer in screen coordinates
-	int hsizey; //y position of observer in screen coordinates
-	Merc mypos; //Position of user
-	double hdgrad; //heading of user, in radians
-	/// Convert from merc to screen coordinates with 
-	/// north up on map
-	private Vector merc2northscreen(Merc m,int zoomlevel)
+	class Transform
 	{
-		return new Vector(m.x-mypos.x+hsizex,-(m.y-mypos.y)+hsizey);
+		public Transform(
+				Merc mypos,
+				Vector arrow,
+				double hdg,
+				int zoomlevel)
+		{
+			this.mypos=mypos;
+			this.hsizex=arrow.x;
+			this.hsizey=arrow.y;
+			this.hdgrad=hdg*(Math.PI/180.0);
+			this.zoomlevel=zoomlevel;
+		}
+		double hsizex; //x position of observer in screen coordinates
+		double hsizey; //y position of observer in screen coordinates
+		Merc mypos; //Position of user
+		double hdgrad; //heading of user, in radians
+		int zoomlevel;
+		/// Convert from merc to screen coordinates with 
+		/// north up on map
+		public Vector merc2northscreen(Merc m)
+		{
+			return new Vector(m.x-mypos.x+hsizex,m.y-mypos.y+hsizey);
+		}
+		/// Convert from screen coordinates with 
+		/// north up on map to merc.
+		public Merc northscreen2merc(Vector n)
+		{
+			/*
+			s.x=m.x-mypos.x+hsizex
+			s.y=-m.y+mypos.y+hsizey
+			m.x=s.x+mypos.x-hsizex
+			m.y=mypos.y+hsizey-s.y
+			*/
+			return new Merc(n.getx()+mypos.x-hsizex,n.gety()+mypos.y-hsizey);
+		}
+		private Vector northscreen2screen(Vector n)
+		{
+			Vector c=new Vector(n.getx()-hsizex,n.gety()-hsizey);
+			Vector r=c.unrot(hdgrad);
+			return new Vector(r.getx()+hsizex,r.gety()+hsizey);
+		}
+		private Vector screen2northscreen(Vector s)
+		{
+			Vector c=new Vector(s.getx()-hsizex,s.gety()-hsizey);
+			Vector r=c.rot(hdgrad);
+			return new Vector(r.getx()+hsizex,r.gety()+hsizey);
+		}
+		public Merc screen2merc(Vector s)
+		{
+			return northscreen2merc(screen2northscreen(s));
+		}
+		public Vector merc2screen(Merc m)
+		{
+			return northscreen2screen(merc2northscreen(m));
+		}
 	}
-	/// Convert from screen coordinates with 
-	/// north up on map to merc.
-	private Merc northscreen2merc(Vector n,int zoomlevel)
+	private Vector getArrow()
 	{
-		/*
-		s.x=m.x-mypos.x+hsizex
-		s.y=-m.y+mypos.y+hsizey
-		m.x=s.x+mypos.x-hsizex
-		m.y=mypos.y+hsizey-s.y
-		*/
-		return new Merc(n.getx()+mypos.x-hsizex,mypos.y+hsizey-n.gety());
+		int xsize=this.getRight()-this.getLeft();
+		int ysize=this.getBottom()-this.getTop();
+		return new Vector(xsize/2,ysize/2+ysize/4);		
 	}
-	private Vector northscreen2screen(Vector n,int zoomlevel)
-	{
-		Vector c=new Vector(n.getx()-hsizex,n.gety()-hsizey);
-		Vector r=c.unrot(hdgrad);
-		return new Vector(r.getx()+hsizex,r.gety()+hsizey);
-	}
-	private Vector screen2northscreen(Vector s,int zoomlevel)
-	{
-		Vector c=new Vector(s.getx()-hsizex,s.gety()-hsizey);
-		Vector r=c.rot(hdgrad);
-		return new Vector(r.getx()+hsizex,r.gety()+hsizey);
-	}
-	
 	private void draw_actual_map(Canvas canvas, int sizex, int sizey) {
 		if (zoomlevel>13) throw new RuntimeException("zoomlevel must be <=13");
-		int zoomgap=13-zoomlevel;
-		Merc center=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),zoomlevel);
-		Merc center13=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),13);
-		int ox=sizex/2;
-		int oy=sizey/2;
-		hdgrad=0;
-		if (lastpos!=null && lastpos.hasBearing())
+		//int zoomgap=13-zoomlevel;
+		//Merc mypos=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),zoomlevel);
+		Merc mypos13=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),13);
+		Transform tf = getTransform();
+				
+		Vector arrow=getArrow();
+		Merc screen_center=tf.screen2merc(new Vector(sizex/2,sizey/2));
+		Merc screen_center13=Project.merc2merc(
+				screen_center,
+				zoomlevel,
+				13);		
+		double fivenm13=Project.approx_scale(mypos13.y,13,10);
+		double diagonal13;		
 		{
-			hdgrad=(-Math.PI/180.0)*lastpos.getBearing();
+			int zoomgap13=13-zoomlevel;
+			diagonal13=((1<<zoomgap13)*(Math.sqrt(arrow.x*arrow.x+arrow.y*arrow.y)+50))+1;
 		}
-		
-		double nm=Project.approx_scale(center13.y,13,5);
-		double diagonal13=((1<<zoomgap)*(Math.sqrt(ox*ox+oy*oy)+50))+1;
 		BoundingBox bb13=new BoundingBox(
-				center13.x,center13.y,
-				center13.x,center13.y).expand(diagonal13);
+				screen_center13.x,screen_center13.y,
+				screen_center13.x,screen_center13.y).expand(diagonal13);
 
-		BoundingBox smbb13=new BoundingBox(center13.x,center13.y,
-				center13.x,center13.y).expand(nm);
+		BoundingBox smbb13=new BoundingBox(mypos13.x,mypos13.y,
+				mypos13.x,mypos13.y).expand(fivenm13);
 				
 		//bb13=new BoundingBox(-1e20,-1e20,1e20,1e20);		
 		/*ShapeDrawable mDrawable = new ShapeDrawable(new OvalShape());
@@ -269,9 +327,8 @@ public class MovingMap extends View {
 				for(LatLon latlon : as.points)
 				{
 					Merc m=Project.latlon2merc(latlon,zoomlevel);
-					double px=rot_x(m.x-center.x,m.y-center.y)+ox;
-					double py=rot_y(m.x-center.x,m.y-center.y)+oy;
-					vs.add(new Vector(px,py));
+					Vector v=tf.merc2screen(m);
+					vs.add(v);
 				}
 				for(int i=0;i<vs.size();++i)
 				{
@@ -285,46 +342,51 @@ public class MovingMap extends View {
 		{
 			for(SigPoint sp : lookup.allOthers.findall(bb13))
 			{
-				double x=sp.pos.x/(1<<zoomgap);
-				double y=sp.pos.y/(1<<zoomgap);
-				//Log.i("fplan",String.format("sigp: %s: %f %f",sp.name,sp.pos.x,sp.pos.y));
-				double px=rot_x(x-center.x,y-center.y)+ox;
-				double py=rot_y(x-center.x,y-center.y)+oy;
+				//Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
+				Merc m=Project.latlon2merc(sp.latlon,zoomlevel);
+				//new Merc(sp.pos.x/(1<<zoomgap),
+				//		sp.pos.y/(1<<zoomgap));
+				Vector p=tf.merc2screen(m);
 				//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
 				//textpaint.setARGB(0, 255,255,255);
 				textpaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
-				canvas.drawText(sp.name, (float)(px), (float)(py), textpaint);			
+				canvas.drawText(sp.name, (float)(p.x), (float)(p.y), textpaint);			
 				linepaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
-				canvas.drawPoint((float)px,(float)py,linepaint);
+				canvas.drawPoint((float)p.x,(float)p.y,linepaint);
 			}
 	
 			for(SigPoint sp : lookup.allObst.findall(smbb13))
 			{
+				/*
 				double x=sp.pos.x/(1<<zoomgap);
 				double y=sp.pos.y/(1<<zoomgap);
 				//Log.i("fplan",String.format("sigp: %s: %f %f",sp.name,sp.pos.x,sp.pos.y));
 				double px=rot_x(x-center.x,y-center.y)+ox;
 				double py=rot_y(x-center.x,y-center.y)+oy;
+				*/
+				//Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
+				Merc m=Project.latlon2merc(sp.latlon,zoomlevel);
+				Vector p=tf.merc2screen(m);
+				
 				//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
 				//textpaint.setARGB(0, 255,255,255);
 				textpaint.setARGB(0xff, 0xff, 0xa0, 0xff);
-				canvas.drawText(String.format("%s %.0fft",sp.name,sp.alt), (float)(px), (float)(py), textpaint);			
+				canvas.drawText(String.format("%s %.0fft",sp.name,sp.alt), (float)(p.x), (float)(p.y), textpaint);			
 				linepaint.setARGB(0xff, 0xff, 0xa0, 0xff);
-				canvas.drawPoint((float)px,(float)py,linepaint);
+				canvas.drawPoint((float)p.x,(float)p.y,linepaint);
 			}
 			
 			for(SigPoint sp : lookup.allAirfields.findall(bb13))
 			{
-				double x=sp.pos.x/(1<<zoomgap);
-				double y=sp.pos.y/(1<<zoomgap);
-				//Log.i("fplan",String.format("sigp: %s: %f %f",sp.name,sp.pos.x,sp.pos.y));
-				double px=rot_x(x-center.x,y-center.y)+ox;
-				double py=rot_y(x-center.x,y-center.y)+oy;
-				//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
+				//Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
+				Merc m=Project.latlon2merc(sp.latlon,zoomlevel);
+				Vector p=tf.merc2screen(m);
+				//Log.i("fplan",String.format("airf: %s: %f %f",sp.name,p.x,p.y));
+				
 				textpaint.setColor(Color.GREEN);
-				canvas.drawText(sp.name, (float)(px), (float)(py), textpaint);
+				canvas.drawText(sp.name, (float)(p.x), (float)(p.y), textpaint);
 				linepaint.setColor(Color.GREEN);
-				canvas.drawPoint((float)px,(float)py,linepaint);
+				canvas.drawPoint((float)p.x,(float)p.y,linepaint);
 			}
 		}
 		
@@ -336,15 +398,14 @@ public class MovingMap extends View {
 				curwp=tripstate.get_target();
 			for(int i=0;i<tripdata.waypoints.size()-1;++i)
 			{
-				String part=tripdata.waypoints.get(i+1).legpart;
+				//String part=tripdata.waypoints.get(i+1).legpart;
 				if (i==0)
 				{
 					Waypoint wp1=tripdata.waypoints.get(i);
 					Merc m1=Project.latlon2merc(wp1.latlon,zoomlevel);
-					double x=m1.x-center.x;
-					double y=m1.y-center.y;
-					lines[4*i]=(float) rot_x(x,y)+ox;
-					lines[4*i+1]=(float) rot_y(x,y)+oy;
+					Vector p1=tf.merc2screen(m1);
+					lines[4*i]=(float) p1.x;
+					lines[4*i+1]=(float) p1.y;
 				}
 				else
 				{
@@ -353,10 +414,9 @@ public class MovingMap extends View {
 				}				
 				Waypoint wp2=tripdata.waypoints.get(i+1);
 				Merc m2=Project.latlon2merc(wp2.latlon,zoomlevel);
-				double x=m2.x-center.x;
-				double y=m2.y-center.y;
-				lines[4*i+2]=(float) rot_x(x,y)+ox;
-				lines[4*i+3]=(float) rot_y(x,y)+oy;
+				Vector p2=tf.merc2screen(m2);
+				lines[4*i+2]=(float) p2.x;
+				lines[4*i+3]=(float) p2.y;
 		
 			}
 			for(int i=0;i<tripdata.waypoints.size()-1;++i)
@@ -377,9 +437,10 @@ public class MovingMap extends View {
 				if (wp.lastsub==0)
 					continue; //Only draw actual waypoints, not climb- or descent-events. 
 				Merc m=Project.latlon2merc(wp.latlon,zoomlevel);
-				double px=rot_x(m.x-center.x,m.y-center.y)+ox;
-				double py=rot_y(m.x-center.x,m.y-center.y)+oy;
-				canvas.drawText(wp.name, (int)(px), (int)(py), textpaint);
+				Vector p=tf.merc2screen(m);
+				//double px=rot_x(m.x-center.x,m.y-center.y)+ox;
+				//double py=rot_y(m.x-center.x,m.y-center.y)+oy;
+				canvas.drawText(wp.name, (float)(p.x), (float)(p.y), textpaint);
 			}
 		}
 		if (tripstate!=null)
@@ -388,13 +449,14 @@ public class MovingMap extends View {
 			if (we!=null)
 			{
 				
-				Vector p=Project.merc2merc(we.getPoint(),13,zoomlevel);
-				if (p!=null)
+				Merc me=Project.merc2merc(new Merc(we.getPoint()),13,zoomlevel);
+				if (me!=null)
 				{
-					float px=(float)rot_x(p.getx()-center.x,p.gety()-center.y)+ox;
-					float py=(float)rot_y(p.getx()-center.x,p.gety()-center.y)+oy;
+					//float px=(float)rot_x(p.getx()-center.x,p.gety()-center.y)+ox;
+					//float py=(float)rot_y(p.getx()-center.x,p.gety()-center.y)+oy;
+					Vector p=tf.merc2screen(me);
 					thinlinepaint.setColor(Color.BLUE);
-					canvas.drawCircle(px,py,10.0f,thinlinepaint);
+					canvas.drawCircle((float)p.x,(float)p.y,10.0f,thinlinepaint);
 				}
 				
 				float tsy=textpaint.getTextSize()+2;
@@ -403,7 +465,7 @@ public class MovingMap extends View {
 				textpaint.setColor(Color.WHITE);
 				int when=we.getWhen();
 				String whenstr;
-				Log.i("fplan","When: "+when);
+				//Log.i("fplan","When: "+when);
 				whenstr=fmttime(when);
 				
 /*				
@@ -457,9 +519,9 @@ public class MovingMap extends View {
 		
 		
 		Path path=new Path();
-		path.moveTo(ox-5,oy);
-		path.lineTo(ox+5,oy);
-		path.lineTo(ox,oy-10);
+		path.moveTo((int)arrow.x-7,(int)arrow.y);
+		path.lineTo((int)arrow.x+7,(int)arrow.y);
+		path.lineTo((int)arrow.x,(int)arrow.y-12);
 		path.close();
 		canvas.drawPath(path,arrowpaint);
 	}
