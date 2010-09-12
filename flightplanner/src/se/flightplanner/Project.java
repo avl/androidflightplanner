@@ -176,6 +176,21 @@ public class Project {
 	{
 		return approx_scale(merc_coords.y,zoomlevel,length_in_nautical_miles);
 	}
+	
+	/**
+	 * Returns the number of pixels for each feet of elevation.
+	 */
+	static public float approx_ft_pixels(iMerc coords,int zoomlevel)
+	{
+	    double factor=Math.pow(2.0,zoomlevel);
+	    double lat=unmerc((128*factor-coords.y)/128.0/factor*merc(85.05113));
+	    double latrad=lat/(180.0/Math.PI);
+	    double scale_diff=Math.cos(latrad);
+	    
+	    double one_foot=256*factor/(360*60.0/6076.11549)/scale_diff;
+	    return (float)one_foot;
+	}
+	
 	static public double approx_scale(double merc_coords_y,int zoomlevel,double length_in_nautical_miles)
 	{	    
 	    double factor=(Math.pow(2.0,(zoomlevel)));

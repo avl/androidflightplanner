@@ -3,6 +3,7 @@ package se.flightplanner.map3d;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import se.flightplanner.Project;
 import se.flightplanner.Project.iMerc;
 
 public class Playfield {
@@ -37,17 +38,24 @@ public class Playfield {
 						Thing t=new Thing(m,boxsize,null,i,vstore);
 						lh.put(m,t);
 					}
-										
 				}
 			}
 			levels.add(lh);
 		}
 	}
-	public void calculate_lods()
+	public void calculate_lods(iMerc observer,short observerElev)
 	{
 		for(int i=coarsestlevel;i<=finestlevel;++i)
 		{
-			
+			HashMap<iMerc,Thing> lh=levels.get(i);
+			for(Thing t:lh.values())
+			{
+				iMerc tpos=t.getPos();				
+				int ypixels=Project.approx_ft_pixels(tpos,13)*t.bumpiness_ft();
+				//90 deg FOV
+				int pixels=
+				
+			}
 		}
 	}
 	

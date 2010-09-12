@@ -71,4 +71,7 @@ public class Vertex {
 		// TODO Auto-generated method stub
 		return bufptr;
 	}
+	public boolean hasElev() {
+		return this.hiElev!=-32768;
+	}
 }

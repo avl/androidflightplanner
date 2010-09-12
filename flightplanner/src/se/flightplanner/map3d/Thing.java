@@ -19,14 +19,38 @@ public class Thing {
 	private int zoomlevel;
 	private int size; //of box's side, in merc units
 	private iMerc pos;
-	private boolean subsumed; //if the current thing has been replaced by smaller things
 	private Thing parent;
 	private ArrayList<Vertex> base_vertices; //lower-left,lower-right,upper-right, upper left
-	private Vertex center; //only used if there are edge-vertices
+	private Vertex center; //Always present, used to judge bumpiness
 	private ArrayList<HashMap<Vertex,Counter>> edges;
-	private boolean need_retriangulation; //set whenever edge vertices are added.
 	private ArrayList<Triangle> triangles;
+	private boolean subsumed; //if the current thing has been replaced by smaller things
+	private boolean need_retriangulation; //set whenever edge vertices are added.
+	private boolean known_ready;//ready when all vertices have received their elevation
+	private boolean deployed; //set to true when a thing becomes visible. Implies that parent->subsumed is true. 
+
+	public float bumpiness() {
+		
+		
+		return 0;
+	}
 	
+	
+	public boolean checkReady()
+	{
+		if (known_ready)
+			return true;
+		for(Vertex v:base_vertices)
+		{
+			if (!v.hasElev())
+				return false;
+		}
+		return true;
+	}
+	iMerc getPos()
+	{
+		return pos;
+	}
 	public Thing(iMerc pos,int size,Thing parent,int zoomlevel,VertexStore vstore)
 	{
 		this.pos=pos;
