@@ -62,6 +62,51 @@ public class Project {
 			os.writeFloat((float)y);
 		}
 	}
+	static public class iMerc
+	{
+		public int x;
+		public int y;
+		public iMerc(Vector v)
+		{
+			x=(int)v.x;
+			y=(int)v.y;
+			
+		}
+		public iMerc(iMerc p)
+		{
+			x=p.x;
+			y=p.y;
+			
+		}
+		@Override
+		public int hashCode()
+		{
+			return x+y*1013;
+		}
+		@Override
+		public boolean equals(Object oo)
+		{
+			iMerc m=(iMerc)oo;
+			return this.x==m.x && this.y==m.y;
+		}
+		public iMerc(double px,double py)
+		{
+			x=(int)px;
+			y=(int)py;
+		}
+		public iMerc(int px,int py)
+		{
+			x=(int)px;
+			y=(int)py;
+		}
+		public static iMerc deserialize(DataInputStream is) throws IOException {
+			return new iMerc(is.readInt(),is.readInt());
+		}
+		public void serialize(DataOutputStream os) throws IOException {
+			os.writeInt(x);
+			os.writeInt(y);
+		}
+	}
 
 	static public Merc latlon2merc(double lat,double lon,int zoomlevel)
 	{
@@ -69,6 +114,13 @@ public class Project {
 	    return new Merc(
 	    		(factor*256.0*(lon+180.0)/360.0),
 	    		(128*factor-128*factor*merc(lat)/merc(85.05113)));		
+	}
+	static public iMerc latlon2imerc(double lat,double lon,int zoomlevel)
+	{
+	    double factor=Math.pow(2.0,zoomlevel);
+	    return new iMerc(
+	    		(int)((factor*256.0*(lon+180.0)/360.0)),
+	    		(int)((128*factor-128*factor*merc(lat)/merc(85.05113))));		
 	}
 	static public Vector latlon2mercvec(double lat,double lon,int zoomlevel)
 	{
@@ -84,6 +136,13 @@ public class Project {
 		double lon=latlon.lon;
 		return latlon2merc(lat,lon,zoomlevel);
 	}
+	static public iMerc latlon2imerc(LatLon latlon,int zoomlevel)
+	{
+		double lat=latlon.lat;
+		double lon=latlon.lon;
+		return latlon2imerc(lat,lon,zoomlevel);
+	}
+	
 	static public Vector latlon2mercvec(LatLon latlon,int zoomlevel)
 	{
 		double lat=latlon.lat;
@@ -91,6 +150,15 @@ public class Project {
 		return latlon2mercvec(lat,lon,zoomlevel);
 	}
 	static public LatLon merc2latlon(Merc merc,int zoomlevel)
+	{
+		double x=merc.x;
+		double y=merc.y;
+		double factor=Math.pow(2.0,zoomlevel);
+	    return new LatLon(
+	    		unmerc((128*factor-y)/128.0/factor*merc(85.05113)),
+	    		x*360.0/(256.0*factor)-180.0);
+	}
+	static public LatLon imerc2latlon(iMerc merc,int zoomlevel)
 	{
 		double x=merc.x;
 		double y=merc.y;
