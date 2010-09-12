@@ -31,7 +31,6 @@ public class Thing {
 
 	public float bumpiness() {
 		
-		
 		return 0;
 	}
 	

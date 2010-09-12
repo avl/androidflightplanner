@@ -7,6 +7,7 @@ import se.flightplanner.Project;
 import se.flightplanner.Project.iMerc;
 
 public class Playfield {
+	/*
 	final static int coarsestlevel=5;
 	final static int finestlevel=13;
 
@@ -58,5 +59,5 @@ public class Playfield {
 			}
 		}
 	}
-	
+*/	
 }
