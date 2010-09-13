@@ -54,9 +54,7 @@ public class Thing {
 		{
 			for(int curx=pos.x;curx<pos.x+2*size;curx+=size)
 			{
-				Thing child=new Thing(new iMerc(curx,cury),this,zoomlevel+1,vstore,estore);
-				for(Vertex basev:child.getBaseVertices())
-					stitcher.stitch(basev,child.getZoomLevel());
+				Thing child=new Thing(new iMerc(curx,cury),this,zoomlevel+1,vstore,estore,stitcher);
 				children.add(child);
 				newThings.add(child);
 			}
@@ -70,6 +68,9 @@ public class Thing {
 	}
 	public void unsubsume()
 	{
+		if (children==null)
+			return; //already unsubsumed
+		//Start showing again.
 		//Note that if the mid-edge-vertices aren't usage=1, that
 		//means that someone else is still using them, and the unsubsumed parent Thing
 		//must stitch them.
@@ -80,8 +81,9 @@ public class Thing {
 		}
 		for(Vertex v : needStitching)
 		{
-			shareVertex(v);
+			shareVertex(v,false);
 		}
+		children=null;
 		
 	}
 	
@@ -106,7 +108,7 @@ public class Thing {
 	{
 		return pos;
 	}
-	public Thing(iMerc pos,Thing parent,int zoomlevel,VertexStore vstore,ElevationStore elevStore)
+	public Thing(iMerc pos,Thing parent,int zoomlevel,VertexStore vstore,ElevationStore elevStore, Stitcher stitcher)
 	{
 		int zoomgap=13-zoomlevel;
 		this.size=256<<zoomgap;
@@ -129,6 +131,7 @@ public class Thing {
 			}
 			Vertex v=vstore.obtain(p,(byte)zoomlevel);
 			base_vertices.add(v);
+			stitcher.stitch(v,zoomlevel,true);
 		}
 	}
 	
@@ -153,43 +156,80 @@ public class Thing {
 	}
 	
 	/**
-	 * Vertex ownership (refcount) is increased 
-	 * if the vertex is used. However, if it is
-	 * one of the Thing's base (corner) vertices, nothing is done.
-	 * Note that this is *ONLY* called during *ONE UNIQUE* occasion:
-	 *  - when a new subthing is created which shares an edge with this Thing.
-	 *    This happens:
-	 *    * When this thing creates subthings.
-	 *    * When neighbors of this thing create subthings
-	 * The corner-vertices of a Thing are thus shared by:
-	 *  - Its parent.
-	 *  - Any things larger than itself, which share an edge.
+	 * The following events may happen for a vertex:
+	 * 
+	 * - First corner usage
+	 *   * Simple - VertexStore detects
+	 * - Subsequent corner usage
+	 *   * Also handled by vertex store
+	 * - Subsequent corner disuse
+	 *   * VertexStore decreases refcount
+	 * - Final disuse (destroy vertex)
+	 *   * VertexStore decreases refcount to 0.
+	 *     - Now must hunt all shared references
+	 *       - Find adjacent edges on all zoomlevels above.
+	 *       - There can be only one adjacent edge needing stitching, per vertex (one out of two possible for each vertex).
+	 *       - In practice at most two corner-vertices will need stitching? (don't use this fact)
 	 *  
-	 * These invariants must be maintained when:
-	 *  - Creating/releasing Things
-	 *  - Subsuming/unsubsuming things.
+	 * - oncreate sharing to adjacent edge
+	 *   * Must hunt all shared edges
+	 *     - simply add vertex to every shared edge
+	 *   
+	 * - stop sharing because of subsumed adjacent edge
+	 *   * whenever subsuming thing:
+	 *     - Remove all stitch-vertices for Thing. (easy) 
+	 * 
+	 * - start sharing because of unsubsumed thing
+	 *   * Most difficult. Could be a huge number of adjacent edges,
+	 *     in principle. Algorithm:
+	 *     - Each vertex that is to start being shared *must* be either:
+	 *       a) Already shared to one of the children of the unsubsuming thing
+	 *       b) One of the corners of the unsubsuming thing's children.
+	 *     Simply try to share all surviving vertices of all the children. Those
+	 *     who aren't on the edge won't be added as shared.
 	 *  
-	 * Note that vertexes are not refcounted. Vertices are _always_ owned by the
-	 * largest thing which has them as a corner. When the owner goes away,
-	 * the vertex is always tossed. 
+	 * - ondestroy stop sharing
+	 *   * Destroyed exactly when last thing which has vertex as corner is destroyed.
+	 *     - *MUST* find all sharings.
+	 *       * Hunt all shared edges
+	 *         - Purge vertex from each such edge.
+	 * 
+	 * 
 	 */
-	public void shareVertex(Vertex v)
+	public void shareVertex(Vertex v, boolean unshare)
 	{
 		if (isCorner(v))
 			return; //vertex is one of the base(=corner) vertices, 			
 		int side = getSide(v);
-		
+		if (side==-1)
+			return;
 		HashMap<Vertex,Counter> hm=edges.get(side);
 		Counter c=hm.get(v);
 		if (c==null)
 		{
+			if (unshare)
+			{
+				//trying to unshare a vertex we don't even own.
+				return;
+			}
 			need_retriangulation=true;
 			c=new Counter(1);
 			hm.put(v, c);
 		}
 		else
 		{
-			c.cnt+=1;
+			if (unshare)
+			{
+				c.cnt-=1;
+				if (c.cnt<=0)
+				{
+					hm.remove(v);
+				}
+			}
+			else
+			{
+				c.cnt+=1;
+			}
 		}
 	}
 	public void delVertex(Vertex v)
@@ -197,6 +237,8 @@ public class Thing {
 		if (isCorner(v))
 			return; //none of the children of a Thing shares its corner, and the parent is _always_ more longer lived, so a delVertex is never for a corner.  			
 		int side=getSide(v);
+		if (side==-1) //not possibly part of Thing, since it isn't on things edge.
+			return;
 		assert side>=0 && side<4;
 		HashMap<Vertex,Counter> hm=edges.get(side);
 		Counter c=hm.get(v);
@@ -224,6 +266,9 @@ public class Thing {
 		return isbase;
 	}
 
+	/**
+	 * Return -1 if vertex isn't along any edge for Thing
+	 */
 	private int getSide(Vertex v) {
 		int side=-1;
 		assert(v.getx()>=pos.x && v.getx()<pos.x+size && v.gety()>=pos.y && v.gety()<pos.y+size);
@@ -231,7 +276,7 @@ public class Thing {
 		if (v.getx()==pos.x+size) side=1;
 		if (v.gety()==pos.y) side=2;
 		if (v.gety()==pos.y+size) side=0;
-		assert side>=0 && side<4;
+		assert (side>=0 && side<4) || (side==-1);
 		return side;
 	}
 

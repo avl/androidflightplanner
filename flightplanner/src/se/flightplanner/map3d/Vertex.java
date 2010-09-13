@@ -19,7 +19,26 @@ public class Vertex {
 	
 	private short bufptr; //pointer to vertex buf for this vertex.
 	
-	byte owninglevel;
+	private short usage; //number of Things using this as corner vertex. When this goes to 0, vertex disappears (and *must* be purged from all stitches!)
+	
+	private byte owninglevel;
+	
+	public void incrementUsage()
+	{
+		usage+=1;
+	}
+	public boolean decrementUsage()
+	{
+		usage-=1;
+		if (usage<=0)
+		{
+			mercx=-1;
+			mercy=-1;
+			owninglevel=-1;
+			return true;
+		}
+		return false;
+	}
 	
 	///Level of the Thing which would own a vertex at this level
 	public int owningLevel()
@@ -35,6 +54,7 @@ public class Vertex {
 	/** Must only be called by VertexStore! */
 	public void deploy(int mercx,int mercy,byte owninglevel)
 	{
+		this.usage=1;
 		this.mercx=mercx;
 		this.mercy=mercy;
 		this.owninglevel=owninglevel;

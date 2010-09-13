@@ -165,9 +165,17 @@ public class Nav extends Activity implements LocationListener {
 	    	}
 		}
 	}
+	@Override 
+	protected void onResume()
+	{
+		super.onResume();
+		if (locman!=null)
+			locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,5, this);
+	}
 	public boolean onOptionsItemSelected(MenuItem item) {
 	    switch (item.getItemId()) {
 	    case MENU_FINISH:
+	    	locman.removeUpdates(this);
 	    	finish();
 	    	break;
 	    case MENU_LOGIN:
@@ -261,7 +269,7 @@ public class Nav extends Activity implements LocationListener {
         map.update_airspace(airspace,lookup);
         map.update_tripdata(tripdata);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
-		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 50,1, this);
+		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,5, this);
         
 		setContentView(map);
 		map.gps_update(null);
@@ -277,7 +285,7 @@ public class Nav extends Activity implements LocationListener {
 	public void onLocationChanged(Location location) {
 		map.gps_update(location);
 		//RookieHelper.showmsg(this, ""+location.getLatitude()+","+location.getLongitude());
-		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0,0, this);
+		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,5, this);
 	}
 	public void onProviderDisabled(String provider) {
 		map.gps_disabled();

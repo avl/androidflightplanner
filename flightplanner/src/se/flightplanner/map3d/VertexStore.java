@@ -16,17 +16,27 @@ public class VertexStore {
 	private LinkedList<Vertex> free;
 	private HashMap<iMerc,Vertex> used;
 	
-	public void decomission(Vertex v)
+	///If this returns true,
+	///then the vertex was actually "destroyed"
+	///and MUST be removed from all stitches before
+	///next frame!
+	public boolean decrement(Vertex v)
 	{
-		short ptr=v.getPointer();
-		used.remove(v.getimerc());
-		free.add(new Vertex(ptr));
+		if (v.decrementUsage())
+		{
+			short ptr=v.getPointer();
+			used.remove(v.getimerc());
+			free.add(new Vertex(ptr));
+			return true;
+		}
+		return false;
 	}
 	public Vertex obtain(iMerc p,byte zoomlevel)
 	{
 		Vertex already=used.get(p);
 		if (already!=null) 
 		{
+			already.incrementUsage();
 			return already;
 		}
 		if (free.isEmpty()) throw new RuntimeException("No more vertices available!");

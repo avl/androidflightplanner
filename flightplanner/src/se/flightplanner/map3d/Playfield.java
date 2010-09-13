@@ -38,7 +38,7 @@ public class Playfield implements Stitcher {
 					for(;x<lowerright.x;x+=boxsize)
 					{
 						iMerc m=new iMerc(x,y);
-						Thing t=new Thing(m,null,i,vstore,estore);
+						Thing t=new Thing(m,null,i,vstore,estore,this);
 						lh.put(m,t);
 					}
 				}
@@ -75,39 +75,54 @@ public class Playfield implements Stitcher {
 		}
 	}
 
-	public void stitch(Vertex v,int level) {
+	public void stitch(Vertex v,int level,boolean unstitch) {
 		level-=1;
 		int zoomgap=13-level;
 		int boxsize=256<<zoomgap;
-		while(level>=coarsestlevel)
+		boolean unshare=unstitch;
+		for(;level>=coarsestlevel;--level)
 		{
-			HashMap<iMerc,Thing> lh=levels.get(level);
 			boolean goody=(v.gety()&(boxsize-1))!=0;
+			boolean goodx=(v.getx()&(boxsize-1))!=0;
+			if (goodx && goody)
+				continue; //Corner vertex - won't need stitching. Coarser levels might, though...
+			HashMap<iMerc,Thing> lh=levels.get(level);
+			//subsumed things never have *any* stitches.
+			boolean unsubsumed=false;
 			if (goody)
 			{
 				//Vertex may fit in horizontal edge of some box
 				int x=v.getx()&(~(boxsize-1));
 				Thing t=lh.get(new iMerc(x,v.gety())); //bottom edge
+				if (!t.isSubsumed())
+					unsubsumed=true;
 				if (t!=null)
-					t.shareVertex(v);
+					t.shareVertex(v,unshare);
 				t=lh.get(new iMerc(x,v.gety()+boxsize)); //top edge
+				if (!t.isSubsumed())
+					unsubsumed=true;
 				if (t!=null)
-					t.shareVertex(v);				
+					t.shareVertex(v,unshare);				
 			}
-			boolean goodx=(v.getx()&(boxsize-1))!=0;
 			if (goodx)
 			{
 				//Vertex may fit in horizontal edge of some box
 				int y=v.gety()&(~(boxsize-1));
 				Thing t=lh.get(new iMerc(v.getx(),y)); //left edge
+				if (!t.isSubsumed())
+					unsubsumed=true;
 				if (t!=null)
-					t.shareVertex(v);
+					t.shareVertex(v,unshare);
 				t=lh.get(new iMerc(v.getx()+boxsize,y)); //right edge
+				if (!t.isSubsumed())
+					unsubsumed=true;
 				if (t!=null)
-					t.shareVertex(v);				
+					t.shareVertex(v,unshare);				
 			}
-			
-			level-=1;
+			if (unsubsumed==false)
+				break; //all subsumed
+			if (!goodx && !goody)
+				break; //even coarser levels won't match if finer levels don't.
 		}
 		
 	}
