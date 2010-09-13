@@ -35,6 +35,7 @@ public class Nav extends Activity implements LocationListener {
 	final static int SETUP_INFO=1;
 	final static int SETTINGS_DIALOG=2;
 	final static int MENU_DOWNLOAD_AIRSPACE=3;
+	final static int MENU_FINISH=4;
 	private LocationManager locman;
 	
 	static class NavData
@@ -84,6 +85,7 @@ public class Nav extends Activity implements LocationListener {
 	public boolean onCreateOptionsMenu(Menu menu) {
 	    menu.add(0, MENU_LOGIN, 0, "Load Trip");
 	    menu.add(0, MENU_DOWNLOAD_AIRSPACE, 0, "Download Map");
+	    menu.add(0, MENU_FINISH, 0, "Exit");
 	    return true;
 	}
 	@Override
@@ -165,6 +167,9 @@ public class Nav extends Activity implements LocationListener {
 	}
 	public boolean onOptionsItemSelected(MenuItem item) {
 	    switch (item.getItemId()) {
+	    case MENU_FINISH:
+	    	finish();
+	    	break;
 	    case MENU_LOGIN:
 
 	    	Intent intent = new Intent(this, SetupInfo.class);

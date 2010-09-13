@@ -1,5 +1,5 @@
 package se.flightplanner.map3d;
-
+/*
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -51,7 +51,7 @@ public class ElevationReader {
 			if (!i.hasNext())
 				break;
 			Vertex v1=i.next();
-			ElevTile et=elevStore.get(v1.getimerc());
+			ElevTile et=elevStore.getTile(v1.getimerc());
 			for(Vertex v2:order)
 			{
 				Elev e=et.get(v2.getimerc());
@@ -104,3 +104,4 @@ public class ElevationReader {
 	
 	
 }
+*/

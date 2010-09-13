@@ -90,7 +90,12 @@ public class ElevationStore {
 		for(ElevTile t : alltiles)
 			t.serialize(data);
 	}
-	public ElevTile get(iMerc pos)
+	public Elev get(iMerc pos,int level)
+	{
+		ElevTile et=getTile(pos,level);
+		return et.get(pos);
+	}
+	public ElevTile getTile(iMerc pos,int level)
 	{
 		BoundingBox box=new BoundingBox(pos.x,pos.y,pos.x+1,pos.y+1);
 		ElevTile besttile=null;
@@ -101,7 +106,7 @@ public class ElevationStore {
 			if (tile.m1.x>pos.x || tile.m1.y>pos.y ||
 			    tile.m2.x<=pos.x || tile.m2.y<=pos.y)
 				continue; //doesn't contain the asked for merc.
-			if (tile.zoomlevel>bestzoom || besttile==null)
+			if (Math.abs(tile.zoomlevel-bestzoom)<bestzoom || besttile==null)
 			{
 				besttile=tile;
 				bestzoom=tile.zoomlevel;

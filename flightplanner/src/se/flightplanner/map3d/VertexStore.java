@@ -15,37 +15,27 @@ public class VertexStore {
 	private FloatBuffer buf;
 	private LinkedList<Vertex> free;
 	private HashMap<iMerc,Vertex> used;
-	private ElevationReader elevReader;
 	
 	public void decomission(Vertex v)
 	{
 		short ptr=v.getPointer();
-		if (v.decrease())
-		{
-			used.remove(v.getimerc());
-			free.add(
-				new Vertex(
-						0,0,(short)0,ptr
-						));
-		}
+		used.remove(v.getimerc());
+		free.add(new Vertex(ptr));
 	}
-	public Vertex obtain(iMerc p)
+	public Vertex obtain(iMerc p,byte zoomlevel)
 	{
 		Vertex already=used.get(p);
 		if (already!=null) 
 		{
-			already.increase();
 			return already;
 		}
 		if (free.isEmpty()) throw new RuntimeException("No more vertices available!");
 		Vertex shiny=free.poll();
-		shiny.deploy(p.x,p.y);
-		elevReader.queue(shiny);
+		shiny.deploy(p.x,p.y,zoomlevel);
 		return shiny;
 	}
-	public VertexStore(int capacity,ElevationReader elevReader)
+	public VertexStore(int capacity)
 	{
-		this.elevReader=elevReader;
 		if (capacity<=0 || capacity>32000)
 			throw new RuntimeException("Invalid capacity for VertexStore:"+capacity);
 		free=new LinkedList<Vertex>();
@@ -54,10 +44,7 @@ public class VertexStore {
 		buf=bytebuf.asFloatBuffer();
 		for(short i=0;i<capacity;++i)
 		{
-			free.add(
-					new Vertex(
-							0,0,(short)0,i
-							));
+			free.add(new Vertex(i));
 		}		
 	}		
 }
