@@ -72,6 +72,10 @@ public class Project {
 			y=(int)v.y;
 			
 		}
+		public String toString()
+		{
+			return "iMerc("+x+","+y+")";
+		}
 		public iMerc(iMerc p)
 		{
 			x=p.x;
@@ -105,6 +109,9 @@ public class Project {
 		public void serialize(DataOutputStream os) throws IOException {
 			os.writeInt(x);
 			os.writeInt(y);
+		}
+		public iMerc copy() {
+			return new iMerc(x,y);
 		}
 	}
 
@@ -187,7 +194,7 @@ public class Project {
 	    double latrad=lat/(180.0/Math.PI);
 	    double scale_diff=Math.cos(latrad);
 	    
-	    double one_foot=256*factor/(360*60.0/6076.11549)/scale_diff;
+	    double one_foot=((256*factor/(360*60.0))/6076.11549)/scale_diff;
 	    return (float)one_foot;
 	}
 	
@@ -225,6 +232,14 @@ public class Project {
 		if (delta==0) return p;
 		float f=(float) Math.pow(2.0, delta);
 		return new Merc(p.x*f,p.y*f);
+	}
+	public static iMerc imerc2imerc(iMerc p, int srczoom, int trgzoom) {
+		int delta=trgzoom-srczoom;
+		if (delta==0) return p;
+		if (delta>0)
+			return new iMerc(p.x<<delta,p.y<<delta);
+		else
+			return new iMerc(p.x>>(-delta),p.y>>(-delta));
 	}
 
 }

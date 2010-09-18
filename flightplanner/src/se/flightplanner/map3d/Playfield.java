@@ -14,71 +14,93 @@ public class Playfield implements Stitcher {
 	VertexStore vstore;
 	TriangleStore tristore;
 	LodCalc lodCalc;
-	private ArrayList<HashMap<iMerc,Thing>> levels;
-	public Playfield(iMerc upperleft,iMerc lowerright,VertexStore vstore,TriangleStore tristore,LodCalc lodCalc,ElevationStore estore)
+	ThingFactory thingf;
+	private ArrayList<HashMap<iMerc,ThingIf>> levels;
+	public Playfield(iMerc upperleft,iMerc lowerright,VertexStore vstore,TriangleStore tristore,LodCalc lodCalc,ElevationStore estore,
+			ThingFactory thingf)
 	{
+		this.thingf=thingf;
 		this.lodCalc=lodCalc;
 		this.vstore=vstore;
 		this.tristore=tristore;
-		levels=new ArrayList<HashMap<iMerc,Thing>>();
+		levels=new ArrayList<HashMap<iMerc,ThingIf>>();
 		for(int i=0;i<coarsestlevel;++i)
 			levels.add(null);
+		int cnt=0;
 		for(int i=coarsestlevel;i<=finestlevel;++i)
 		{
-			HashMap<iMerc,Thing> lh=new HashMap<iMerc,Thing>();
+			HashMap<iMerc,ThingIf> lh=new HashMap<iMerc,ThingIf>();
 			if (i==coarsestlevel)
 			{
 				int zoomgap=13-i;
-				int boxsize=256<<zoomgap;
-				
+				int boxsize=64<<zoomgap;
+				int boxmask=boxsize-1;
 				int y=upperleft.y;
+				y&=~(boxmask);
 				for(;y<lowerright.y;y+=boxsize)
 				{
 					int x=upperleft.x;
+					x&=~(boxmask);
 					for(;x<lowerright.x;x+=boxsize)
 					{
 						iMerc m=new iMerc(x,y);
-						Thing t=new Thing(m,null,i,vstore,estore,this);
+						
+						ThingIf t = thingf.createThing(vstore, estore, i, m,this);
+						
 						lh.put(m,t);
+						cnt+=1;
 					}
 				}
 			}
 			levels.add(lh);
 		}
 	}
-	public void calculate_lods(iMerc observer,short observerElev,VertexStore vstore,ElevationStore estore)
+	public void changeLods(iMerc observer,short observerElev,VertexStore vstore,ElevationStore estore)
 	{
-		ArrayList<Thing> newThings=new ArrayList<Thing>();
+		ArrayList<ThingIf> newThings=new ArrayList<ThingIf>();
 		for(int i=coarsestlevel;i<=finestlevel;++i)
 		{
-			HashMap<iMerc,Thing> lh=levels.get(i);
-			for(Thing t:lh.values())
+			HashMap<iMerc,ThingIf> lh=levels.get(i);
+			for(ThingIf t:lh.values())
 			{
-				iMerc tpos=t.getPos();				
+				///iMerc tpos=t.getPos();				
 				float bumpiness=t.bumpiness();
-				float refine=lodCalc.needRefining(bumpiness, t.getDistance(observer,observerElev));
+				float dist=t.getDistance(observer,observerElev);
+				float refine=lodCalc.needRefining(bumpiness, dist);
 				if (refine<0)
 				{
 					if (t.isSubsumed())
-						t.unsubsume();
+					{						
+						t.unsubsume(vstore,this);
+					}
 					continue;
 				}
 				else
 				{
 					if (!t.isSubsumed())
+					{
 						t.subsume(newThings,vstore,this,estore);
+					}
 					continue;
 				}
 				//90 deg FOV
 				
 			}
 		}
+		for(ThingIf t:newThings)
+		{
+			int zl=t.getZoomlevel();
+			if (zl<coarsestlevel) throw new RuntimeException("Bad level for newly created Thing");
+			HashMap<iMerc,ThingIf> lh=levels.get(zl);
+			lh.put(t.getPos(),t);
+		}
+		
 	}
 
 	public void stitch(Vertex v,int level,boolean unstitch) {
 		level-=1;
 		int zoomgap=13-level;
-		int boxsize=256<<zoomgap;
+		int boxsize=64<<zoomgap;
 		boolean unshare=unstitch;
 		for(;level>=coarsestlevel;--level)
 		{
@@ -86,41 +108,30 @@ public class Playfield implements Stitcher {
 			boolean goodx=(v.getx()&(boxsize-1))!=0;
 			if (goodx && goody)
 				continue; //Corner vertex - won't need stitching. Coarser levels might, though...
-			HashMap<iMerc,Thing> lh=levels.get(level);
-			//subsumed things never have *any* stitches.
-			boolean unsubsumed=false;
+			HashMap<iMerc,ThingIf> lh=levels.get(level);
 			if (goody)
 			{
 				//Vertex may fit in horizontal edge of some box
 				int x=v.getx()&(~(boxsize-1));
-				Thing t=lh.get(new iMerc(x,v.gety())); //bottom edge
-				if (!t.isSubsumed())
-					unsubsumed=true;
+				ThingIf t=lh.get(new iMerc(x,v.gety())); //bottom edge
 				if (t!=null)
-					t.shareVertex(v,unshare);
+					t.shareVertex(vstore,v,!unshare);
 				t=lh.get(new iMerc(x,v.gety()+boxsize)); //top edge
-				if (!t.isSubsumed())
-					unsubsumed=true;
 				if (t!=null)
-					t.shareVertex(v,unshare);				
+					t.shareVertex(vstore,v,!unshare);				
 			}
 			if (goodx)
 			{
 				//Vertex may fit in horizontal edge of some box
 				int y=v.gety()&(~(boxsize-1));
-				Thing t=lh.get(new iMerc(v.getx(),y)); //left edge
-				if (!t.isSubsumed())
-					unsubsumed=true;
+				ThingIf t=lh.get(new iMerc(v.getx(),y)); //left edge
 				if (t!=null)
-					t.shareVertex(v,unshare);
+					t.shareVertex(vstore,v,!unshare);
 				t=lh.get(new iMerc(v.getx()+boxsize,y)); //right edge
-				if (!t.isSubsumed())
-					unsubsumed=true;
 				if (t!=null)
-					t.shareVertex(v,unshare);				
+					t.shareVertex(vstore,v,!unshare);				
 			}
-			if (unsubsumed==false)
-				break; //all subsumed
+			//Future optimization: If we know we've found all neighbors, we don't need to go further up in hierarchy.
 			if (!goodx && !goody)
 				break; //even coarser levels won't match if finer levels don't.
 		}

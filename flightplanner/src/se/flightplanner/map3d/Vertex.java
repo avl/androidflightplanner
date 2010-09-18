@@ -21,8 +21,11 @@ public class Vertex {
 	
 	private short usage; //number of Things using this as corner vertex. When this goes to 0, vertex disappears (and *must* be purged from all stitches!)
 	
-	private byte owninglevel;
-	
+	private byte owninglevel; //Level on which the Things which own this vertex are (have it as corners)
+	public String toString()
+	{
+		return "Vertex("+mercx+","+mercy+")";
+	}
 	public void incrementUsage()
 	{
 		usage+=1;
@@ -32,9 +35,9 @@ public class Vertex {
 		usage-=1;
 		if (usage<=0)
 		{
-			mercx=-1;
-			mercy=-1;
-			owninglevel=-1;
+			//mercx=-1;
+			//mercy=-1;
+			//owninglevel=-1;
 			return true;
 		}
 		return false;
@@ -69,6 +72,7 @@ public class Vertex {
 		this.mercx=-1;
 		this.mercy=-1;
 		this.bufptr=bufptr;
+		this.usage=-1;
 	}
 	public short getIndex() {
 		return bufptr;
@@ -79,5 +83,13 @@ public class Vertex {
 	public short getPointer() {
 		// TODO Auto-generated method stub
 		return bufptr;
+	}
+	public boolean valid()
+	{
+		return usage>0;
+	}
+	public int dbgUsage() {
+		
+		return usage;
 	}
 }

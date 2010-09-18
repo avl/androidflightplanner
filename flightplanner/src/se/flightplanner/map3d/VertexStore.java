@@ -16,6 +16,15 @@ public class VertexStore {
 	private LinkedList<Vertex> free;
 	private HashMap<iMerc,Vertex> used;
 	
+	public HashMap<Short,Vertex> dbgGetVertices(){
+		HashMap<Short,Vertex> h=new HashMap<Short,Vertex>();
+		for(Vertex v:used.values())
+		{
+			h.put(new Short(v.getPointer()), v);
+		}
+		return h;
+	}
+	
 	///If this returns true,
 	///then the vertex was actually "destroyed"
 	///and MUST be removed from all stitches before
@@ -31,6 +40,12 @@ public class VertexStore {
 		}
 		return false;
 	}
+	/**
+	 * 
+	 * @param p Position of vertex
+	 * @param zoomlevel The zoomlevel of the owning Things.
+	 * @return New or reused Vertex
+	 */
 	public Vertex obtain(iMerc p,byte zoomlevel)
 	{
 		Vertex already=used.get(p);
@@ -41,9 +56,17 @@ public class VertexStore {
 		}
 		if (free.isEmpty()) throw new RuntimeException("No more vertices available!");
 		Vertex shiny=free.poll();
+		
+		used.put(p, shiny);
 		shiny.deploy(p.x,p.y,zoomlevel);
+		//System.out.println("Obtained new "+shiny);
 		return shiny;
 	}
+	public Vertex obtaindbg(iMerc iMerc, byte b) {
+		Vertex dbg=new Vertex((short)-1);
+		dbg.deploy(iMerc.x,iMerc.y,b);
+		return dbg;
+	}		
 	public VertexStore(int capacity)
 	{
 		if (capacity<=0 || capacity>32000)
@@ -56,5 +79,8 @@ public class VertexStore {
 		{
 			free.add(new Vertex(i));
 		}		
-	}		
+	}
+	public int usedVertices() {
+		return used.size();
+	}
 }

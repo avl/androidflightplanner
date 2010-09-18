@@ -1,6 +1,8 @@
 package se.flightplanner;
 
 import java.io.InputStream;
+
+import java.io.BufferedInputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
@@ -48,7 +50,7 @@ public class DataDownloader {
 			str=new InflaterInputStream(str2);
 		else
 			str=str2;
-		return str;
+		return new BufferedInputStream(str);
 	}
 	
 	static JSONObject post(String path,String user, String pass,

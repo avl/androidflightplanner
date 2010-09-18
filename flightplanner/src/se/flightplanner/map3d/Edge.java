@@ -1,8 +1,8 @@
 package se.flightplanner.map3d;
 
 public class Edge {
-	private Thing left;
-	private Thing right;
+	private ThingIf left;
+	private ThingIf right;
 	Vertex a;
 	Vertex b;
 }

@@ -22,7 +22,7 @@ public class TestAirspaceSerialization {
 		ByteArrayOutputStream bao=new ByteArrayOutputStream();
 		DataOutputStream os=new DataOutputStream(bao);
 		os.writeFloat((float) 1.0);
-		//
+		//data
 		os.writeInt(0x01020304);
 		//Ints are in big-endian
 		os.writeUTF("hello");
