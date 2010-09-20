@@ -1,0 +1,10 @@
+* FIXED: Significant points, entry/exit points and holding point would be nice.
+* FIXAD: Show current time, with seconds (för att man ska se att det uppdateras). 
+* WONTFIX: More instant feedback when clicking buttons would be nice. But impossible?
+* FIXED: Fix the "Current Position" warning so that it is updated live.
+* FIXED: Allow manual positioning of markers.
+* FIXED: Some way to get info around you without turning!
+* FIXED: You never want it in widescreen (I think). So never change orientation "landscape".
+* WONTFIX: Show GPS satellite positioning accuracy.
+* FIXED: Borde gå att stänga av programmet
+* Live descent info would be nice ("descend 370fpm to reach waypoint")
