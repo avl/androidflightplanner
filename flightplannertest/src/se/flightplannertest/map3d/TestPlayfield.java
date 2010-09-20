@@ -38,8 +38,8 @@ public class TestPlayfield {
 		final int parentsize=64<<pgap;
 		iMerc p1=new iMerc(0,0);
 		iMerc p2=new iMerc(parentsize*2,parentsize);
-		VertexStore vstore=new VertexStore(100);
-		ElevationStore estore=TestElevMap.getSampleEstore();
+		final VertexStore vstore=new VertexStore(100);
+		final ElevationStore estore=TestElevMap.getSampleEstore();
 		TriangleStore tristore=new TriangleStore(100);
 		LodCalc lc=new LodCalc(100, 10);
 		final Mockery mock=new Mockery();
@@ -55,6 +55,24 @@ public class TestPlayfield {
 		final short observerheight=1000;
 		allmocks[0]=parent;
 		allmocks[1]=neighbor;
+		
+		final int[] cnt=new int[1];
+		ThingFactory thingf=new ThingFactory()
+		{
+			@Override
+			public ThingIf createThing(VertexStore vstore, ElevationStore estore,
+					int i, iMerc m,Stitcher st) {
+				++cnt[0];
+				if (cnt[0]-1==0) return parent;
+				if (cnt[0]-1==1) return neighbor;
+				if (cnt[0]-1<6)
+					return children[cnt[0]-2];
+				throw new RuntimeException("Created more things than expected");
+			}
+		};
+		
+		final Playfield play=new Playfield(p1,p2,vstore,tristore,lc,estore,thingf);
+		
 		final ThingIf[] parents=new ThingIf[]{parent,neighbor};
 		for(int i=0;i<4;++i)
 			allmocks[i+2]=children[i];
@@ -68,6 +86,7 @@ public class TestPlayfield {
         		{
         			//the parent is close, to absolutely positively force a refine.
         			allowing(t).getDistance(observerpos,observerheight);will(returnValue(0.0f));
+        			allowing(t).subsume(new ArrayList<ThingIf>(), vstore, play, estore); 
         		}
         		else
         		{
@@ -91,33 +110,14 @@ public class TestPlayfield {
         		allowing(t).getZoomlevel();will(returnValue(6));
     			allowing(t).getPos();will(returnValue(new iMerc(dx*childsize,dy*childsize)));
     			allowing(t).getDistance(observerpos,observerheight);will(returnValue((float)(2.0*childsize)));
-
 	        }});
 		}
 		
-		final int[] cnt=new int[1];
-		ThingFactory thingf=new ThingFactory()
-		{
-			@Override
-			public ThingIf createThing(VertexStore vstore, ElevationStore estore,
-					int i, iMerc m,Stitcher st) {
-				++cnt[0];
-				if (cnt[0]-1==0) return parent;
-				if (cnt[0]-1==1) return neighbor;
-				if (cnt[0]-1<6)
-					return children[cnt[0]-2];
-				throw new RuntimeException("Created more things than expected");
-			}
-		};
-        System.out.println("Bumpiness:"+parent.bumpiness());
-        System.out.println("Unexpected:"+parent.getZoomlevel());
 		
-		Playfield play=new Playfield(p1,p2,vstore,tristore,lc,estore,thingf);
 		Assert.assertEquals(2,cnt[0]);
 		iMerc observer=new iMerc(0,0);
 		
 		play.changeLods(observer, (short)1000, vstore, estore);
-		Assert.assertEquals(6,cnt[0]);
 		mock.assertIsSatisfied();
 	}
 	
