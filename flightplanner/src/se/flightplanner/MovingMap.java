@@ -45,6 +45,7 @@ public class MovingMap extends View {
 	private Paint seltrippaint;
 	private Paint arrowpaint;
 	private Paint backgroundpaint;
+	//private CountDownTimer timer;
 	//private TimeZone utctz;
 	
 	@Override
@@ -582,7 +583,10 @@ public class MovingMap extends View {
 				}
 				else
 				{
-					speed=lastpos.getSpeed();
+					if (lastpos.hasSpeed())
+						speed=lastpos.getSpeed();
+					else
+						speed=0.0;
 				}
 				mylocation.setSpeed((float) speed);
 			}

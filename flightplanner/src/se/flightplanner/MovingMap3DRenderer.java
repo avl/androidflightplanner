@@ -9,6 +9,22 @@ import se.flightplanner.map3d.VertexStore;
 import android.opengl.GLSurfaceView.Renderer;
 
 public class MovingMap3DRenderer implements Renderer {
+
+	public void onDrawFrame(GL10 gl) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void onSurfaceChanged(GL10 gl, int width, int height) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
+		// TODO Auto-generated method stub
+		
+	}
+	/*
 	VertexStore vstore;
 	TriangleStore tristore;
     public MovingMap3DRenderer() {
@@ -39,5 +55,5 @@ public class MovingMap3DRenderer implements Renderer {
 	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
 		  gl.glDisable(GL10.GL_DITHER);
 	}
-
+*/
 }
