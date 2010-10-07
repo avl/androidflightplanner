@@ -103,7 +103,7 @@ public class Nav extends Activity implements LocationListener {
     	diag.show();
     	*/
 		
-		if (req==SETUP_INFO)
+		if (req==SETUP_INFO && data!=null)
 		{
 			final String user=data.getStringExtra("se.flightplanner.login");
 			final String password=data.getStringExtra("se.flightplanner.password");
