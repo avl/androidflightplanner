@@ -25,7 +25,7 @@ import android.widget.TextView;
 
 public class Nav extends Activity implements LocationListener {
     /** Called when the activity is first created. */
-	MovingMap map;
+	MovingMap3D map;
 	TripData tripdata;
 	Airspace airspace;
 	AirspaceLookup lookup;
@@ -265,7 +265,7 @@ public class Nav extends Activity implements LocationListener {
 
         }
     	
-        map=new MovingMap(this);
+        map=new MovingMap3D(this);
         map.update_airspace(airspace,lookup);
         map.update_tripdata(tripdata);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);

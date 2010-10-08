@@ -1,5 +1,6 @@
 package se.flightplanner;
 
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -24,6 +25,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import se.flightplanner.Project.LatLon;
+import se.flightplanner.map3d.ElevationStore;
 
 import android.content.Context;
 import android.location.Location;
@@ -31,6 +33,7 @@ import android.util.Log;
 
 public class TripData implements Serializable {
 	private static final long serialVersionUID = -6626110951719722186L;
+	ElevationStore estore;
 	static String[] get_trips(String user,String pass) throws Exception
 	{		
 		
@@ -98,37 +101,52 @@ public class TripData implements Serializable {
 	}
 	ArrayList<Waypoint> waypoints;
 	static TripData get_trip(String user,String pass,String trip) throws Exception
-	{		
-		ArrayList<NameValuePair> nvps=new ArrayList<NameValuePair>();
-		nvps.add(new BasicNameValuePair("trip",trip));
-		JSONObject obj = DataDownloader.post("/api/get_trip",user, pass, nvps,false);	
-		if (!obj.has("waypoints"))
-			throw new RuntimeException("Fetched obj has no waypoints. Obj: "+obj.toString());
-		JSONArray jsonwps=obj.getJSONArray("waypoints");
+	{
 		TripData td=new TripData();
-		td.trip=trip;
-		td.waypoints=new ArrayList<Waypoint>();
-		for(int i=0;i<jsonwps.length();++i)
 		{
-			if (jsonwps.isNull(i))
-				throw new RuntimeException("There is no waypoint with number "+i);
-			JSONObject wpobj=jsonwps.getJSONObject(i);
+			ArrayList<NameValuePair> nvps=new ArrayList<NameValuePair>();
+			nvps.add(new BasicNameValuePair("trip",trip));
+			JSONObject obj = DataDownloader.post("/api/get_trip",user, pass, nvps,false);	
+			if (!obj.has("waypoints"))
+				throw new RuntimeException("Fetched obj has no waypoints. Obj: "+obj.toString());
+			JSONArray jsonwps=obj.getJSONArray("waypoints");
+			td.trip=trip;
+			td.waypoints=new ArrayList<Waypoint>();
+			for(int i=0;i<jsonwps.length();++i)
+			{
+				if (jsonwps.isNull(i))
+					throw new RuntimeException("There is no waypoint with number "+i);
+				JSONObject wpobj=jsonwps.getJSONObject(i);
+				
+				Waypoint wp=new Waypoint();
+				wp.latlon=new LatLon(wpobj.getDouble("lat"),
+						wpobj.getDouble("lon"));
+				wp.startalt=wpobj.getDouble("startalt");
+				wp.endalt=wpobj.getDouble("endalt");
+				wp.name=wpobj.getString("name");
+				wp.legpart=wpobj.getString("legpart");
+				wp.what=wpobj.getString("what");
+				wp.lastsub=wpobj.getInt("lastsub");
+				wp.gs=wpobj.getDouble("gs");
+				wp.tas=wpobj.getDouble("tas");
+				wp.d=wpobj.getDouble("d");
+				td.waypoints.add(wp);
+			}
+		}
+		{
+			ArrayList<NameValuePair> nvps=new ArrayList<NameValuePair>();
+			nvps.add(new BasicNameValuePair("trip",trip));
+			InputStream strm=DataDownloader.postRaw("/api/get_elev_near_trip",user, pass, nvps,false);
+			td.estore=ElevationStore.deserialize(new DataInputStream(strm));
+			strm.close();
 			
-			Waypoint wp=new Waypoint();
-			wp.latlon=new LatLon(wpobj.getDouble("lat"),
-					wpobj.getDouble("lon"));
-			wp.startalt=wpobj.getDouble("startalt");
-			wp.endalt=wpobj.getDouble("endalt");
-			wp.name=wpobj.getString("name");
-			wp.legpart=wpobj.getString("legpart");
-			wp.what=wpobj.getString("what");
-			wp.lastsub=wpobj.getInt("lastsub");
-			wp.gs=wpobj.getDouble("gs");
-			wp.tas=wpobj.getDouble("tas");
-			wp.d=wpobj.getDouble("d");
-			td.waypoints.add(wp);
-		}		
+		}
 		return td;
+	}
+
+	public ElevationStore getElevStore() {
+		// TODO Auto-generated method stub
+		return estore;
 	}
 	
 }
