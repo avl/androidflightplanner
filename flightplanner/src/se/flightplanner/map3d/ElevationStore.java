@@ -24,7 +24,14 @@ public class ElevationStore {
 		ArrayList<ElevTile> alltiles;
 	}
 	HashMap<Integer,Level> levels;
-	
+	public ElevationStore(int zero)
+	{
+		if (zero!=0) throw new RuntimeException("0-init ElevationStore is the only one that can be created without data");
+		levels=new HashMap<Integer,Level>();		
+	}
+	private ElevationStore()
+	{
+	}
 	static public class Elev
 	{
 		public Elev(short lo,short hi)

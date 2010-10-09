@@ -12,6 +12,7 @@ import se.flightplanner.Project.iMerc;
 import se.flightplanner.map3d.ElevationStore;
 import se.flightplanner.map3d.LodCalc;
 import se.flightplanner.map3d.Playfield;
+import se.flightplanner.map3d.PlayfieldDrawer;
 import se.flightplanner.map3d.Stitcher;
 import se.flightplanner.map3d.Thing;
 import se.flightplanner.map3d.ThingFactory;
@@ -25,9 +26,6 @@ import android.util.Log;
 
 public class MovingMap3DRenderer implements Renderer {
 
-	VertexStore vstore;
-	TriangleStore tristore;
-	LodCalc lodc;
 	Location pos;
     private IntBuffer   mVertexBuffer;
     private IntBuffer   mColorBuffer;
@@ -35,8 +33,7 @@ public class MovingMap3DRenderer implements Renderer {
     private float a;
     float altitude_feet;
     private float headturn;
-    private Playfield playfield;
-	private ElevationStore elevstore;
+    private PlayfieldDrawer playfield;
 	public MovingMap3DRenderer() {
 		// vstore=new Vertex
 		a=0.0f;
@@ -111,11 +108,15 @@ public class MovingMap3DRenderer implements Renderer {
         gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
 		
 		
-		gl.glFrontFace(gl.GL_CCW);
+		gl.glFrontFace(gl.GL_CW);
 		gl.glVertexPointer(3, gl.GL_FIXED, 0, mVertexBuffer);
 		gl.glColorPointer(4, gl.GL_FIXED, 0, mColorBuffer);
 		gl.glDrawElements(gl.GL_TRIANGLES, 36, gl.GL_UNSIGNED_BYTE,
 				mIndexBuffer);
+		
+		if (playfield!=null)
+			playfield.draw(gl);
+		
 
 	}
 
@@ -125,7 +126,7 @@ public class MovingMap3DRenderer implements Renderer {
 		float ratio = (float) width / height;
 		gl.glMatrixMode(GL10.GL_PROJECTION);
 		gl.glLoadIdentity();
-		gl.glFrustumf(-ratio, ratio, -1, 1, 1, 100000);
+		gl.glFrustumf(-ratio, ratio, -1, 1, 1, 1000000.0f);
 	}
 
 	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
@@ -166,23 +167,7 @@ public class MovingMap3DRenderer implements Renderer {
 	public void update(Airspace airspace, AirspaceLookup lookup,
 			TripData tripdata) {
 		// TODO Auto-generated method stub
-		iMerc p1=Project.latlon2imerc(new LatLon(60,16),13);
-		iMerc p2=Project.latlon2imerc(new LatLon(58,20),13);
-		vstore=new VertexStore(2000);
-		tristore=new TriangleStore(1000);
-		lodc=new LodCalc(480,1000); //TODO: Screenheight isn't always 480. Also, tolerance 1000 is too big!
-		this.elevstore=tripdata.getElevStore();
-		if (this.elevstore==null)
-			throw new RuntimeException("Elevstore is null.");
-		playfield=new Playfield(p1,p2,vstore,tristore,lodc,elevstore,
-				new ThingFactory()
-			{
-				public ThingIf createThing(VertexStore vstore,
-						ElevationStore estore, int zoomlevel, iMerc m, Stitcher st) {
-					return new Thing(m,null,zoomlevel,vstore,estore,st);
-				}
-			}
-		);
+		playfield=new PlayfieldDrawer(tripdata.getElevStore());		
 		
 	}
 

@@ -5,17 +5,37 @@ import se.flightplanner.Project.iMerc;
 public class Vertex {
 	private int mercx; //mercx
 	private int mercy; //mercy
+	
+	/**
+	 * Get the mercator x-position of this vertex.
+	 */
 	public int getx() { return mercx;}
+	/**
+	 * Get the mercator y-position of this vertex.
+	 */
 	public int gety() { return mercy;}
 	
+	/**
+	 * Calculates the resulting elevation of the vertex, stores
+	 * the value to the lastElev field, and returns the same value.
+	 */
+	public int calcZ()
+	{
+		lastElev=(100*elev)/elevcontributors;
+		return lastElev;
+	}
+	public int getLastElev()
+	{
+		return lastElev;
+	}
 	//last resulting elev, the one written to the graphics card.
-	private float lastElev;
+	private int lastElev;
 	
 	//altitude contributions. Divide by elevcontribs to get real elev. 
-	private float elev;
+	private int elev;
 	//each contributor adds 1 to this. Divide elev by this to get real elev.
 	//weak contributors might add an elev scaled by f. They will add f here instead then.
-	private float elevcontributors;
+	private int elevcontributors; //in units of 0.01 (i.e, divide this number by 100.0f to get real number) 
 	
 	private short bufptr; //pointer to vertex buf for this vertex.
 	
@@ -25,6 +45,10 @@ public class Vertex {
 	public String toString()
 	{
 		return "Vertex("+mercx+","+mercy+")";
+	}
+	public boolean isUsed()
+	{
+		return usage>0;
 	}
 	public void incrementUsage()
 	{

@@ -2,6 +2,7 @@ package se.flightplanner.map3d;
 
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,9 +13,11 @@ import se.flightplanner.Project.iMerc;
 
 public class VertexStore {
 
-	private FloatBuffer buf;
+	private IntBuffer buf;
+	private ByteBuffer colors;
 	private LinkedList<Vertex> free;
 	private HashMap<iMerc,Vertex> used;
+	private ArrayList<Vertex> all;
 	
 	public HashMap<Short,Vertex> dbgGetVertices(){
 		HashMap<Short,Vertex> h=new HashMap<Short,Vertex>();
@@ -35,7 +38,9 @@ public class VertexStore {
 		{
 			short ptr=v.getPointer();
 			used.remove(v.getimerc());
-			free.add(new Vertex(ptr));
+			Vertex n=new Vertex(ptr);
+			free.add(n);
+			all.set(ptr,n);
 			return true;
 		}
 		return false;
@@ -74,13 +79,51 @@ public class VertexStore {
 		free=new LinkedList<Vertex>();
 		used=new HashMap<iMerc,Vertex>(capacity);
 		ByteBuffer bytebuf= ByteBuffer.allocateDirect(capacity*4*3);
-		buf=bytebuf.asFloatBuffer();
+		colors=ByteBuffer.allocateDirect(capacity*4);
+		buf=bytebuf.asIntBuffer();
+		all=new ArrayList<Vertex>();
+		all.ensureCapacity(capacity);
 		for(short i=0;i<capacity;++i)
 		{
-			free.add(new Vertex(i));
+			Vertex n=new Vertex(i);
+			all.add(n);			
+			free.add(n);
 		}		
 	}
 	public int usedVertices() {
 		return used.size();
 	}
+	static class VertAndColor
+	{
+		public IntBuffer vertices;
+		public ByteBuffer colors;
+	}
+	VertAndColor getVerticesReadyForRender()
+	{
+		buf.position(0);
+		colors.position(0);
+		for(int i=0;i<all.size();++i)
+		{
+			Vertex v=all.get(i);
+			if (!v.isUsed()) 
+				continue;
+			int z=v.calcZ();
+			buf.put(v.getx());
+			buf.put(v.gety());
+			buf.put(z);
+			byte r=(byte)z;
+			byte g=(byte)z;
+			byte b=(byte)z;
+			colors.put(r);
+			colors.put(g);
+			colors.put(b);
+		}
+		buf.position(0);
+		colors.position(0);
+		VertAndColor va=new VertAndColor();
+		va.colors=colors;
+		va.vertices=buf;
+		return va;
+	}
+	
 }
