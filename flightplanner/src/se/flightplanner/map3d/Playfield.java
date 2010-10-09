@@ -93,6 +93,16 @@ public class Playfield implements Stitcher {
 			if (zl<coarsestlevel) throw new RuntimeException("Bad level for newly created Thing");
 			HashMap<iMerc,ThingIf> lh=levels.get(zl);
 			lh.put(t.getPos(),t);
+		}		
+	}
+	public void prepareForRender()
+	{
+		for(int i=coarsestlevel;i<=finestlevel;++i)
+		{
+			HashMap<iMerc,ThingIf> lh=levels.get(i);
+			if (lh!=null)
+				for(ThingIf t:lh.values())
+					t.triangulate(tristore);
 		}
 		
 	}

@@ -1,12 +1,15 @@
 package se.flightplanner.map3d;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+
+import android.util.Log;
 
 import se.flightplanner.Project.Merc;
 import se.flightplanner.map3d.Triangle;
@@ -22,6 +25,7 @@ public class TriangleStore {
 		if (capacity<=0 || capacity>=32000)
 			throw new RuntimeException("Bad triangle count for TriangleStore");
 		ByteBuffer bytebuf= ByteBuffer.allocateDirect(capacity*2*3);
+		bytebuf.order(ByteOrder.nativeOrder());
 		buf=bytebuf.asShortBuffer();
 		used=new HashSet<Triangle>();
 		all=new ArrayList<Triangle>();
@@ -63,13 +67,16 @@ public class TriangleStore {
 		Indices ret=new Indices();
 		ret.buf=buf;
 		ret.tricount=0;
+		int cnt=0;
 		for(Triangle t:all)
 		{
 			if (!t.isUsed()) continue;
 			buf.put(t.getidx(0));
 			buf.put(t.getidx(1));
 			buf.put(t.getidx(2));
+			Log.i("fplan","Index nr #"+cnt+": "+t.getidx(0)+","+t.getidx(1)+","+t.getidx(2));
 			ret.tricount+=1;
+			cnt+=1;
 		}
 		buf.position(0);
 		return ret;

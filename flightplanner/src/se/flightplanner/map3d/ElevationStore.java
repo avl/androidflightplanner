@@ -1,13 +1,23 @@
 package se.flightplanner.map3d;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.Map.Entry;
 
+import android.content.Context;
+import android.util.Log;
+
+import se.flightplanner.Airspace;
 import se.flightplanner.Project;
 import se.flightplanner.Project.Merc;
 import se.flightplanner.Project.iMerc;
@@ -74,8 +84,25 @@ public class ElevationStore {
 			int len=data.readInt();
 			if (len!=dim*dim*4)
 				throw new RuntimeException("Bad binary format of heightmap");
-			for(int i=0;i<2*dim*dim;++i)
-				e.data[i]=data.readShort();
+			
+			ByteBuffer bbuf=ByteBuffer.allocate(2*2*dim*dim);			
+			if (bbuf.array().length!=dim*dim*4)
+				throw new RuntimeException("Failed when allocating buf for elev tile");
+			int tot=0;
+			for(;tot<len;)
+			{
+				int l=data.read(bbuf.array(),tot,len-tot);
+				if (l==-1) throw new RuntimeException("Unexpected end of file in Elev tile reader");
+				tot+=l;
+			}
+			if (tot!=dim*dim*4)
+				throw new RuntimeException("Failed when reading elevation tile:"+tot+" should:"+len);
+			ShortBuffer shbuf=bbuf.asShortBuffer();
+			shbuf.position(0);
+			shbuf.get(e.data);
+			//for(int i=0;i<2*dim*dim;++i)
+			//	e.data[i]=data.readShort();
+			
 			e.box=new BoundingBox(e.m1.x,e.m1.y,e.m2.x,e.m2.y);
 			return e;
 		}		
@@ -83,8 +110,13 @@ public class ElevationStore {
 			iMerc temp=Project.imerc2imerc(m1, 13, zoomlevel);
 			temp.serialize(strm);
 			strm.writeInt(dim*dim*4);
-			for(int i=0;i<2*dim*dim;++i)
-				strm.writeShort(data[i]);			
+			ByteBuffer bbuf=ByteBuffer.allocate(2*2*dim*dim);			
+			ShortBuffer shbuf=bbuf.asShortBuffer();
+			shbuf.put(data);
+			bbuf.position(0);
+			strm.write(bbuf.array());
+			//for(int i=0;i<2*dim*dim;++i)
+			//	strm.writeShort(data[i]);			
 		}
 	}
 	public static ElevationStore deserialize(DataInputStream data) throws IOException
@@ -156,5 +188,39 @@ public class ElevationStore {
 			}
 		}
 		return null;
-	}	
+	}
+	public void serialize_to_file(Context context,String filename) throws Exception
+	{
+		OutputStream ofstream=new BufferedOutputStream(context.openFileOutput(filename,Context.MODE_PRIVATE));
+		try
+		{
+			DataOutputStream os=new DataOutputStream(ofstream);
+			serialize(os);
+			os.close();
+			ofstream.close();
+		}
+		finally
+		{
+			ofstream.close();
+		}		
+	}
+	
+	public static ElevationStore deserialize_from_file(Context context,String filename) throws Exception
+	{
+		InputStream ofstream=new BufferedInputStream(context.openFileInput(filename));
+		ElevationStore data=null;
+		try
+		{
+			
+			DataInputStream os=new DataInputStream(ofstream);
+			data=ElevationStore.deserialize(os);//(Airspace)os.readObject();
+			os.close();		
+		}
+		finally
+		{
+			ofstream.close();			
+		}
+		return data;
+	}
+	
 }

@@ -33,7 +33,9 @@ import android.util.Log;
 
 public class TripData implements Serializable {
 	private static final long serialVersionUID = -6626110951719722186L;
-	ElevationStore estore;
+	ArrayList<Waypoint> waypoints;
+	String trip;
+	
 	static String[] get_trips(String user,String pass) throws Exception
 	{		
 		
@@ -84,7 +86,6 @@ public class TripData implements Serializable {
 		return data;
 	}
 	
-	String trip;
 	static public class Waypoint implements Serializable
 	{
 		private static final long serialVersionUID = 4282439811657511726L;
@@ -99,7 +100,6 @@ public class TripData implements Serializable {
 		public double d;
 		public double tas;
 	}
-	ArrayList<Waypoint> waypoints;
 	static TripData get_trip(String user,String pass,String trip) throws Exception
 	{
 		TripData td=new TripData();
@@ -134,19 +134,10 @@ public class TripData implements Serializable {
 			}
 		}
 		{
-			ArrayList<NameValuePair> nvps=new ArrayList<NameValuePair>();
-			nvps.add(new BasicNameValuePair("trip",trip));
-			InputStream strm=DataDownloader.postRaw("/api/get_elev_near_trip",user, pass, nvps,false);
-			td.estore=ElevationStore.deserialize(new DataInputStream(strm));
-			strm.close();
 			
 		}
 		return td;
 	}
 
-	public ElevationStore getElevStore() {
-		// TODO Auto-generated method stub
-		return estore;
-	}
 	
 }

@@ -36,11 +36,11 @@ public class MovingMap3D extends GLSurfaceView {
 	private Airspace airspace;
 	private AirspaceLookup lookup;
 	private TripData tripdata;
+	private ElevationStore estore;
 	public void update_tripdata(TripData tripdata) {
 		// TODO Auto-generated method stub
 		this.tripdata=tripdata;
-		if (airspace!=null && lookup!=null && tripdata!=null)
-			rend.update(airspace,lookup,tripdata);
+		rend.update_tripdata(this.tripdata);
 		
 	}
 
@@ -48,8 +48,8 @@ public class MovingMap3D extends GLSurfaceView {
 		// TODO Auto-generated method stub
 		this.airspace=airspace;
 		this.lookup=lookup;
-		if (airspace!=null && lookup!=null && tripdata!=null)
-			rend.update(airspace,lookup,tripdata);
+		if (airspace!=null && lookup!=null && estore!=null)
+			rend.update(airspace,lookup,estore);
 	}
 
 	public void gps_update(Location location) {
@@ -60,6 +60,12 @@ public class MovingMap3D extends GLSurfaceView {
 	public void gps_disabled() {
 		// TODO Auto-generated method stub
 		
+	}
+
+	public void update_estore(ElevationStore estore) {
+		this.estore=estore;
+		if (airspace!=null && lookup!=null && estore!=null)
+			rend.update(airspace,lookup,estore);
 	}
 
 }

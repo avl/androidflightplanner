@@ -21,6 +21,8 @@ public class Vertex {
 	 */
 	public int calcZ()
 	{
+		if (elevcontributors==0)
+			return 0;
 		lastElev=(100*elev)/elevcontributors;
 		return lastElev;
 	}

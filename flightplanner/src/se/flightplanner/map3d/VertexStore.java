@@ -1,6 +1,7 @@
 package se.flightplanner.map3d;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
@@ -8,12 +9,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 
+import android.util.Log;
+
 import se.flightplanner.Project.Merc;
 import se.flightplanner.Project.iMerc;
 
 public class VertexStore {
 
-	private IntBuffer buf;
+	private FloatBuffer buf;
 	private ByteBuffer colors;
 	private LinkedList<Vertex> free;
 	private HashMap<iMerc,Vertex> used;
@@ -79,8 +82,10 @@ public class VertexStore {
 		free=new LinkedList<Vertex>();
 		used=new HashMap<iMerc,Vertex>(capacity);
 		ByteBuffer bytebuf= ByteBuffer.allocateDirect(capacity*4*3);
+		bytebuf.order(ByteOrder.nativeOrder());
 		colors=ByteBuffer.allocateDirect(capacity*4);
-		buf=bytebuf.asIntBuffer();
+		colors.order(ByteOrder.nativeOrder());
+		buf=bytebuf.asFloatBuffer();
 		all=new ArrayList<Vertex>();
 		all.ensureCapacity(capacity);
 		for(short i=0;i<capacity;++i)
@@ -95,10 +100,10 @@ public class VertexStore {
 	}
 	static class VertAndColor
 	{
-		public IntBuffer vertices;
+		public FloatBuffer vertices;
 		public ByteBuffer colors;
 	}
-	VertAndColor getVerticesReadyForRender()
+	VertAndColor getVerticesReadyForRender(iMerc observer,int altitude)
 	{
 		buf.position(0);
 		colors.position(0);
@@ -107,16 +112,23 @@ public class VertexStore {
 			Vertex v=all.get(i);
 			if (!v.isUsed()) 
 				continue;
-			int z=v.calcZ();
-			buf.put(v.getx());
-			buf.put(v.gety());
+			float z=v.calcZ()-altitude;
+			float x=v.getx()-observer.x;
+			float y=v.gety()-observer.y;
+			x*=0.01;
+			y*=0.01;
+			z*=0.01;
+			buf.put(x);
+			buf.put(y);
 			buf.put(z);
-			byte r=(byte)z;
-			byte g=(byte)z;
-			byte b=(byte)z;
+			Log.i("fplan","Rendered vertex #"+i+": "+x+","+y+","+z);
+			byte r=-1;//(byte)z;
+			byte g=-1;//(byte)z;
+			byte b=0;//(byte)z;
 			colors.put(r);
 			colors.put(g);
 			colors.put(b);
+			//colors.put((byte)-1);
 		}
 		buf.position(0);
 		colors.position(0);
