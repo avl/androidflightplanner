@@ -11,7 +11,8 @@ public interface Stitcher {
 	 * of level 'level'. 
 	 * If dostitch is false, unstitch vertex rather than stitch it.
 	 * A vertex is only ever unstitched if it is destroyed.
+	 * @param parent 
 	 */
-	public void stitch(Vertex v,int level,boolean dostitch);
+	public void stitch(Vertex v,int level,ThingIf parent, boolean dostitch);
 	
 }

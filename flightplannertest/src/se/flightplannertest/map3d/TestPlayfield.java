@@ -24,12 +24,13 @@ import se.flightplanner.map3d.TriangleStore;
 import se.flightplanner.map3d.Vertex;
 import se.flightplanner.map3d.VertexStore;
 import se.flightplanner.map3d.Stitcher;
+import se.flightplanner.map3d.TriangleStore.DbgTriangle2D;
 
 public class TestPlayfield {
 
 	public static void main(String[] args) throws FileNotFoundException, IOException {
 		TestPlayfield pf=new TestPlayfield();
-		pf.testPlayfieldVirtualThing();
+		pf.testPlayfieldSimpleIntegration2();
 	}
 	@Test
 	public void testPlayfieldVirtualThing() throws FileNotFoundException, IOException
@@ -71,7 +72,7 @@ public class TestPlayfield {
 			}
 		};
 		
-		final Playfield play=new Playfield(p1,p2,vstore,tristore,lc,estore,thingf);
+		final Playfield play=new Playfield(p1,p2,vstore,tristore,estore,thingf);
 		
 		final ThingIf[] parents=new ThingIf[]{parent,neighbor};
 		for(int i=0;i<4;++i)
@@ -117,7 +118,7 @@ public class TestPlayfield {
 		Assert.assertEquals(2,cnt[0]);
 		iMerc observer=new iMerc(0,0);
 		
-		play.changeLods(observer, (short)1000, vstore, estore);
+		play.changeLods(observer, (short)1000, vstore, estore,lc);
 		mock.assertIsSatisfied();
 	}
 	
@@ -141,9 +142,104 @@ public class TestPlayfield {
 			}
 			
 		};
-		Playfield play=new Playfield(p1,p2,vstore,tristore,lc,estore,thingf);
+		Playfield play=new Playfield(p1,p2,vstore,tristore,estore,thingf);
 		iMerc observer=Project.latlon2imerc(new LatLon(57.5,18.4), 13);
-		play.changeLods(observer, (short)1000, vstore, estore);
+		play.changeLods(observer, (short)1000, vstore, estore,lc);
+	}
+	@Test
+	public void testPlayfieldSimpleIntegration2() throws FileNotFoundException, IOException
+	{
+		iMerc p1=new iMerc(0,0);
+		iMerc p2=new iMerc(16384,16384);
+		VertexStore vstore=new VertexStore(100);
+		ElevationStore estore=TestElevMap.getSampleEstore();
+		TriangleStore tristore=new TriangleStore(100);
+
+		ThingFactory thingf=new ThingFactory()
+		{
+			@Override
+			public ThingIf createThing(VertexStore vstore, ElevationStore estore,
+					int i, iMerc m,Stitcher st) {
+				Thing t=new Thing(m,null,i,vstore,estore,st);
+				return t;
+			}
+			
+		};
+		Playfield play=new Playfield(p1,p2,vstore,tristore,estore,thingf);
+		Assert.assertTrue(play.dbgGetThing(new iMerc(0,0), 5)!=null);
+		Assert.assertTrue(play.dbgGetThing(new iMerc(16384,0), 5)==null);
+		Assert.assertTrue(play.dbgGetThing(new iMerc(8192,8192), 5)==null);
+		Assert.assertTrue(play.dbgGetThing(new iMerc(8192,8192), 6)==null);
+		
+		play.prepareForRender();
+		Assert.assertTrue(vstore.dbgGetIMercSet().contains(new iMerc(0,0)));
+		Assert.assertTrue(vstore.dbgGetIMercSet().contains(new iMerc(16384,0)));
+		Assert.assertTrue(vstore.dbgGetIMercSet().contains(new iMerc(0,16384)));
+		Assert.assertTrue(vstore.dbgGetIMercSet().contains(new iMerc(16384,16384)));
+		HashSet<DbgTriangle2D> tris=tristore.dbgGetTriangles2D(vstore.dbgGetVertices());
+		Assert.assertTrue(tris.contains(new DbgTriangle2D(
+				0,0,
+				0,16384,
+				16384,0)));
+		Assert.assertTrue(tris.contains(new DbgTriangle2D(
+				0,16384,
+				16384,16384,
+				16384,0)));
+		
+		play.explicitSubsume(new iMerc(0,0),5,vstore, estore, true);
+		play.prepareForRender();
+		tris=tristore.dbgGetTriangles2D(vstore.dbgGetVertices());
+		Assert.assertFalse(tris.contains(new DbgTriangle2D( //Big tri is subsumed
+				0,16384,
+				16384,16384,
+				16384,0)));
+		Assert.assertTrue(tris.contains(new DbgTriangle2D(
+				0,8192,
+				8192,8192,
+				8192,0)));
+		Assert.assertTrue(tris.contains(new DbgTriangle2D(
+				0,0,
+				0,8192,
+				8192,0)));
+		
+		Assert.assertEquals(8,tris.size());
+		Assert.assertTrue(vstore.dbgGetIMercSet().contains(new iMerc(0,0)));
+		Assert.assertTrue(vstore.dbgGetIMercSet().contains(new iMerc(8192,8192)));
+		Assert.assertTrue(vstore.dbgGetIMercSet().contains(new iMerc(0,8192)));
+		Assert.assertTrue(vstore.dbgGetIMercSet().contains(new iMerc(16384,16384)));
+
+		Assert.assertTrue(play.dbgGetThing(new iMerc(8192,8192), 5)==null);
+		Assert.assertTrue(play.dbgGetThing(new iMerc(8192,8192), 6)!=null);
+		
+
+		
+		play.explicitSubsume(new iMerc(0,0), 6, vstore, estore, true);
+		Assert.assertTrue(play.dbgGetThing(new iMerc(4096,4096), 7)!=null);
+		Assert.assertTrue(vstore.dbgGetIMercSet().contains(new iMerc(4096,4096)));
+		Assert.assertTrue(vstore.dbgGetIMercSet().contains(new iMerc(0,4096)));
+		Assert.assertTrue(vstore.dbgGetIMercSet().contains(new iMerc(8192,4096)));
+		Assert.assertTrue(vstore.dbgGetIMercSet().contains(new iMerc(8192+4096,4096))); //"Center" vertex of right box (needed because of how we do stitching)
+		play.prepareForRender();
+		tris=tristore.dbgGetTriangles2D(vstore.dbgGetVertices());
+		//for(DbgTriangle2D t:tris)
+		//	System.out.println("Triangle: "+t);
+		DbgTriangle2D lt=new DbgTriangle2D(
+				8192,4096,
+				8192+4096,4096,
+				8192,0);
+		//System.out.println("Looking for tri: "+lt);
+		Assert.assertTrue(tris.contains(lt));
+
+		Assert.assertTrue(tris.contains(new DbgTriangle2D(
+				8192,0,
+				8192+4096,4096,
+				16384,0				
+				)));
+		Assert.assertTrue(tris.contains(new DbgTriangle2D(
+				8192+4096,4096,
+				16384,8192,				
+				16384,0
+				)));
 		
 		
 	}

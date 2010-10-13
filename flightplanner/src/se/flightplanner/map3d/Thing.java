@@ -47,6 +47,15 @@ public class Thing implements ThingIf {
 	private boolean deployed; //set to true when a thing becomes visible. Implies that parent->subsumed is true.
 	private ArrayList<Thing> children; //order: upper row first; left-right, then second row; left-right.
 
+	
+	public ThingIf getChild(int i,int j)
+	{
+		if (i<0 || i>=2) throw new RuntimeException("Bad i-value in Thing.getChild");
+		if (j<0 || j>=2) throw new RuntimeException("Bad j-value in Thing.getChild");
+		int idx=i+2*j;
+		return children.get(idx);
+	}
+
 	/* (non-Javadoc)
 	 * @see se.flightplanner.map3d.ThingIf#getCorner(int)
 	 */
@@ -140,6 +149,15 @@ public class Thing implements ThingIf {
 	private float feet2merc(iMerc pos,int feet) {
 		return Project.approx_ft_pixels(pos, 13)*feet;
 	}
+	public String toString()
+	{
+		StringBuilder b=new StringBuilder();
+		b.append("Thing(");
+		b.append(""+pos.x);
+		b.append(","+pos.x);
+		b.append(")");
+		return b.toString();
+	}
 	/* (non-Javadoc)
 	 * @see se.flightplanner.map3d.ThingIf#subsume(java.util.ArrayList, se.flightplanner.map3d.VertexStore, se.flightplanner.map3d.Stitcher, se.flightplanner.map3d.ElevationStore)
 	 */
@@ -147,9 +165,10 @@ public class Thing implements ThingIf {
 	{
 		if (children!=null) return; //Already subsumed
 		children=new ArrayList<Thing>();
-		for(int cury=pos.y;cury<pos.y+2*size;cury+=size)
+		need_retriangulation=true;
+		for(int cury=pos.y;cury<pos.y+size;cury+=size/2)
 		{
-			for(int curx=pos.x;curx<pos.x+2*size;curx+=size)
+			for(int curx=pos.x;curx<pos.x+size;curx+=size/2)
 			{
 				Thing child=new Thing(new iMerc(curx,cury),this,zoomlevel+1,vstore,estore,stitcher);
 				children.add(child);
@@ -171,6 +190,7 @@ public class Thing implements ThingIf {
 		//must stitch them.
 		
 		
+		need_retriangulation=true;
 		HashSet<Vertex> neededStitching=new HashSet<Vertex>();
 		for(ThingIf child : children)
 		{
@@ -194,8 +214,11 @@ public class Thing implements ThingIf {
 			//System.out.println("Freeing "+v);
 			if (unused)
 			{
+				
+				/*erorr: What you were doing? 
+						fix that a box is stitched with its parent!*/
 				//System.out.println("ACtually freed "+v);
-				st.stitch(v,this.zoomlevel,false);
+				st.stitch(v,this.zoomlevel,parent,false);
 			}
 			else
 			{
@@ -240,7 +263,7 @@ public class Thing implements ThingIf {
 			//System.out.println("Added base "+v);
 			base_vertices.add(v);
 			//System.out.println("Created v "+v.getimerc());
-			stitcher.stitch(v,zoomlevel,true);
+			stitcher.stitch(v,zoomlevel,parent,false);
 		}
 		need_retriangulation=true;
 	}
@@ -290,6 +313,9 @@ public class Thing implements ThingIf {
 			for(int i=0;i<4;++i)
 				vcnt+=edges.get(i).size();
 		releaseTriangles(tristore);
+		if (children!=null)
+			return; //this block is subsumed! It thus has no own triangles.
+			
 		if (vcnt==0)
 		{
 			Vertex v0=base_vertices.get(0);
@@ -386,10 +412,13 @@ public class Thing implements ThingIf {
 			}
 			else
 			{
-				Assert.assertTrue(false); //shouldn't happen, should it?
 				c.cnt+=1;
 			}
 		}
+	}
+
+	public ThingIf getParent() {
+		return parent;
 	}
 	
 	/*

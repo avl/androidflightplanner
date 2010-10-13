@@ -59,7 +59,7 @@ public interface ThingIf {
 			VertexStore vstore, Stitcher st);
 
 	public abstract void triangulate(TriangleStore tristore);
-
+	public abstract ThingIf getChild(int i,int j);
 	/**
 	 * The following events may happen for a vertex:
 	 * 
@@ -102,5 +102,7 @@ public interface ThingIf {
 	 * 
 	 */
 	public abstract void shareVertex(VertexStore vstore, Vertex v, boolean share);
+
+	public abstract ThingIf getParent();
 
 }

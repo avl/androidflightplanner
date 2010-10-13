@@ -30,6 +30,14 @@ public class VertexStore {
 		}
 		return h;
 	}
+	public HashSet<iMerc> dbgGetIMercSet(){
+		HashSet<iMerc> h=new HashSet<iMerc>();
+		for(Vertex v:used.values())
+		{
+			h.add(v.getimerc());
+		}
+		return h;
+	}
 	
 	///If this returns true,
 	///then the vertex was actually "destroyed"

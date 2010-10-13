@@ -34,7 +34,7 @@ public class TestThing {
 		Stitcher st=new MyStitcher()
 		{
 			@Override
-			public void stitch(Vertex v, int level, boolean unstitch) {
+			public void stitch(Vertex v, int level, ThingIf parent,boolean unstitch) {
 				stitchrequired.add(v);
 				stitchrequiredmerc.add(v.getimerc());
 			}		
@@ -116,7 +116,7 @@ public class TestThing {
 		Stitcher st=new MyStitcher()
 		{
 			@Override
-			public void stitch(Vertex v, int level, boolean unstitch) {
+			public void stitch(Vertex v, int level, ThingIf parent, boolean unstitch) {
 				// TODO Auto-generated method stub
 				
 			}		
@@ -158,7 +158,7 @@ public class TestThing {
 		Stitcher st=new MyStitcher()
 		{
 			@Override
-			public void stitch(Vertex v, int level, boolean stitch) {
+			public void stitch(Vertex v, int level, ThingIf parent,boolean stitch) {
 				if (!stitch)
 					unstitched.remove(v);
 				else
@@ -199,7 +199,7 @@ public class TestThing {
 		Stitcher st=new MyStitcher()
 		{
 			@Override
-			public void stitch(Vertex v, int level, boolean unstitch) {
+			public void stitch(Vertex v, int level, ThingIf parent,boolean unstitch) {
 				
 			}		
 		};

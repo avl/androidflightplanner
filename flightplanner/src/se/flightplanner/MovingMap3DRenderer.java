@@ -72,14 +72,12 @@ public class MovingMap3DRenderer implements Renderer {
 		
 		
 		
-		LatLon cameraLatLon=new LatLon(60f,18);//pos.getLatitude(),pos.getLongitude());
+		LatLon cameraLatLon=new LatLon(60,18);//pos.getLatitude(),pos.getLongitude());
 		iMerc cameramerc=Project.latlon2imerc(cameraLatLon, 13);
 
 		LatLon obstLatLon=new LatLon(59,18);
 		iMerc obstmerc=Project.latlon2imerc(obstLatLon, 13);
-		int one = (int)(0x10000);
-		float onec= 10.0f;//(int)(f*0x40000);
-		int yd=30;
+		byte one = (byte)-1;
 		
 		/*
 I/fplan   (18568): Drawed 2 triangles
@@ -93,6 +91,8 @@ I/fplan   (18568): Drawed 2 triangles
 
 
 		 */
+		
+		/*
 		float vertices[] = 
 		{ -65,90,10,
 		   98,90,10,
@@ -107,7 +107,10 @@ I/fplan   (18568): Drawed 2 triangles
 
 		short indices[] = {0,2,1,
 					2,3,1};
-		/*
+		*/
+		
+		float onec=1.0f; 
+		float yd=0;//-10.0f+a;
 		float vertices[] = 
 			{ -onec, -onec+yd, -onec, 
 				onec, -onec+yd, -onec, 
@@ -118,13 +121,13 @@ I/fplan   (18568): Drawed 2 triangles
 				onec, onec+yd, onec, 
 				-onec, onec+yd, onec, };
 
-		int colors[] = { 0, 0, 0, one, one, 0, 0, one, one, one, 0, one, 0,
+		byte colors[] = { 0, 0, 0, one, one, 0, 0, one, one, one, 0, one, 0,
 				one, 0, one, 0, 0, one, one, one, 0, one, one, one, one, one,
 				one, 0, one, one, one, };
 
-		byte indices[] = { 0, 4, 5, 0, 5, 1, 1, 5, 6, 1, 6, 2, 2, 6, 7, 2, 7,
+		short indices[] = { 0, 4, 5, 0, 5, 1, 1, 5, 6, 1, 6, 2, 2, 6, 7, 2, 7,
 				3, 3, 7, 4, 3, 4, 0, 4, 7, 6, 4, 6, 5, 3, 0, 1, 3, 1, 2 };
-		*/
+		
 		
 		
 		ByteBuffer vbb = ByteBuffer.allocateDirect(vertices.length * 4);
@@ -153,7 +156,9 @@ I/fplan   (18568): Drawed 2 triangles
         float hdg=pos.getBearing()+headturn;//a*10.0f;
         float altitude=altitude_feet;//3.0f;
         //float f=1.0f/65536.0f;
-        gl.glRotatef(hdg, 0, 0, 1); //compass heading
+        
+        //gl.glRotatef(hdg, 0, 0, 1); //compass heading
+        
         //gl.glTranslatef(0,20.0f,0);
         //gl.glTranslatef(10.0f*(float)Math.cos(a),10.0f*(float)Math.sin(a),0);
         //gl.glRotatef((float)(-3.14159/2.0), 1.0f, 0, 0);
@@ -164,20 +169,21 @@ I/fplan   (18568): Drawed 2 triangles
         Log.i("fplan","Obstmerc: "+obstmerc.x+","+obstmerc.y+", obstsize:"+onec);
         //gl.glRotatef((float)(0.5)+a,        0, 1, 0);
         //gl.glRotatef((float)(0.5*0.25)+a,  1, 0, 0);
+        
+        
         gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
         gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
 		
-		/*
-		gl.glFrontFace(gl.GL_CCW);
+        gl.glFrontFace(gl.GL_CCW);
 		gl.glVertexPointer(3, gl.GL_FLOAT, 0, mVertexBuffer);
 		gl.glColorPointer(3, gl.GL_UNSIGNED_BYTE, 0, cbb);
-		gl.glDrawElements(gl.GL_TRIANGLES, 6, gl.GL_UNSIGNED_SHORT,
+		gl.glDrawElements(gl.GL_TRIANGLES, 36, gl.GL_UNSIGNED_SHORT,
 				si);
-		*/
-        gl.glPopMatrix();
-		if (playfield!=null)
-			playfield.draw(gl,cameramerc,(short)altitude);
 		
+        gl.glPopMatrix();
+		/*if (playfield!=null)
+			playfield.draw(gl,cameramerc,(short)altitude);
+		*/
 
 	}
 

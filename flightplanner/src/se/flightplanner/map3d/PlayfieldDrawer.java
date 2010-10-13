@@ -24,13 +24,13 @@ public class PlayfieldDrawer {
 	{
 		iMerc p1=Project.latlon2imerc(new LatLon(59.1,17.9),13);
 		iMerc p2=Project.latlon2imerc(new LatLon(58.9,18.1),13);
-		vstore=new VertexStore(200);
-		tristore=new TriangleStore(100);
-		lodc=new LodCalc(480,1000); //TODO: Screenheight isn't always 480. Also, tolerance 1000 is too big!
+		vstore=new VertexStore(1000);
+		tristore=new TriangleStore(1000);
+		lodc=new LodCalc(480,10000); //TODO: Screenheight isn't always 480. Also, tolerance 1000 is too big!
 		elevstore=estore;
 		if (elevstore==null)
 			elevstore=new ElevationStore(0);
-		playfield=new Playfield(p1,p2,vstore,tristore,lodc,elevstore,
+		playfield=new Playfield(p1,p2,vstore,tristore,elevstore,
 				new ThingFactory()
 			{
 				public ThingIf createThing(VertexStore vstore,
@@ -47,7 +47,7 @@ public class PlayfieldDrawer {
 	{
         gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
         gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
-		playfield.changeLods(observer, observerElev, vstore, elevstore);
+		//playfield.changeLods(observer, observerElev, vstore, elevstore,lodc);
 		playfield.prepareForRender();
 		VertAndColor va=vstore.getVerticesReadyForRender(observer,observerElev);
 				
