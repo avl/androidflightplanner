@@ -325,14 +325,14 @@ public class Thing implements ThingIf {
 		}
 		
 		if (!need_retriangulation) return;
-		int vcnt=0;
-		if (edges!=null)
-			for(int i=0;i<4;++i)
-				vcnt+=edges.get(i).size();
 		releaseTriangles(tristore);
 		if (children!=null)
 			return; //this block is subsumed! It thus has no own triangles.
 			
+		int vcnt=0;
+		if (edges!=null)
+			for(int i=0;i<4;++i)
+				vcnt+=edges.get(i).size();
 		if (vcnt==0)
 		{
 			Vertex v0=base_vertices.get(0);
@@ -440,18 +440,18 @@ public class Thing implements ThingIf {
 
 	public void debugDump(Writer f) throws IOException {
 		f.write("{\n");
-		f.write("  \"pos\" : "+getPosStr()+",\n");
-		f.write("  \"base_vertices\" : [\n");
+		f.write("  \"pos\" : \""+getPosStr()+"\",\n");
+		f.write("  \"base_vertices\" : [\n  ");
 		for(int i=0;i<this.base_vertices.size();++i)
 		{
 			if (i!=0) f.write(" , ");
 			f.write(""+base_vertices.get(i).getIndex());
 		}
-		f.write("]\n");
+		f.write("],\n");
 		if (center_vertex!=null)
-			f.write("\"center_vertex\" : "+center_vertex.getIndex()+",\n");
+			f.write("  \"center_vertex\" : "+center_vertex.getIndex()+",\n");
 		else
-			f.write("\"center_vertex\" : null,\n");
+			f.write("  \"center_vertex\" : null,\n");
 		f.write("  \"triangles\" : [\n");
 		for(int i=0;i<triangles.size();++i)
 		{
@@ -459,7 +459,7 @@ public class Thing implements ThingIf {
 			f.write(""+triangles.get(i).getPointer());
 		}
 		f.write("],\n");
-		f.write("  \"parent\" : "+((parent==null) ? "null" : ("\""+parent.getPosStr()+"\"")));
+		f.write("  \"parent\" : "+((parent==null) ? "null,\n" : ("\""+parent.getPosStr()+"\",\n")));
 
 		f.write("  \"children\":[\n");
 		if (children!=null)
@@ -470,18 +470,19 @@ public class Thing implements ThingIf {
 				f.write("\""+children.get(i).getPosStr()+"\"");
 			}
 		}
-		f.write("]\n");
+		f.write("],\n");
 		
 		f.write("  \"edges\":[\n");
 		if (edges!=null)
 		{
 			for(int i=0;i<edges.size();++i)
 			{
-				f.write("    \"edge_vertices\": [\n");
+				if (i!=0) f.write(" , ");
+				f.write("[");
 				int cnt=0;
 				for(Vertex edgev : edges.get(i).keySet())
 				{
-					if (cnt==0) f.write(" , ");
+					if (cnt!=0) f.write(" , ");
 					f.write("      "+edgev.getIndex());
 					++cnt;
 				}						

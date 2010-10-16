@@ -31,18 +31,24 @@ public class Playfield implements Stitcher {
 			fname="/sdcard/fplan.dump";
 		FileOutputStream rf=new FileOutputStream(fname);
 		Writer f=new BufferedWriter(new OutputStreamWriter(rf));
+		f.write("{\n");
 		vstore.debugDump(f);
+		f.write(",");
 		tristore.debugDump(f);
+		f.write(",");
 		int tcnt=0;
+		f.write("\"things\" : [");
 		for(int i=coarsestlevel;i<finestlevel;++i)
 		{
 			for(ThingIf t: levels.get(i).values())
-			{
-				if (tcnt!=0) f.write(" , ");
+			{	
+				if (tcnt!=0) f.write(",\n");
 				t.debugDump(f);
 				++tcnt;
 			}
 		}
+		f.write("]\n");
+		f.write("}\n");
 		f.flush();
 		rf.close();
 	}

@@ -184,19 +184,25 @@ public class TriangleStore {
 		return ret;
 	}
 	public void debugDump(Writer f) throws IOException {
-		f.write("\"triangles\":{\n");
+		f.write("\"triangles\":[\n");
+		int cnt=0;
 		for(Triangle t:all)
 		{
 			if (!t.isUsed()) continue;
-			f.write("\"nr:\" : "+t.pointer+",\n");
-			f.write("\"vertices:\" : [\n");
+			if (cnt!=0)
+				f.write(",\n");
+			f.write("{");
+			f.write("  \"nr\" : "+t.pointer+",\n");
+			f.write("  \"vertices\" : [ ");
 			for(int i=0;i<3;++i)
 			{
-				if (i!=0) f.write(" , ");
-				f.write(""+t.getidx(i)+"\n");
+				if (i!=0) f.write(",");
+				f.write(""+t.getidx(i));
 			}
-			f.write("]\n");
+			f.write(" ]\n");
+			f.write("}");
+			++cnt;
 		}
-		f.write("}\n");
+		f.write("]\n");
 	}
 }

@@ -137,7 +137,7 @@ public class Vertex {
 		f.write("\"used\" : \""+isUsed()+"\",\n");
 		f.write("\"posx\" : "+mercx+" ,\n");
 		f.write("\"posy\" : "+mercy+" ,\n");
-		f.write("\"lastElev\" : "+lastElev+" ,\n");
+		f.write("\"lastElev\" : "+lastElev+" \n");
 		f.write("}\n");		
 	}
 }
