@@ -43,7 +43,7 @@ public class MovingMap3DRenderer implements Renderer {
 		headturn=0.0f;
 		pos=new Location("gps");
 		pos.setLatitude(59.0);
-		pos.setLongitude(18.0);
+		pos.setLongitude(17.0);
 		pos.setBearing((float) 360.0);
 
 	
@@ -63,19 +63,17 @@ public class MovingMap3DRenderer implements Renderer {
 		gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
 		draw_vertices(gl);
 		try {
-			Thread.sleep(200);
+			Thread.sleep(50);
 		} catch (InterruptedException e) {
 		}
 	}
 
 	private void draw_vertices(GL10 gl) {
-		
-		
-		
-		LatLon cameraLatLon=new LatLon(60,18);//pos.getLatitude(),pos.getLongitude());
+
+		LatLon cameraLatLon=new LatLon(60,17);//pos.getLatitude(),pos.getLongitude());
 		iMerc cameramerc=Project.latlon2imerc(cameraLatLon, 13);
 
-		LatLon obstLatLon=new LatLon(59,18);
+		LatLon obstLatLon=new LatLon(59,17);
 		iMerc obstmerc=Project.latlon2imerc(obstLatLon, 13);
 		byte one = (byte)-1;
 		
@@ -92,23 +90,25 @@ I/fplan   (18568): Drawed 2 triangles
 
 		 */
 		
-		/*
+        short altitude=(short)(altitude_feet);
+		
 		float vertices[] = 
-		{ -65,90,10,
-		   98,90,10,
-		   -65,254,10,
-		   98,254,10
+		{ -65,90,10.0f-altitude/100.0f,
+		   98,90,10.0f-altitude/100.0f,
+		   -65,254,10.0f-altitude/100.0f,
+		   98,254,10.0f-altitude/100.0f
 		};
 		
-		byte colors[] = { (byte)-1,0,0,
-						0,(byte)-1,0,
-						0,0,(byte)-1,
-						(byte)-1,(byte)-1,(byte)-1};
+		byte colors[] = { (byte)-1,0,0,(byte)-1,
+						0,(byte)-1,0,(byte)-1,
+						0,0,(byte)-1,(byte)-1,
+						(byte)-1,(byte)-1,(byte)-1,(byte)-1
+						};
 
 		short indices[] = {0,2,1,
 					2,3,1};
-		*/
 		
+		/*
 		float onec=1.0f; 
 		float yd=0;//-10.0f+a;
 		float vertices[] = 
@@ -127,7 +127,7 @@ I/fplan   (18568): Drawed 2 triangles
 
 		short indices[] = { 0, 4, 5, 0, 5, 1, 1, 5, 6, 1, 6, 2, 2, 6, 7, 2, 7,
 				3, 3, 7, 4, 3, 4, 0, 4, 7, 6, 4, 6, 5, 3, 0, 1, 3, 1, 2 };
-		
+		*/
 		
 		
 		ByteBuffer vbb = ByteBuffer.allocateDirect(vertices.length * 4);
@@ -136,10 +136,10 @@ I/fplan   (18568): Drawed 2 triangles
 		mVertexBuffer.put(vertices);
 		mVertexBuffer.position(0);
 
-		ByteBuffer cbb = ByteBuffer.allocateDirect(colors.length * 4);
+		ByteBuffer cbb = ByteBuffer.allocateDirect(colors.length);
 		cbb.order(ByteOrder.nativeOrder());
 		cbb.put(colors);
-		cbb.position(0);
+		cbb.position(0); 
 
 		mIndexBuffer = ByteBuffer.allocateDirect(indices.length*2);
 		mIndexBuffer.order(ByteOrder.nativeOrder());
@@ -150,40 +150,24 @@ I/fplan   (18568): Drawed 2 triangles
         gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT);
         gl.glMatrixMode(GL10.GL_MODELVIEW);
         gl.glLoadIdentity();
-        a+=0.1;
-        ///Log.i("fplan","A:"+a);
         gl.glRotatef(-90, 1.0f, 0, 0); //tilt to look to horizon (don't change)
-        float hdg=pos.getBearing()+headturn;//a*10.0f;
-        float altitude=altitude_feet;//3.0f;
-        //float f=1.0f/65536.0f;
-        
-        //gl.glRotatef(hdg, 0, 0, 1); //compass heading
-        
-        //gl.glTranslatef(0,20.0f,0);
-        //gl.glTranslatef(10.0f*(float)Math.cos(a),10.0f*(float)Math.sin(a),0);
-        //gl.glRotatef((float)(-3.14159/2.0), 1.0f, 0, 0);
-        //gl.glTranslatef(-cameramerc.x, -cameramerc.y, -altitude);
-        //Log.i("fplan","Camerapos: "+cameramerc.x+","+cameramerc.y+","+altitude);
-        gl.glPushMatrix();
-        //gl.glTranslatef(obstmerc.x-cameramerc.x, obstmerc.y-cameramerc.y, 0.0f-altitude);
-        Log.i("fplan","Obstmerc: "+obstmerc.x+","+obstmerc.y+", obstsize:"+onec);
-        //gl.glRotatef((float)(0.5)+a,        0, 1, 0);
-        //gl.glRotatef((float)(0.5*0.25)+a,  1, 0, 0);
-        
+        float hdg=pos.getBearing()+headturn;
+        gl.glRotatef(hdg, 0, 0, 1); //compass heading
+
         
         gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
         gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
 		
         gl.glFrontFace(gl.GL_CCW);
 		gl.glVertexPointer(3, gl.GL_FLOAT, 0, mVertexBuffer);
-		gl.glColorPointer(3, gl.GL_UNSIGNED_BYTE, 0, cbb);
-		gl.glDrawElements(gl.GL_TRIANGLES, 36, gl.GL_UNSIGNED_SHORT,
+		gl.glColorPointer(4, gl.GL_UNSIGNED_BYTE, 0, cbb);
+		gl.glDrawElements(gl.GL_TRIANGLES, 6, gl.GL_UNSIGNED_SHORT,
 				si);
 		
         gl.glPopMatrix();
-		/*if (playfield!=null)
+		if (playfield!=null)
 			playfield.draw(gl,cameramerc,(short)altitude);
-		*/
+		
 
 	}
 
@@ -199,10 +183,9 @@ I/fplan   (18568): Drawed 2 triangles
         gl.glHint(GL10.GL_PERSPECTIVE_CORRECTION_HINT,
                 GL10.GL_FASTEST);
         gl.glDisable(GL10.GL_CULL_FACE);
-        gl.glClearColor(1,1,1,1);
+        gl.glClearColor(0.75f,0.75f,1,1);
         gl.glShadeModel(GL10.GL_SMOOTH);
-        ///gl.glEnable(GL10.GL_DEPTH_TEST);
-        gl.glDisable(GL10.GL_DEPTH_TEST);
+        gl.glEnable(GL10.GL_DEPTH_TEST);
 
 	}
 
@@ -217,10 +200,10 @@ I/fplan   (18568): Drawed 2 triangles
 			altitude_feet-=1000.0f;
 		if (i<0)
 			altitude_feet+=1000.0f;
-		if (altitude_feet>10000.0f)
-			altitude_feet=10000.0f;
-		if (altitude_feet<-10000.0f)
-			altitude_feet=-10000.0f;
+		if (altitude_feet>100000.0f)
+			altitude_feet=100000.0f;
+		if (altitude_feet<-100000.0f)
+			altitude_feet=-100000.0f;
 			
 	}
 

@@ -241,6 +241,6 @@ public class TestPlayfield {
 				16384,0
 				)));
 		
-		
+		play.completeDebugDump("dump.json");
 	}
 }

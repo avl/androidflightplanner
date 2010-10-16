@@ -1,10 +1,14 @@
 package se.flightplanner.map3d;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+
+import android.util.Log;
 
 import junit.framework.Assert;
 
@@ -131,13 +135,17 @@ public class Thing implements ThingIf {
 		
 		if(obs.x<pos1.x)
 			x=pos1.x;
-		else if (obs.x>=pos2.x) x=pos2.x;
-		else x=obs.x;
+		else if (obs.x>=pos2.x) 
+			x=pos2.x;
+		else 
+			x=obs.x;
 		
 		if(obs.y<pos1.y)
 			y=pos1.y;
-		else if (obs.y>=pos2.y) y=pos2.y;
-		else y=obs.y;
+		else if (obs.y>=pos2.y) 
+			y=pos2.y;
+		else 
+			y=obs.y;
 		
 		float a=(obs.x-x);
 		float b=(obs.y-y);
@@ -155,6 +163,7 @@ public class Thing implements ThingIf {
 		b.append("Thing(");
 		b.append(""+pos.x);
 		b.append(","+pos.x);
+		b.append(",zoom="+zoomlevel);
 		b.append(")");
 		return b.toString();
 	}
@@ -245,9 +254,11 @@ public class Thing implements ThingIf {
 		this.parent=parent;
 		this.zoomlevel=zoomlevel;
 		this.triangles=new ArrayList<Triangle>();
-		this.elev=elevStore.get(pos,zoomlevel);
+		this.elev=elevStore.get(pos,zoomlevel-6);
+		Elev oelev=this.elev;
 		if (this.elev==null)
 			this.elev=new Elev((short)0,(short)0);
+		Log.i("fplan","Elevstore got hi-elev "+elev.hiElev+" loelev:"+elev.loElev+"for pos "+pos+" zoom "+zoomlevel+" elevobj="+oelev);
 		base_vertices=new ArrayList<Vertex>();
 		for(int i=0;i<4;++i)
 		{
@@ -307,6 +318,12 @@ public class Thing implements ThingIf {
 	 */
 	public void triangulate(TriangleStore tristore)
 	{
+		for(int i=0;i<4;++i)
+		{
+			Vertex v=base_vertices.get(i);
+			v.contribElev(this.elev.hiElev,(short)100);
+		}
+		
 		if (!need_retriangulation) return;
 		int vcnt=0;
 		if (edges!=null)
@@ -419,6 +436,64 @@ public class Thing implements ThingIf {
 
 	public ThingIf getParent() {
 		return parent;
+	}
+
+	public void debugDump(Writer f) throws IOException {
+		f.write("{\n");
+		f.write("  \"pos\" : "+getPosStr()+",\n");
+		f.write("  \"base_vertices\" : [\n");
+		for(int i=0;i<this.base_vertices.size();++i)
+		{
+			if (i!=0) f.write(" , ");
+			f.write(""+base_vertices.get(i).getIndex());
+		}
+		f.write("]\n");
+		if (center_vertex!=null)
+			f.write("\"center_vertex\" : "+center_vertex.getIndex()+",\n");
+		else
+			f.write("\"center_vertex\" : null,\n");
+		f.write("  \"triangles\" : [\n");
+		for(int i=0;i<triangles.size();++i)
+		{
+			if (i!=0) f.write(" , ");
+			f.write(""+triangles.get(i).getPointer());
+		}
+		f.write("],\n");
+		f.write("  \"parent\" : "+((parent==null) ? "null" : ("\""+parent.getPosStr()+"\"")));
+
+		f.write("  \"children\":[\n");
+		if (children!=null)
+		{
+			for(int i=0;i<children.size();++i)
+			{
+				if (i!=0) f.write(" , ");
+				f.write("\""+children.get(i).getPosStr()+"\"");
+			}
+		}
+		f.write("]\n");
+		
+		f.write("  \"edges\":[\n");
+		if (edges!=null)
+		{
+			for(int i=0;i<edges.size();++i)
+			{
+				f.write("    \"edge_vertices\": [\n");
+				int cnt=0;
+				for(Vertex edgev : edges.get(i).keySet())
+				{
+					if (cnt==0) f.write(" , ");
+					f.write("      "+edgev.getIndex());
+					++cnt;
+				}						
+				f.write("]\n");
+			}
+		}
+		f.write("  ]\n");
+		f.write("}\n");
+	}
+
+	public String getPosStr() {
+		return ""+pos.x+","+pos.y+","+zoomlevel;
 	}
 	
 	/*

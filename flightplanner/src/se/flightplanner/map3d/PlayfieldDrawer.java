@@ -47,16 +47,17 @@ public class PlayfieldDrawer {
 	{
         gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
         gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
-		//playfield.changeLods(observer, observerElev, vstore, elevstore,lodc);
+		playfield.changeLods(observer, observerElev, vstore, elevstore,lodc);
+        //playfield.explicitSubsume(new iMerc(1146880,606208), 5, vstore, elevstore, true);
 		playfield.prepareForRender();
 		VertAndColor va=vstore.getVerticesReadyForRender(observer,observerElev);
 				
 		gl.glFrontFace(gl.GL_CCW);
 		gl.glVertexPointer(3, gl.GL_FLOAT, 0, va.vertices);
-		gl.glColorPointer(3, gl.GL_UNSIGNED_BYTE, 0, va.colors);
-		TriangleStore.Indices ind=tristore.getIndexForRender();
+		gl.glColorPointer(4, gl.GL_UNSIGNED_BYTE, 0, va.colors);
+		TriangleStore.Indices ind=tristore.getIndexForRender(vstore);
 		gl.glDrawElements(gl.GL_TRIANGLES, 3*ind.tricount, gl.GL_UNSIGNED_SHORT,
 				ind.buf);
-		Log.i("fplan","Drawed "+ind.tricount+" triangles");
+		//Log.i("fplan","Drawed "+ind.tricount+" triangles");
 	}
 }

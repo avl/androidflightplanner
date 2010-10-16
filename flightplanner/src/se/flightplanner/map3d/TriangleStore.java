@@ -1,5 +1,9 @@
 package se.flightplanner.map3d;
 
+import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -156,7 +160,7 @@ public class TriangleStore {
 		}
 		return ret;
 	}
-	public Indices getIndexForRender()
+	public Indices getIndexForRender(VertexStore vstore)
 	{
 		buf.position(0);
 		Indices ret=new Indices();
@@ -166,14 +170,33 @@ public class TriangleStore {
 		for(Triangle t:all)
 		{
 			if (!t.isUsed()) continue;
+			for(int i=0;i<3;++i)
+				if (!vstore.isUsed(t.getidx(i)))
+					throw new RuntimeException("Triangle contains index which points to a presently non-used vertex! ("+t.getidx(i)+")");
 			buf.put(t.getidx(0));
 			buf.put(t.getidx(1));
 			buf.put(t.getidx(2));
-			Log.i("fplan","Index nr #"+cnt+": "+t.getidx(0)+","+t.getidx(1)+","+t.getidx(2));
+			//Log.i("fplan","Index nr #"+cnt+": "+t.getidx(0)+","+t.getidx(1)+","+t.getidx(2));
 			ret.tricount+=1;
 			cnt+=1;
 		}
 		buf.position(0);
 		return ret;
+	}
+	public void debugDump(Writer f) throws IOException {
+		f.write("\"triangles\":{\n");
+		for(Triangle t:all)
+		{
+			if (!t.isUsed()) continue;
+			f.write("\"nr:\" : "+t.pointer+",\n");
+			f.write("\"vertices:\" : [\n");
+			for(int i=0;i<3;++i)
+			{
+				if (i!=0) f.write(" , ");
+				f.write(""+t.getidx(i)+"\n");
+			}
+			f.write("]\n");
+		}
+		f.write("}\n");
 	}
 }

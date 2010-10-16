@@ -1,5 +1,9 @@
 package se.flightplanner.map3d;
 
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+
 import se.flightplanner.Project.iMerc;
 
 public class Vertex {
@@ -117,5 +121,23 @@ public class Vertex {
 	public int dbgUsage() {
 		
 		return usage;
+	}
+	public void contribElev(short hiElev,short strength) {
+		elev+=hiElev;
+		elevcontributors+=strength;		
+	}
+	public void resetElev()
+	{
+		elev=0;
+		elevcontributors=0;
+	}
+	public void debugDump(Writer f) throws IOException {
+		f.write("{\n");
+		f.write("\"nr\" : "+bufptr+" ,\n");
+		f.write("\"used\" : \""+isUsed()+"\",\n");
+		f.write("\"posx\" : "+mercx+" ,\n");
+		f.write("\"posy\" : "+mercy+" ,\n");
+		f.write("\"lastElev\" : "+lastElev+" ,\n");
+		f.write("}\n");		
 	}
 }

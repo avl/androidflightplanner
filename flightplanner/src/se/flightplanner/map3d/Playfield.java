@@ -1,7 +1,16 @@
 package se.flightplanner.map3d;
 
+import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
+
+import android.util.Log;
 
 import se.flightplanner.Project;
 import se.flightplanner.Project.iMerc;
@@ -15,6 +24,29 @@ public class Playfield implements Stitcher {
 	TriangleStore tristore;
 	ThingFactory thingf;
 	private ArrayList<HashMap<iMerc,ThingIf>> levels;
+	
+	public void completeDebugDump(String fname) throws IOException
+	{
+		if (fname==null)
+			fname="/sdcard/fplan.dump";
+		FileOutputStream rf=new FileOutputStream(fname);
+		Writer f=new BufferedWriter(new OutputStreamWriter(rf));
+		vstore.debugDump(f);
+		tristore.debugDump(f);
+		int tcnt=0;
+		for(int i=coarsestlevel;i<finestlevel;++i)
+		{
+			for(ThingIf t: levels.get(i).values())
+			{
+				if (tcnt!=0) f.write(" , ");
+				t.debugDump(f);
+				++tcnt;
+			}
+		}
+		f.flush();
+		rf.close();
+	}
+	
 	public Playfield(iMerc upperleft,iMerc lowerright,VertexStore vstore,TriangleStore tristore,ElevationStore estore,
 			ThingFactory thingf)
 	{
@@ -76,10 +108,12 @@ public class Playfield implements Stitcher {
 				float bumpiness=t.bumpiness();
 				float dist=t.getDistance(observer,observerElev);
 				float refine=lodCalc.needRefining(bumpiness, dist);
+				//if (i<=8) refine=1.0f;
 				if (refine<0)
 				{
 					if (t.isSubsumed())
-					{						
+					{
+						//Log.i("fplan","Un-subsuming "+t);
 						t.unsubsume(vstore,this);
 					}
 					continue;
@@ -88,6 +122,7 @@ public class Playfield implements Stitcher {
 				{
 					if (!t.isSubsumed())
 					{
+						//Log.i("fplan","Subsuming "+t);
 						t.subsume(newThings,vstore,this,estore);
 					}
 					continue;
@@ -99,7 +134,7 @@ public class Playfield implements Stitcher {
 		for(ThingIf t:newThings)
 		{
 			int zl=t.getZoomlevel();
-			if (zl<coarsestlevel) throw new RuntimeException("Bad level for newly created Thing");
+			if (zl<=coarsestlevel) throw new RuntimeException("Bad level for newly created Thing");
 			HashMap<iMerc,ThingIf> lh=levels.get(zl);
 			lh.put(t.getPos(),t);
 		}		
@@ -140,10 +175,13 @@ public class Playfield implements Stitcher {
 		{
 			HashMap<iMerc,ThingIf> lh=levels.get(i);
 			if (lh!=null)
+			{
 				for(ThingIf t:lh.values())
+				{
 					t.triangulate(tristore);
+				}
+			}
 		}
-		
 	}
 	public void stitch(Vertex v,int level,ThingIf parent,boolean unstitch) {
 		level-=1;

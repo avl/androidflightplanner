@@ -1,5 +1,9 @@
 package se.flightplanner.map3d;
 
+import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -118,25 +122,33 @@ public class VertexStore {
 		for(int i=0;i<all.size();++i)
 		{
 			Vertex v=all.get(i);
-			if (!v.isUsed()) 
-				continue;
-			float z=v.calcZ()-altitude;
-			float x=v.getx()-observer.x;
-			float y=v.gety()-observer.y;
-			x*=0.01;
-			y*=0.01;
-			z*=0.01;
+			float x=0,y=0,z=0;
+			byte r=0,g=0,b=0;
+			int calzraw=-999;
+			if (v.isUsed())
+			{
+				calzraw=v.calcZ();
+				int calz=(int)(0.1*calzraw);
+				v.resetElev();
+				z=calz-altitude;			
+				x=v.getx()-observer.x;
+				y=v.gety()-observer.y;
+				
+				x*=0.01;
+				y*=0.01;
+				z*=0.01;
+				r=(byte)calz;//-1;//(byte)z;
+				g=(byte)((i*8)%256);//(byte)z;
+				b=(byte)((i*64)%256);//(byte)z;
+			}
 			buf.put(x);
 			buf.put(y);
 			buf.put(z);
-			Log.i("fplan","Rendered vertex #"+i+": "+x+","+y+","+z);
-			byte r=-1;//(byte)z;
-			byte g=-1;//(byte)z;
-			byte b=0;//(byte)z;
+			Log.i("fplan","Rendered vertex #"+i+": "+x+","+y+","+z+" rawZ:"+calzraw);
 			colors.put(r);
 			colors.put(g);
 			colors.put(b);
-			//colors.put((byte)-1);
+			colors.put((byte)-1);
 		}
 		buf.position(0);
 		colors.position(0);
@@ -144,6 +156,21 @@ public class VertexStore {
 		va.colors=colors;
 		va.vertices=buf;
 		return va;
+	}
+	public void debugDump(Writer f) throws IOException {
+		f.write("\"vertices\":[\n");
+		int cnt=0;
+		for(Vertex v:all)
+		{
+			if (cnt!=0) f.write(" , ");
+			v.debugDump(f);
+			++cnt;
+		}
+		f.write("]\n");
+	}
+	public boolean isUsed(short idx) {
+		if (idx<0 || idx>=all.size()) throw new RuntimeException("idx out of bounds");
+		return all.get(idx).isUsed();
 	}
 	
 }

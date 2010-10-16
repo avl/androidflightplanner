@@ -1,5 +1,8 @@
 package se.flightplanner.map3d;
 
+import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashSet;
 
@@ -104,5 +107,9 @@ public interface ThingIf {
 	public abstract void shareVertex(VertexStore vstore, Vertex v, boolean share);
 
 	public abstract ThingIf getParent();
+
+	public abstract void debugDump(Writer f) throws IOException;
+
+	public abstract String getPosStr();
 
 }

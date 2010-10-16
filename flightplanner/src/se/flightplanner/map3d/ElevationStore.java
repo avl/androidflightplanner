@@ -76,14 +76,14 @@ public class ElevationStore {
 		public static ElevTile deserialize(DataInputStream data,byte pzoomlevel) throws IOException {
 			ElevTile e=new ElevTile();
 			e.zoomlevel=pzoomlevel;
-			e.m1=iMerc.deserialize(data);
-			e.m2=new iMerc(e.m1.x+dim,e.m1.y+dim);
-			e.m1=Project.imerc2imerc(e.m1, e.zoomlevel, 13);
-			e.m2=Project.imerc2imerc(e.m2, e.zoomlevel, 13);
+			iMerc m1=iMerc.deserialize(data);
+			iMerc m2=new iMerc(m1.x+dim,m1.y+dim);
+			e.m1=Project.imerc2imerc(m1, e.zoomlevel, 13);
+			e.m2=Project.imerc2imerc(m2, e.zoomlevel, 13);
 			e.data=new short[2*dim*dim];
 			int len=data.readInt();
 			if (len!=dim*dim*4)
-				throw new RuntimeException("Bad binary format of heightmap");
+				throw new RuntimeException("Bad binary format of heightmap. Len was "+len);
 			
 			ByteBuffer bbuf=ByteBuffer.allocate(2*2*dim*dim);			
 			if (bbuf.array().length!=dim*dim*4)
@@ -100,9 +100,14 @@ public class ElevationStore {
 			ShortBuffer shbuf=bbuf.asShortBuffer();
 			shbuf.position(0);
 			shbuf.get(e.data);
-			//for(int i=0;i<2*dim*dim;++i)
-			//	e.data[i]=data.readShort();
 			
+			int maxelev=0;
+			for(int i=0;i<dim*dim;++i)
+				if (e.data[2*i+1]>maxelev)
+					maxelev=e.data[2*i+1];
+			
+			
+			Log.i("fplan","Deserialized tile at "+e.m1+" maxelev:"+maxelev+" zoomlevel: "+e.zoomlevel);
 			e.box=new BoundingBox(e.m1.x,e.m1.y,e.m2.x,e.m2.y);
 			return e;
 		}		
@@ -173,6 +178,8 @@ public class ElevationStore {
 	}
 	public ElevTile getTile(iMerc pos,int curlevel)
 	{
+		if (curlevel<0)
+			curlevel=0;
 		BoundingBox box=new BoundingBox(pos.x,pos.y,pos.x+1,pos.y+1);
 		for(;curlevel>=0;--curlevel)
 		{
