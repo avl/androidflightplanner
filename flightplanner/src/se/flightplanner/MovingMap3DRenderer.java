@@ -1,5 +1,6 @@
 package se.flightplanner;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -61,17 +62,24 @@ public class MovingMap3DRenderer implements Renderer {
 		gl.glMatrixMode(GL10.GL_MODELVIEW);
 		gl.glLoadIdentity();
 		gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
-		draw_vertices(gl);
+		try {
+			draw_vertices(gl);
+		} catch (IOException e1) {
+			e1.printStackTrace();
+			throw new RuntimeException(e1);
+		}
 		try {
 			Thread.sleep(50);
 		} catch (InterruptedException e) {
 		}
 	}
+	int b=0;
+	private void draw_vertices(GL10 gl) throws IOException {
 
-	private void draw_vertices(GL10 gl) {
-
-		LatLon cameraLatLon=new LatLon(60,17);//pos.getLatitude(),pos.getLongitude());
+		LatLon cameraLatLon=new LatLon(61,19);//pos.getLatitude(),pos.getLongitude());
 		iMerc cameramerc=Project.latlon2imerc(cameraLatLon, 13);
+		cameramerc.y+=b;
+		b+=17;
 
 		LatLon obstLatLon=new LatLon(59,17);
 		iMerc obstmerc=Project.latlon2imerc(obstLatLon, 13);
@@ -158,12 +166,13 @@ I/fplan   (18568): Drawed 2 triangles
         gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
         gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
 		
+        /*
         gl.glFrontFace(gl.GL_CCW);
 		gl.glVertexPointer(3, gl.GL_FLOAT, 0, mVertexBuffer);
 		gl.glColorPointer(4, gl.GL_UNSIGNED_BYTE, 0, cbb);
 		gl.glDrawElements(gl.GL_TRIANGLES, 6, gl.GL_UNSIGNED_SHORT,
 				si);
-		
+		*/
         gl.glPopMatrix();
 		if (playfield!=null)
 			playfield.draw(gl,cameramerc,(short)altitude);
@@ -197,9 +206,9 @@ I/fplan   (18568): Drawed 2 triangles
 		// TODO Auto-generated method stub
 		
 		if (i>0)
-			altitude_feet-=1000.0f;
+			altitude_feet-=100.0f;
 		if (i<0)
-			altitude_feet+=1000.0f;
+			altitude_feet+=100.0f;
 		if (altitude_feet>100000.0f)
 			altitude_feet=100000.0f;
 		if (altitude_feet<-100000.0f)
@@ -225,6 +234,12 @@ I/fplan   (18568): Drawed 2 triangles
 
 	public void update_tripdata(TripData tripdata) {
 		// TODO Auto-generated method stub
+		
+	}
+
+	public void debugdump() throws IOException {
+		if (playfield!=null)
+			playfield.debugdump();
 		
 	}
 

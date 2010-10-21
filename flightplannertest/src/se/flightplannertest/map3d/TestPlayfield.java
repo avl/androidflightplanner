@@ -4,6 +4,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Random;
 
 import junit.framework.Assert;
 
@@ -30,7 +31,7 @@ public class TestPlayfield {
 
 	public static void main(String[] args) throws FileNotFoundException, IOException {
 		TestPlayfield pf=new TestPlayfield();
-		pf.testPlayfieldSimpleIntegration2();
+		pf.testPlayfieldSimpleIntegration3();
 	}
 	@Test
 	public void testPlayfieldVirtualThing() throws FileNotFoundException, IOException
@@ -118,7 +119,7 @@ public class TestPlayfield {
 		Assert.assertEquals(2,cnt[0]);
 		iMerc observer=new iMerc(0,0);
 		
-		play.changeLods(observer, (short)1000, vstore, estore,lc);
+		play.changeLods(observer, (short)1000, vstore, estore,lc,0);
 		mock.assertIsSatisfied();
 	}
 	
@@ -128,10 +129,10 @@ public class TestPlayfield {
 	{
 		iMerc p1=Project.latlon2imerc(new LatLon(59,17), 13);
 		iMerc p2=Project.latlon2imerc(new LatLon(57,19), 13);
-		VertexStore vstore=new VertexStore(100);
+		VertexStore vstore=new VertexStore(1000);
 		ElevationStore estore=TestElevMap.getSampleEstore();
-		TriangleStore tristore=new TriangleStore(100);
-		LodCalc lc=new LodCalc(100, 10);
+		TriangleStore tristore=new TriangleStore(1000);
+		LodCalc lc=new LodCalc(100, 1000);
 		ThingFactory thingf=new ThingFactory()
 		{
 			@Override
@@ -144,16 +145,16 @@ public class TestPlayfield {
 		};
 		Playfield play=new Playfield(p1,p2,vstore,tristore,estore,thingf);
 		iMerc observer=Project.latlon2imerc(new LatLon(57.5,18.4), 13);
-		play.changeLods(observer, (short)1000, vstore, estore,lc);
+		play.changeLods(observer, (short)1000, vstore, estore, lc, 0);
 	}
 	@Test
 	public void testPlayfieldSimpleIntegration2() throws FileNotFoundException, IOException
 	{
 		iMerc p1=new iMerc(0,0);
 		iMerc p2=new iMerc(16384,16384);
-		VertexStore vstore=new VertexStore(100);
+		VertexStore vstore=new VertexStore(1000);
 		ElevationStore estore=TestElevMap.getSampleEstore();
-		TriangleStore tristore=new TriangleStore(100);
+		TriangleStore tristore=new TriangleStore(1000);
 
 		ThingFactory thingf=new ThingFactory()
 		{
@@ -214,6 +215,7 @@ public class TestPlayfield {
 
 		
 		play.explicitSubsume(new iMerc(0,0), 6, vstore, estore, true);
+		play.prepareForRender();
 		Assert.assertTrue(play.dbgGetThing(new iMerc(4096,4096), 7)!=null);
 		Assert.assertTrue(vstore.dbgGetIMercSet().contains(new iMerc(4096,4096)));
 		Assert.assertTrue(vstore.dbgGetIMercSet().contains(new iMerc(0,4096)));
@@ -241,6 +243,45 @@ public class TestPlayfield {
 				16384,0
 				)));
 		
-		play.completeDebugDump("dump.json");
+		play.explicitSubsume(new iMerc(0,0), 6, vstore, estore, false);
+		
+	}
+
+	@Test
+	public void testPlayfieldSimpleIntegration3() throws FileNotFoundException, IOException
+	{
+		iMerc p1=new iMerc(0,0);
+		iMerc p2=new iMerc(16384,16384);
+		VertexStore vstore=new VertexStore(1000);
+		ElevationStore estore=TestElevMap.getSampleEstore();
+		TriangleStore tristore=new TriangleStore(1000);
+
+		ThingFactory thingf=new ThingFactory()
+		{
+			@Override
+			public ThingIf createThing(VertexStore vstore, ElevationStore estore,
+					int i, iMerc m,Stitcher st) {
+				Thing t=new Thing(m,null,i,vstore,estore,st);
+				return t;
+			}
+			
+		};
+		Playfield play=new Playfield(p1,p2,vstore,tristore,estore,thingf);
+		LodCalc lodcalc=new LodCalc(480,1770);
+		
+		Random r=new Random();
+		r.setSeed(42);
+		for(int i=0;i<1000;++i)
+		{
+			float alt=r.nextFloat()*3000;
+			float xpos=r.nextFloat()*8192;
+			float ypos=r.nextFloat()*8192;
+			float bumpbias=r.nextFloat()*10.0f;
+			play.changeLods(new iMerc((int)xpos,(int)ypos),(short) alt,vstore,estore,lodcalc,bumpbias);
+			//Yes, reproduced!
+			play.prepareForRender();			
+			play.completeDebugDump("dump"+i+".json");
+		}
+		
 	}
 }

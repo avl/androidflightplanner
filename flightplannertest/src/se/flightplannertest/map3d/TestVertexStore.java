@@ -20,11 +20,11 @@ public class TestVertexStore {
 		assertEquals(va,vb);
 		VertexStore vstore=new VertexStore(5);
 		iMerc im=new iMerc(256,256);
-		Vertex v=vstore.obtain(im, (byte)13);
+		Vertex v=vstore.obtain(im, (byte)13,"debug1");
 		assertEquals(v.getIndex(),0);
 		assertEquals(v.getx(),256);
 		assertEquals(v.gety(),256);
-		Vertex v2=vstore.obtain(im, (byte)13);
+		Vertex v2=vstore.obtain(im, (byte)13,"debug2");
 		assertEquals(v,v2);
 		vstore.decrement(v);
 		assertEquals(v2.getimerc(),im);
@@ -40,12 +40,12 @@ public class TestVertexStore {
 		for(int i=0;i<5;++i)
 		{
 			iMerc im=new iMerc(256+256*i,256);
-			vstore.obtain(im, (byte)13);
+			vstore.obtain(im, (byte)13,"debug3");
 		}
 		boolean exception=false;
 		try
 		{
-			vstore.obtain(new iMerc(0,0),(byte)13);
+			vstore.obtain(new iMerc(0,0),(byte)13,"debug4");
 		}
 		catch (RuntimeException e)
 		{
@@ -64,7 +64,7 @@ public class TestVertexStore {
 		for(int i=0;i<10;++i)
 		{
 			iMerc im=new iMerc(256,256);
-			Vertex v2=vstore.obtain(im, (byte)13);
+			Vertex v2=vstore.obtain(im, (byte)13,"debug5");
 			if (v==null) v=v2;
 			assertEquals(v,v2);
 		}

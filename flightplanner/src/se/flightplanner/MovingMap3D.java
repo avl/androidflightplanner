@@ -1,5 +1,7 @@
 package se.flightplanner;
 
+import java.io.IOException;
+
 import se.flightplanner.map3d.ElevationStore;
 import android.content.Context;
 import android.graphics.Color;
@@ -66,6 +68,11 @@ public class MovingMap3D extends GLSurfaceView {
 		this.estore=estore;
 		if (airspace!=null && lookup!=null && estore!=null)
 			rend.update(airspace,lookup,estore);
+	}
+
+	public void debugdump() throws IOException {
+		rend.debugdump();
+		
 	}
 
 }

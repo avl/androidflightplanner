@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 
+import android.util.Log;
+
 import se.flightplanner.Project.iMerc;
 
 public class Vertex {
@@ -26,9 +28,21 @@ public class Vertex {
 	public int calcZ()
 	{
 		if (elevcontributors==0)
-			return 0;
+		{
+			throw new RuntimeException("No elev for vertex: "+this);
+		}
 		lastElev=(100*elev)/elevcontributors;
+		Log.i("fplan","CalcZ(...)="+lastElev);
 		return lastElev;
+	}
+	public void contribElev(short hiElev,short strength) {
+		elev+=hiElev;
+		elevcontributors+=strength;		
+	}
+	public void resetElev()
+	{
+		elev=0;
+		elevcontributors=0;
 	}
 	public int getLastElev()
 	{
@@ -48,9 +62,11 @@ public class Vertex {
 	private short usage; //number of Things using this as corner vertex. When this goes to 0, vertex disappears (and *must* be purged from all stitches!)
 	
 	private byte owninglevel; //Level on which the Things which own this vertex are (have it as corners)
+	
+	private String what; //Debug description of what Vertex is used for.
 	public String toString()
 	{
-		return "Vertex("+mercx+","+mercy+")";
+		return "Vertex("+mercx+","+mercy+",what="+what+")";
 	}
 	public boolean isUsed()
 	{
@@ -65,6 +81,7 @@ public class Vertex {
 		usage-=1;
 		if (usage<=0)
 		{
+			if (usage<0) throw new RuntimeException("Bad decrementUsage - usage is now negative:"+"Vertex:"+this+" usage: "+usage);
 			//mercx=-1;
 			//mercy=-1;
 			//owninglevel=-1;
@@ -84,13 +101,15 @@ public class Vertex {
 		Vertex o=(Vertex)oo;
 		return o.mercx==mercx && o.mercy==mercy;
 	}
-	/** Must only be called by VertexStore! */
-	public void deploy(int mercx,int mercy,byte owninglevel)
+	/** Must only be called by VertexStore! 
+	 * @param what */
+	public void deploy(int mercx,int mercy,byte owninglevel, String what)
 	{
 		this.usage=1;
 		this.mercx=mercx;
 		this.mercy=mercy;
 		this.owninglevel=owninglevel;
+		this.what=what;
 	}
 	
 	public int hashCode()
@@ -122,22 +141,20 @@ public class Vertex {
 		
 		return usage;
 	}
-	public void contribElev(short hiElev,short strength) {
-		elev+=hiElev;
-		elevcontributors+=strength;		
-	}
-	public void resetElev()
-	{
-		elev=0;
-		elevcontributors=0;
-	}
 	public void debugDump(Writer f) throws IOException {
 		f.write("{\n");
 		f.write("\"nr\" : "+bufptr+" ,\n");
 		f.write("\"used\" : \""+isUsed()+"\",\n");
 		f.write("\"posx\" : "+mercx+" ,\n");
 		f.write("\"posy\" : "+mercy+" ,\n");
+		f.write("\"what\" : \""+what+"\" ,\n");
 		f.write("\"lastElev\" : "+lastElev+" \n");
 		f.write("}\n");		
+	}
+	public String getWhat() {
+		return what;
+	}
+	public void setWhat(String w) {
+		what=w;
 	}
 }

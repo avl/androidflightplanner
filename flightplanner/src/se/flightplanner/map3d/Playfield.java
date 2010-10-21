@@ -9,6 +9,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import android.util.Log;
 
@@ -38,7 +39,7 @@ public class Playfield implements Stitcher {
 		f.write(",");
 		int tcnt=0;
 		f.write("\"things\" : [");
-		for(int i=coarsestlevel;i<finestlevel;++i)
+		for(int i=coarsestlevel;i<=finestlevel;++i)
 		{
 			for(ThingIf t: levels.get(i).values())
 			{	
@@ -101,26 +102,76 @@ public class Playfield implements Stitcher {
 			return null;
 		return ret;
 	}
-	
-	public void changeLods(iMerc observer,short observerElev,VertexStore vstore,ElevationStore estore,LodCalc lodCalc)
+	public void scanForCracks()
 	{
-		ArrayList<ThingIf> newThings=new ArrayList<ThingIf>();
-		for(int i=coarsestlevel;i<=finestlevel;++i)
+		for(int i=coarsestlevel;i<finestlevel;++i)
+		{
+			HashMap<iMerc,ThingIf> lh=levels.get(i);
+			for(ThingIf t:lh.values())
+			{
+				HashSet<Vertex> vs=((Thing)t).getEdgeVertices();
+				vs.addAll(((Thing)t).getCornersAndCenter());
+				int boxsize=t.getBoxSize();
+				if (!t.isSubsumed())
+				{
+					for(int i2=coarsestlevel;i2<finestlevel;++i2)
+					{
+						HashMap<iMerc,ThingIf> lh2=levels.get(i2);
+						for(ThingIf t2:lh2.values())
+						{
+							if (t.getPos().equals(t2.getPos()) && t.getZoomlevel()==t2.getZoomlevel())
+								continue; //don't compare to self
+							Thing tt=(Thing)t2;
+							for(Vertex v : tt.getCornersAndCenter())
+							{
+								if (v.getx()>=t.getPos().x &&
+									v.gety()>=t.getPos().y &&
+									v.getx()<=t.getPos().x+boxsize &&
+									v.gety()<=t.getPos().y+boxsize)
+								{
+									if (!vs.contains(v))
+										throw new RuntimeException("Vertex "+v+" should have been stitched into "+t+" but it wasn't!");
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	public void changeLods(iMerc observer,short observerElev,VertexStore vstore,ElevationStore estore,LodCalc lodCalc,float bumpinessBias)
+	{
+		for(int i=coarsestlevel;i<finestlevel;++i)
 		{
 			HashMap<iMerc,ThingIf> lh=levels.get(i);
 			for(ThingIf t:lh.values())
 			{
 				///iMerc tpos=t.getPos();				
-				float bumpiness=t.bumpiness();
+				float bumpiness=t.bumpiness()+bumpinessBias;
 				float dist=t.getDistance(observer,observerElev);
 				float refine=lodCalc.needRefining(bumpiness, dist);
-				//if (i<=8) refine=1.0f;
+				//if (i>=6) refine=-1.0f;
+				//else refine=1;
+				
 				if (refine<0)
-				{
+				{					
 					if (t.isSubsumed())
 					{
-						//Log.i("fplan","Un-subsuming "+t);
-						t.unsubsume(vstore,this);
+						//Log.i("fplan","Unsubsuming: Refine-value for "+t+" is "+refine);
+						//scanForCracks();
+						ArrayList<ThingIf> removedThings=new ArrayList<ThingIf>();
+						t.unsubsume(vstore,this,removedThings,tristore);
+						for(ThingIf t2:removedThings)
+						{
+							int zl=t2.getZoomlevel();
+							if (zl<=i) throw new RuntimeException("Removed things on same or higher zoomlevel!");
+							if (zl<=coarsestlevel) throw new RuntimeException("Bad (low) level for removed Thing");
+							if (zl>finestlevel) throw new RuntimeException("Bad (high) level for removed Thing");
+							HashMap<iMerc,ThingIf> lh2=levels.get(zl);
+							if (lh2.remove(t2.getPos())==null)
+								throw new RuntimeException("Unexpected error - thing to be removed wasn't found in map. Pos:"+t2.getPosStr());
+						}		
+						//scanForCracks();
 					}
 					continue;
 				}
@@ -128,8 +179,18 @@ public class Playfield implements Stitcher {
 				{
 					if (!t.isSubsumed())
 					{
-						//Log.i("fplan","Subsuming "+t);
+						//Log.i("fplan","Subsuming: Refine-value for "+t+" is "+refine);
+						ArrayList<ThingIf> newThings=new ArrayList<ThingIf>();
 						t.subsume(newThings,vstore,this,estore);
+						for(ThingIf t2:newThings)
+						{
+							int zl=t2.getZoomlevel();
+							if (zl<=i) throw new RuntimeException("Added things on same or higher zoomlevel!");
+							if (zl<=coarsestlevel) throw new RuntimeException("Bad (low) level for newly created Thing");
+							if (zl>finestlevel) throw new RuntimeException("Bad (high) level for newly created Thing");
+							HashMap<iMerc,ThingIf> lh2=levels.get(zl);
+							lh2.put(t2.getPos(),t2);
+						}		
 					}
 					continue;
 				}
@@ -137,17 +198,12 @@ public class Playfield implements Stitcher {
 				
 			}
 		}
-		for(ThingIf t:newThings)
-		{
-			int zl=t.getZoomlevel();
-			if (zl<=coarsestlevel) throw new RuntimeException("Bad level for newly created Thing");
-			HashMap<iMerc,ThingIf> lh=levels.get(zl);
-			lh.put(t.getPos(),t);
-		}		
+		//scanForCracks();
 	}
 	public void explicitSubsume(iMerc pos,int zoomlevel,VertexStore vstore,ElevationStore estore,boolean subsume)
 	{
 		ArrayList<ThingIf> newThings=new ArrayList<ThingIf>();
+		ArrayList<ThingIf> removedThings=new ArrayList<ThingIf>();
 		HashMap<iMerc,ThingIf> lh=levels.get(zoomlevel);
 		for(ThingIf t:lh.values())
 		{
@@ -155,7 +211,7 @@ public class Playfield implements Stitcher {
 			{
 				if (t.isSubsumed() && !subsume)
 				{						
-					t.unsubsume(vstore,this);
+					t.unsubsume(vstore,this,removedThings,tristore);
 					continue;
 				}
 				if (!t.isSubsumed() && subsume)
@@ -172,6 +228,14 @@ public class Playfield implements Stitcher {
 			HashMap<iMerc,ThingIf> lh2=levels.get(zl);
 			lh2.put(t.getPos(),t);
 		}		
+		for(ThingIf t:removedThings)
+		{
+			int zl=t.getZoomlevel();
+			if (zl<=coarsestlevel) throw new RuntimeException("Bad level for removed Thing");
+			HashMap<iMerc,ThingIf> lh2=levels.get(zl);
+			if (lh2.remove(t.getPos())==null)
+				throw new RuntimeException("Thing to be removed didn't exist: "+t);
+		}		
 	}
 	
 	
@@ -184,17 +248,17 @@ public class Playfield implements Stitcher {
 			{
 				for(ThingIf t:lh.values())
 				{
-					t.triangulate(tristore);
+					t.triangulate(tristore,vstore);
 				}
 			}
 		}
 	}
-	public void stitch(Vertex v,int level,ThingIf parent,boolean unstitch) {
+	public void stitch(Vertex v,int level,ThingIf parent,boolean dostitch) {
 		level-=1;
 		int zoomgap=13-level;
 		int boxsize=64<<zoomgap;
-		boolean unshare=unstitch;
-		for(;level>=coarsestlevel;--level)
+		boolean unshare=!dostitch;
+		for(;level>=coarsestlevel;--level,boxsize<<=1)
 		{
 			
 			boolean goody=(v.gety()&(boxsize-1))==0;
@@ -210,22 +274,22 @@ public class Playfield implements Stitcher {
 				{
 					//Vertex may fit in horizontal edge of some box
 					int x=v.getx()&(~(boxsize-1));
-					ThingIf t=lh.get(new iMerc(x,v.gety())); //bottom edge
-					if (t!=null && t!=parent)
+					ThingIf t=lh.get(new iMerc(x,v.gety()-boxsize)); //bottom edge
+					if (t!=null && t!=parent && !t.isReleased())
 						t.shareVertex(vstore,v,!unshare);
-					t=lh.get(new iMerc(x,v.gety()+boxsize)); //top edge
-					if (t!=null && t!=parent)
+					t=lh.get(new iMerc(x,v.gety())); //top edge
+					if (t!=null && t!=parent && !t.isReleased())
 						t.shareVertex(vstore,v,!unshare);				
 				}
 				if (goodx)
 				{
 					//Vertex may fit in horizontal edge of some box
 					int y=v.gety()&(~(boxsize-1));
-					ThingIf t=lh.get(new iMerc(v.getx(),y)); //left edge
-					if (t!=null && t!=parent)
+					ThingIf t=lh.get(new iMerc(v.getx()-boxsize,y)); //left edge
+					if (t!=null && t!=parent && !t.isReleased())
 						t.shareVertex(vstore,v,!unshare);
-					t=lh.get(new iMerc(v.getx()+boxsize,y)); //right edge
-					if (t!=null && t!=parent)
+					t=lh.get(new iMerc(v.getx(),y)); //right edge
+					if (t!=null && t!=parent && !t.isReleased())
 						t.shareVertex(vstore,v,!unshare);				
 				}
 				//Future optimization: If we know we've found all neighbors, we don't need to go further up in hierarchy.

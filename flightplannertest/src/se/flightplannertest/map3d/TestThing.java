@@ -55,7 +55,7 @@ public class TestThing {
 		}
 						
 		TriangleStore tristore=new TriangleStore(10);
-		t1.triangulate(tristore);
+		t1.triangulate(tristore,vstore);
 		ArrayList<Triangle> tris=tristore.dbgGetTriangles();
 		HashMap<Short,Vertex> map=vstore.dbgGetVertices();
 		Assert.assertEquals(5,tris.size());
@@ -115,10 +115,9 @@ public class TestThing {
 	{
 		Stitcher st=new MyStitcher()
 		{
+			
 			@Override
 			public void stitch(Vertex v, int level, ThingIf parent, boolean unstitch) {
-				// TODO Auto-generated method stub
-				
 			}		
 		};
 		VertexStore vstore=new VertexStore(100);
@@ -128,7 +127,7 @@ public class TestThing {
 				new iMerc(256,256),null,13,vstore,estore,st
 				);
 		TriangleStore tristore=new TriangleStore(10);
-		t.triangulate(tristore);
+		t.triangulate(tristore,vstore);
 		ArrayList<Triangle> tris=tristore.dbgGetTriangles();
 		Assert.assertEquals(2,tris.size());
 		Assert.assertTrue(tris.get(0).getidx(0)==0);
@@ -145,6 +144,7 @@ public class TestThing {
 	public void testThingSubsume() throws FileNotFoundException, IOException
 	{
 		VertexStore vstore=new VertexStore(100);
+		TriangleStore tristore=new TriangleStore(100);
 		final HashSet<Vertex> stitched=new HashSet<Vertex>();
 		final HashSet<Vertex> unstitched=new HashSet<Vertex>();
 		iMerc[] ims=new iMerc[]{
@@ -159,6 +159,7 @@ public class TestThing {
 		{
 			@Override
 			public void stitch(Vertex v, int level, ThingIf parent,boolean stitch) {
+				System.out.println("Stitch called for "+v+" action stitch="+stitch);
 				if (!stitch)
 					unstitched.remove(v);
 				else
@@ -179,18 +180,26 @@ public class TestThing {
 		t.subsume(newThings, vstore, st, estore);
 		Assert.assertTrue(t.getCorner(0).dbgUsage()==2);
 		Assert.assertTrue(t.getCorner(1).dbgUsage()==2);
+
 		
+		System.out.println("There are "+stitched.size()+" stitches.");
+		for(Vertex v:stitched)
+		{
+			System.out.println("Missing stitch for "+v);
+		}
 		Assert.assertTrue(stitched.size()==0); //all have occurred
 
 		Assert.assertTrue(newThings.get(0).isCorner(vstore.obtaindbg(new iMerc(0,0), (byte)zoomlevel)));
 		Assert.assertTrue(newThings.get(0).isCorner(vstore.obtaindbg(new iMerc(64,0), (byte)zoomlevel)));
 		Assert.assertTrue(!newThings.get(0).isCorner(vstore.obtaindbg(new iMerc(128,0), (byte)zoomlevel)));
 		Assert.assertTrue(t.isSubsumed());
-		t.unsubsume(vstore,st);
+		ArrayList<ThingIf> out=new ArrayList<ThingIf>();
+		t.unsubsume(vstore,st,out,tristore);
 		Assert.assertTrue(t.getCorner(0).dbgUsage()==1);
 		Assert.assertFalse(t.isSubsumed());		
 		HashSet<Vertex> ns=new HashSet<Vertex>();
-		t.release(ns,vstore,st);
+		t.release(ns,vstore,st,out,tristore);
+		System.out.println("used vert: "+vstore.dbgGetIMercSet());
 		Assert.assertEquals(0,vstore.usedVertices());
 	}
 	@Test
@@ -204,6 +213,7 @@ public class TestThing {
 			}		
 		};
 		VertexStore vstore=new VertexStore(100);
+		TriangleStore tristore=new TriangleStore(100);
 		ElevationStore estore=TestElevMap.getSampleEstore();
 		int size=64;
 		ThingIf t=new Thing(
@@ -241,7 +251,8 @@ public class TestThing {
 		Vertex ulcorn=t.getCorner(0);
 		Assert.assertEquals(ulcorn.dbgUsage(),1);
 		HashSet<Vertex> stitched=new HashSet<Vertex>();
-		t.release(stitched, vstore, st);
+		ArrayList<ThingIf> out=new ArrayList<ThingIf>();
+		t.release(stitched, vstore, st,out,tristore);
 		Assert.assertEquals(0,stitched.size()); //None of the vertices of the released thing need to be stitched into the things parent (mostly since it has no parent)
 		Assert.assertEquals(0,ulcorn.dbgUsage()); //All of the vertices are unallocated
 		

@@ -1,6 +1,7 @@
 package se.flightplanner;
 
 import java.io.DataInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 
@@ -89,6 +90,15 @@ public class Nav extends Activity implements LocationListener {
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
         	map.sideways(+1);
+    		return true;
+        }
+        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER) {
+        	try {
+				map.debugdump();
+				RookieHelper.showmsg(this, "Dump saved!");
+			} catch (IOException e) {
+				RookieHelper.showmsg(this, "Couldn't save debug dump: "+e);
+			}
     		return true;
         }
          return false;

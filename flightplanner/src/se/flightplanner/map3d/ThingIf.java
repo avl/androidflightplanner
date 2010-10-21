@@ -15,6 +15,8 @@ public interface ThingIf {
 	public abstract Vertex getCorner(int i);
 
 	public abstract iMerc getPos();
+	public abstract int getBoxSize();
+	public abstract boolean isReleased();
 
 	/*
 	private int getZoomLevel() {
@@ -47,7 +49,7 @@ public interface ThingIf {
 	public abstract void subsume(ArrayList<ThingIf> newThings,
 			VertexStore vstore, Stitcher stitcher, ElevationStore estore);
 
-	public abstract void unsubsume(VertexStore vstore, Stitcher st);
+	public abstract void unsubsume(VertexStore vstore, Stitcher st,ArrayList<ThingIf> removed_things,TriangleStore tristore);
 
 	/**
 	 * Called when the life of a Thing ends. 
@@ -59,9 +61,9 @@ public interface ThingIf {
 	 * the criteria for needing stitching?) 
 	 */
 	public abstract void release(HashSet<Vertex> neededStitching,
-			VertexStore vstore, Stitcher st);
+			VertexStore vstore, Stitcher st,ArrayList<ThingIf> removed_things,TriangleStore tristore);
 
-	public abstract void triangulate(TriangleStore tristore);
+	public abstract void triangulate(TriangleStore tristore,VertexStore vstore);
 	public abstract ThingIf getChild(int i,int j);
 	/**
 	 * The following events may happen for a vertex:

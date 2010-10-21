@@ -53,7 +53,19 @@ public class VertexStore {
 		{
 			short ptr=v.getPointer();
 			used.remove(v.getimerc());
+			//Some explanation for the next line.
+			//Initially it was aimed for not having to
+			//use new in the render loop, for vertices. 
+			//The idea being that the same objects could be recycled
+			//over and over. However, not using new turned out to
+			//be too restrictive. And the Vertex objects aren't
+			//more expensive than any other. Presently the 'neededStitching'
+			//hack in Thing is dependent on Vertices not being recycled.
+			//More precisely, the hack counts on Vertexes living indefinitely with
+			//count = 0 after having been removed from the VertexStore here
+			//in this routine.
 			Vertex n=new Vertex(ptr);
+			n.setWhat("Previously "+v.getWhat()+" at: "+v.getx()+","+v.gety());
 			free.add(n);
 			all.set(ptr,n);
 			return true;
@@ -66,7 +78,7 @@ public class VertexStore {
 	 * @param zoomlevel The zoomlevel of the owning Things.
 	 * @return New or reused Vertex
 	 */
-	public Vertex obtain(iMerc p,byte zoomlevel)
+	public Vertex obtain(iMerc p,byte zoomlevel,String what)
 	{
 		Vertex already=used.get(p);
 		if (already!=null) 
@@ -78,13 +90,13 @@ public class VertexStore {
 		Vertex shiny=free.poll();
 		
 		used.put(p, shiny);
-		shiny.deploy(p.x,p.y,zoomlevel);
+		shiny.deploy(p.x,p.y,zoomlevel,what);
 		//System.out.println("Obtained new "+shiny);
 		return shiny;
 	}
 	public Vertex obtaindbg(iMerc iMerc, byte b) {
 		Vertex dbg=new Vertex((short)-1);
-		dbg.deploy(iMerc.x,iMerc.y,b);
+		dbg.deploy(iMerc.x,iMerc.y,b,"debug");
 		return dbg;
 	}		
 	public VertexStore(int capacity)
@@ -128,7 +140,7 @@ public class VertexStore {
 			if (v.isUsed())
 			{
 				calzraw=v.calcZ();
-				int calz=(int)(0.1*calzraw);
+				int calz=(int)(calzraw);
 				v.resetElev();
 				z=calz-altitude;			
 				x=v.getx()-observer.x;
@@ -137,14 +149,20 @@ public class VertexStore {
 				x*=0.01;
 				y*=0.01;
 				z*=0.01;
-				r=(byte)calz;//-1;//(byte)z;
-				g=(byte)((i*8)%256);//(byte)z;
-				b=(byte)((i*64)%256);//(byte)z;
+				g=(byte)(calzraw);//-1;//(byte)z;
+				if (calzraw<50)
+				{
+					b=(byte)-1;
+					g=0;
+				}
+				//g=(byte)((i*8)%256);//(byte)z;
+				//b=(byte)((i*64)%256);//(byte)z;
+				//Log.i("fplan","Rendered vertex #"+i+": "+x+","+y+","+z+" rawZ:"+calzraw);
 			}
 			buf.put(x);
 			buf.put(y);
 			buf.put(z);
-			Log.i("fplan","Rendered vertex #"+i+": "+x+","+y+","+z+" rawZ:"+calzraw);
+			
 			colors.put(r);
 			colors.put(g);
 			colors.put(b);

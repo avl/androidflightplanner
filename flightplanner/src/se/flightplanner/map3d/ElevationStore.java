@@ -107,7 +107,7 @@ public class ElevationStore {
 					maxelev=e.data[2*i+1];
 			
 			
-			Log.i("fplan","Deserialized tile at "+e.m1+" maxelev:"+maxelev+" zoomlevel: "+e.zoomlevel);
+			//Log.i("fplan","Deserialized tile at "+e.m1+" maxelev:"+maxelev+" zoomlevel: "+e.zoomlevel);
 			e.box=new BoundingBox(e.m1.x,e.m1.y,e.m2.x,e.m2.y);
 			return e;
 		}		
@@ -169,12 +169,43 @@ public class ElevationStore {
 		}
 		data.writeInt(0x1beef);
 	}
-	public Elev get(iMerc pos,int level)
+	public Elev get(iMerc pos,int hlevel)
 	{
-		ElevTile et=getTile(pos,level);
+		/*
+		int level=hlevel+6;
+		int amp=4000;
+		int wavelen=16384<<1;
+		int lvgp=13-level;
+		int boxsize=64<<lvgp;
+		Log.i("fplan","Elev.get level="+level+", pos "+pos+" boxsize: "+boxsize);
+		int x1=pos.x;
+		int x2=pos.x+boxsize;
+		if (boxsize>=wavelen)
+			return new Elev((short)0,(short)amp);
+		float px1=(float)(Math.PI*2.0)*(float)(x1%wavelen)/(float)wavelen;
+		float px2=(float)(Math.PI*2.0)*(float)(x2%wavelen)/(float)wavelen;
+		if (px2<px1)
+			px2+=(float)(2*Math.PI);
+		float min=1;
+		float max=0;
+		for(float i=px1;i<=px2;i+=0.05)
+		{
+			float y=0.5f+0.5f*(float) Math.sin(i);
+			if (y<min) min=y;
+			if (y>max) max=y;
+		}
+		min*=amp;
+		max*=amp;
+		Elev e=new Elev((short)min,(short)max);
+		//e.1024*h
+		return e;
+		*/
+		
+		ElevTile et=getTile(pos,hlevel);
 		if (et==null)
 			return null;
 		return et.get(pos);
+		
 	}
 	public ElevTile getTile(iMerc pos,int curlevel)
 	{

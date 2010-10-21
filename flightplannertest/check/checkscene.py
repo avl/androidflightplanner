@@ -10,14 +10,22 @@ class Vertex(object):
     def __init__(self,subtree):
         self.nr=subtree['nr']
         self.used=subtree['used']=='true'
+        self.what=subtree['what']
         self.merc=tuple(int(x) for x in [subtree['posx'],subtree['posy']])
         self.lastElev=subtree['lastElev']
+    def __repr__(self):
+        return "Vertex(%s,nr=#%d,used=%s,what=%s)"%(self.merc,self.nr,self.used,self.what)
+    
 class Triangle(object):
     def __init__(self,subtree):
         self.nr=subtree['nr']
         self.vertices=subtree['vertices']
-
-
+    def get_lines(self):
+        l=len(self.vertices)
+        for i in xrange(l):
+            a=self.vertices[i]
+            b=self.vertices[(i+1)%l]
+            yield (a,b)
 
 def parse_pos(x):
     posx,posy,zoomlevel=x.split(",")
@@ -29,6 +37,8 @@ class Thing(object):
         if self.parentobj:
             return self.parentobj.self_or_parent_has_triangles()
         return False
+    def __repr__(self):
+        return "Thing(%s,%s)"%(self.merc,self.zoomlevel)
     def __init__(self,subtree):
         self.subtree=subtree
         self.merc,self.zoomlevel=parse_pos(subtree['pos'])
@@ -95,9 +105,11 @@ class Scene(object):
                 thing.parentobj=self.poszoom2thing[thing.parentpz]
             else:
                 thing.parentobj=None
+        
     def get_thing_by_poszoom(self,pz):
         assert len(pz)==2
         return self.poszoom2thing[pz]
+        
     def __init__(self,dumpfile):
         self.tree=json.load(open(dumpfile))
         self.vertices=[]
@@ -111,11 +123,37 @@ class Scene(object):
             self.things.append(Thing(subtree))
 
         self.prepare_lookups()    
+    
+    def find_cracks(self):
+        lines=[]
+        vertices=dict()
+        for tri in self.triangles:
+            for line in tri.get_lines():
+                linev=(self.vnr2vobj[line[0]],self.vnr2vobj[line[1]])
+                lines.append((linev,tri))
+                vertices[linev[0].merc]=linev[0]
+                vertices[linev[1].merc]=linev[1]
+        for line,tri in lines:
+            linemercs=[line[0].merc,line[1].merc]
+            l=pyshapemerge2d.Line2(
+                pyshapemerge2d.Vertex(int(line[0].merc[0]),int(line[0].merc[1])),
+                pyshapemerge2d.Vertex(int(line[1].merc[0]),int(line[1].merc[1])))
+                
+            for vertmerc,vert in vertices.items():
+                assert vertmerc==vert.merc
+                if vert.merc in linemercs: continue
+                v=pyshapemerge2d.Vertex(*vert.merc)
+                dist=l.approx_dist(v)
+                if dist<1:
+                    print "Tri:",tri.nr
+                    raise Exception("Likely crack detected - line %s (%s) is way too close to vertex %s (dist = %d)"%(l,line,vert,dist))
+
     def checkall(self):
         self.check_parent_child_consistency()
         self.check_vertices_in_things()
         self.check_areas()
         self.check_subsuming()
+        self.find_cracks()
     def check_areas(self):
         for t in self.things:
             t.check_area(self.nr2tri)
@@ -128,13 +166,20 @@ class Scene(object):
             for triangle in thing.triangles:
                 triangleObj=self.nr2tri[triangle]
                 for idx in triangleObj.vertices:
-                    pos=self.vert2pos[idx]
-                    assert thing.isinside(pos)
+                    vobj=self.vnr2vobj[idx] #self.vert2pos[idx]
+                    if not vobj.used:
+                        print "Thing %s, triangle %s, uses unused vertex: #%d:%s"%(thing,triangle,vobj.nr,vobj)
+                        assert False
+                    if not thing.isinside(vobj.merc):
+                        print "Pos: %s is not inside <%s>"%(vobj,thing)
+                        assert False
                     
     def check_parent_child_consistency(self):
         for thing in self.things:
             if thing.parentpz!=None:
                 parentthing=self.get_thing_by_poszoom(thing.parentpz)
+                if not (thing.pz in parentthing.children):
+                    print "Thing %s has parent %s, but that parent doesn't have the thing."%(thing,parentthing)
                 assert thing.pz in parentthing.children
             for childpz in thing.children:
                 childobj=self.get_thing_by_poszoom(childpz)
@@ -154,6 +199,13 @@ class Scene(object):
     
     
 if __name__=='__main__':
-    analyzer=Scene(sys.argv[1])
-    analyzer.checkall()
-        
+    for arg in sys.argv[1:]:
+        print "Analyzing dump:",arg
+        analyzer=Scene(arg)
+        try:
+            analyzer.checkall()
+        except:
+            print "Error is in ",arg
+            raise
+            
+            
