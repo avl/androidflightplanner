@@ -152,7 +152,8 @@ public class Playfield implements Stitcher {
 				float refine=lodCalc.needRefining(bumpiness, dist);
 				//if (i>=6) refine=-1.0f;
 				//else refine=1;
-				
+				if (i==coarsestlevel)
+					t.adjustRefine(1.0f); //Coarsest level is always fully refined".
 				if (refine<0)
 				{					
 					if (t.isSubsumed())
@@ -192,6 +193,8 @@ public class Playfield implements Stitcher {
 							lh2.put(t2.getPos(),t2);
 						}		
 					}
+					for(ThingIf child : t.getAllChildren())
+						child.adjustRefine(refine);
 					continue;
 				}
 				//90 deg FOV
@@ -238,7 +241,9 @@ public class Playfield implements Stitcher {
 		}		
 	}
 	
+
 	
+
 	public void prepareForRender()
 	{
 		for(int i=coarsestlevel;i<=finestlevel;++i)
@@ -249,9 +254,39 @@ public class Playfield implements Stitcher {
 				for(ThingIf t:lh.values())
 				{
 					t.triangulate(tristore,vstore);
+					t.calcElevs1(tristore,vstore);
 				}
 			}
 		}
+		for(int i=coarsestlevel;i<=finestlevel;++i)
+		{
+			HashMap<iMerc,ThingIf> lh=levels.get(i);
+			if (lh!=null)
+			{
+				for(ThingIf t:lh.values())
+				{
+					t.calcElevs2(tristore,vstore);
+				}
+			}
+		}
+		HashSet<Vertex> allInStore=vstore.dbgGetAllUsed();
+		for(int i=coarsestlevel;i<=finestlevel;++i)
+		{
+			HashMap<iMerc,ThingIf> lh=levels.get(i);
+			if (lh!=null)
+			{
+				for(ThingIf t:lh.values())
+				{
+					for(Vertex v:((Thing)t).getCornersAndCenter())
+					{
+						allInStore.remove(v);
+					}					
+				}
+			}
+			if (allInStore.size()!=0) throw new RuntimeException("Bad!");
+		}
+			
+		
 	}
 	public void stitch(Vertex v,int level,ThingIf parent,boolean dostitch) {
 		level-=1;

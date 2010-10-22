@@ -28,7 +28,7 @@ public class PlayfieldDrawer {
 		iMerc p2=Project.latlon2imerc(new LatLon(50,20),13);
 		vstore=new VertexStore(2000);
 		tristore=new TriangleStore(2000);
-		lodc=new LodCalc(480,100); //TODO: Screenheight isn't always 480. Also, tolerance 1000 is too big!
+		lodc=new LodCalc(480,200); //TODO: Screenheight isn't always 480. Also, tolerance 1000 is too big!
 		elevstore=estore;
 		if (elevstore==null)
 			elevstore=new ElevationStore(0);

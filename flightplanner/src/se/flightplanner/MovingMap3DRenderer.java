@@ -76,7 +76,7 @@ public class MovingMap3DRenderer implements Renderer {
 	int b=0;
 	private void draw_vertices(GL10 gl) throws IOException {
 
-		LatLon cameraLatLon=new LatLon(61,19);//pos.getLatitude(),pos.getLongitude());
+		LatLon cameraLatLon=new LatLon(61,17);//pos.getLatitude(),pos.getLongitude());
 		iMerc cameramerc=Project.latlon2imerc(cameraLatLon, 13);
 		cameramerc.y+=b;
 		b+=17;
@@ -161,8 +161,15 @@ I/fplan   (18568): Drawed 2 triangles
         gl.glRotatef(-90, 1.0f, 0, 0); //tilt to look to horizon (don't change)
         float hdg=pos.getBearing()+headturn;
         gl.glRotatef(hdg, 0, 0, 1); //compass heading
-
         
+/*        
+Probably calc mid-vertices in a separate pass, last.
+For transitioning Things, the mid would initially be a
+straight mix between the "two corners", so that result would
+be same as before subsumtion. Then, as the subsumption deepends,
+the mid-vertex would be more and more its own (calculated
+from the Thing).
+*/        
         gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
         gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
 		

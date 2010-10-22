@@ -29,7 +29,7 @@ public class Vertex {
 	{
 		if (elevcontributors==0)
 		{
-			throw new RuntimeException("No elev for vertex: "+this);
+			throw new RuntimeException("No elev for vertex: "+this+" lastelev: "+lastElev);
 		}
 		lastElev=(100*elev)/elevcontributors;
 		Log.i("fplan","CalcZ(...)="+lastElev);

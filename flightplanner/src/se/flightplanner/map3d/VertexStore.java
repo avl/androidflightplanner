@@ -127,6 +127,19 @@ public class VertexStore {
 		public FloatBuffer vertices;
 		public ByteBuffer colors;
 	}
+	HashSet<Vertex> dbgGetAllUsed()
+	{
+		HashSet<Vertex> ret=new HashSet<Vertex>();
+		for(int i=0;i<all.size();++i)
+		{
+			Vertex v=all.get(i);
+			if (v.isUsed())
+			{
+				ret.add(v);
+			}
+		}
+		return ret;		
+	}
 	VertAndColor getVerticesReadyForRender(iMerc observer,int altitude)
 	{
 		buf.position(0);

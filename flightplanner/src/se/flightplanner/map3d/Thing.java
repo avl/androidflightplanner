@@ -28,6 +28,7 @@ public class Thing implements ThingIf {
 		}
 	}*/
 	private int zoomlevel;
+	private float refine;
 	
 	private int size; //of box's side, in merc units
 	/* (non-Javadoc)
@@ -51,7 +52,7 @@ public class Thing implements ThingIf {
 	private boolean need_retriangulation; //set whenever edge vertices are added.
 	private boolean known_ready;//ready when all vertices have received their elevation
 	private boolean deployed; //set to true when a thing becomes visible. Implies that parent->subsumed is true.
-	private ArrayList<Thing> children; //order: upper row first; left-right, then second row; left-right.
+	private ArrayList<ThingIf> children; //order: upper row first; left-right, then second row; left-right.
 
 	public HashSet<Vertex> getEdgeVertices()
 	{
@@ -79,6 +80,10 @@ public class Thing implements ThingIf {
 		if (center_vertex!=null)
 			ret.add(center_vertex);
 		return ret;
+	}
+	public ArrayList<ThingIf> getAllChildren()
+	{
+		return children;
 	}
 	public ThingIf getChild(int i,int j)
 	{
@@ -196,7 +201,7 @@ public class Thing implements ThingIf {
 	{
 		if (children!=null) 
 			return; //Already subsumed
-		children=new ArrayList<Thing>();
+		children=new ArrayList<ThingIf>();
 		need_retriangulation=true;
 		for(int cury=pos.y;cury<pos.y+size;cury+=size/2)
 		{
@@ -427,6 +432,36 @@ public class Thing implements ThingIf {
 		cmps.add(cmp3);
 	}
 
+	public void calcElevs1(TriangleStore tristore, VertexStore vstore)
+	{
+		if (base_vertices==null || isReleased())
+			throw new RuntimeException("calcElevs called for released Thing");
+		if (refine==0.0f) throw new RuntimeException("refine is 0.0");
+		short ref=(short)(100*refine);
+		if (ref<0) ref=1;
+		for(int i=0;i<4;++i)
+		{
+			Vertex v=base_vertices.get(i);
+			v.contribElev((short)(elev.hiElev*refine),ref);			
+		}
+		
+	}
+	public void calcElevs2(TriangleStore tristore, VertexStore vstore)
+	{
+		if (base_vertices==null || isReleased())
+			throw new RuntimeException("calcElevs called for released Thing2");
+		if (center_vertex!=null)
+		{
+			int upperright_height=base_vertices.get(1).calcZ();
+			int lowerleft_height=base_vertices.get(2).calcZ();
+			int middleheight=(upperright_height+lowerleft_height)/2;
+			center_vertex.contribElev((short)middleheight,(short)100);			
+		}
+	}
+	public void adjustRefine(float refine)
+	{
+		this.refine=refine;
+	}
 	public void triangulate(TriangleStore tristore,VertexStore vstore)
 	{
 		if (base_vertices==null || isReleased())
@@ -434,13 +469,6 @@ public class Thing implements ThingIf {
 		//if (false && !need_retriangulation) return;
 		releaseTriangles(tristore);
 		//System.out.println("Released tris for "+this);
-		for(int i=0;i<4;++i)
-		{
-			Vertex v=base_vertices.get(i);
-			v.contribElev((short)(elev.hiElev),(short)100);
-		}
-		if (center_vertex!=null)
-			center_vertex.contribElev((short)(elev.hiElev),(short)100);
 		if (children!=null)
 			return; //this block is subsumed! It thus has no own triangles.
 			
@@ -495,7 +523,7 @@ public class Thing implements ThingIf {
 					centerpos.y+=size/2;			
 					//System.out.println("Creating center vertex for Thing "+this+" at "+centerpos);
 					center_vertex=vstore.obtain(centerpos, (byte)zoomlevel,"Center vertex for "+this);
-					center_vertex.contribElev((short)(elev.hiElev),(short)100);
+					/// not needed - contrib elev is now done *after* triangulation center_vertex.contribElev((short)(elev.hiElev),(short)100);
 					if (center_vertex.dbgUsage()!=1)
 						throw new RuntimeException("When creating new center vertex during rendering, created center_vertex was not singularly owned!");
 				}				

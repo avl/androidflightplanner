@@ -114,4 +114,11 @@ public interface ThingIf {
 
 	public abstract String getPosStr();
 
+	public abstract void calcElevs1(TriangleStore tristore, VertexStore vstore);
+	public abstract void calcElevs2(TriangleStore tristore, VertexStore vstore);
+
+	public abstract void adjustRefine(float refine);
+
+	public abstract ArrayList<ThingIf> getAllChildren();
+
 }
