@@ -79,7 +79,7 @@ public class MovingMap3DRenderer implements Renderer {
 		LatLon cameraLatLon=new LatLon(61,17);//pos.getLatitude(),pos.getLongitude());
 		iMerc cameramerc=Project.latlon2imerc(cameraLatLon, 13);
 		cameramerc.y+=b;
-		b+=17;
+		b+=7;//17;
 
 		LatLon obstLatLon=new LatLon(59,17);
 		iMerc obstmerc=Project.latlon2imerc(obstLatLon, 13);

@@ -150,10 +150,15 @@ public class Playfield implements Stitcher {
 				float bumpiness=t.bumpiness()+bumpinessBias;
 				float dist=t.getDistance(observer,observerElev);
 				float refine=lodCalc.needRefining(bumpiness, dist);
+
 				//if (i>=6) refine=-1.0f;
 				//else refine=1;
 				if (i==coarsestlevel)
 					t.adjustRefine(1.0f); //Coarsest level is always fully refined".
+				if (i>10)
+					refine=-1;
+				if (refine>=1.0f) refine=1.0f;
+
 				if (refine<0)
 				{					
 					if (t.isSubsumed())
@@ -161,6 +166,7 @@ public class Playfield implements Stitcher {
 						//Log.i("fplan","Unsubsuming: Refine-value for "+t+" is "+refine);
 						//scanForCracks();
 						ArrayList<ThingIf> removedThings=new ArrayList<ThingIf>();
+						//verifyVertexUsage();
 						t.unsubsume(vstore,this,removedThings,tristore);
 						for(ThingIf t2:removedThings)
 						{
@@ -172,6 +178,7 @@ public class Playfield implements Stitcher {
 							if (lh2.remove(t2.getPos())==null)
 								throw new RuntimeException("Unexpected error - thing to be removed wasn't found in map. Pos:"+t2.getPosStr());
 						}		
+						//verifyVertexUsage();
 						//scanForCracks();
 					}
 					continue;
@@ -182,7 +189,9 @@ public class Playfield implements Stitcher {
 					{
 						//Log.i("fplan","Subsuming: Refine-value for "+t+" is "+refine);
 						ArrayList<ThingIf> newThings=new ArrayList<ThingIf>();
+						//verifyVertexUsage();
 						t.subsume(newThings,vstore,this,estore);
+						//Log.i("fplan","Newthings: "+newThings.size());
 						for(ThingIf t2:newThings)
 						{
 							int zl=t2.getZoomlevel();
@@ -190,8 +199,14 @@ public class Playfield implements Stitcher {
 							if (zl<=coarsestlevel) throw new RuntimeException("Bad (low) level for newly created Thing");
 							if (zl>finestlevel) throw new RuntimeException("Bad (high) level for newly created Thing");
 							HashMap<iMerc,ThingIf> lh2=levels.get(zl);
-							lh2.put(t2.getPos(),t2);
+							//Log.i("fplan","Physically putting thing "+t2+" into zoomlevel "+zl);
+							if (lh2.put(t2.getPos(),t2)!=null)
+								throw new RuntimeException("Attempt to replace existing child!");
+							//Log.i("fplan","Adding new thing "+t2);
 						}		
+						//Log.i("fplan","Verify to start");
+						//verifyVertexUsage();
+						//Log.i("fplan","Verify succeeded");
 					}
 					for(ThingIf child : t.getAllChildren())
 						child.adjustRefine(refine);
@@ -246,6 +261,7 @@ public class Playfield implements Stitcher {
 
 	public void prepareForRender()
 	{
+		verifyVertexUsage();
 		for(int i=coarsestlevel;i<=finestlevel;++i)
 		{
 			HashMap<iMerc,ThingIf> lh=levels.get(i);
@@ -258,6 +274,7 @@ public class Playfield implements Stitcher {
 				}
 			}
 		}
+		verifyVertexUsage();
 		for(int i=coarsestlevel;i<=finestlevel;++i)
 		{
 			HashMap<iMerc,ThingIf> lh=levels.get(i);
@@ -266,27 +283,48 @@ public class Playfield implements Stitcher {
 				for(ThingIf t:lh.values())
 				{
 					t.calcElevs2(tristore,vstore);
+					
+					for(Vertex v:((Thing)t).getCornersAndCenter())
+					{
+						if (!v.dbgHasElev())
+							throw new RuntimeException("No elev, vertex: "+v+" of thing: "+t);
+					}
 				}
 			}
 		}
+		verifyVertexUsage();
+			
+		
+	}
+
+	private void verifyVertexUsage() {
 		HashSet<Vertex> allInStore=vstore.dbgGetAllUsed();
+		int good=0;
 		for(int i=coarsestlevel;i<=finestlevel;++i)
 		{
 			HashMap<iMerc,ThingIf> lh=levels.get(i);
 			if (lh!=null)
 			{
+				//Log.i("fplan","Number of things on level "+i+" is "+lh.size());
 				for(ThingIf t:lh.values())
 				{
 					for(Vertex v:((Thing)t).getCornersAndCenter())
 					{
-						allInStore.remove(v);
+						if (allInStore.contains(v))
+						{
+							good+=1;
+							if (allInStore.remove(v)==false)
+								throw new RuntimeException("Failed to remove v");
+						}
 					}					
 				}
 			}
-			if (allInStore.size()!=0) throw new RuntimeException("Bad!");
 		}
-			
-		
+		if (allInStore.size()!=0)
+		{
+			Vertex vf=allInStore.iterator().next();
+			throw new RuntimeException("Bad cnt="+allInStore.size()+", good cnt="+good+", first is "+vf+" vf.isUsed="+vf.isUsed());
+		}
 	}
 	public void stitch(Vertex v,int level,ThingIf parent,boolean dostitch) {
 		level-=1;

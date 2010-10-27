@@ -73,12 +73,20 @@ public class Thing implements ThingIf {
 	{
 		HashSet<Vertex> ret=new HashSet<Vertex>();
 		if (base_vertices!=null)
+		{
 			for(Vertex b:base_vertices)
 			{
+				//if (!ret.contains(b))
+				//	Log.i("fplan","Check adding a "+b);
 				ret.add(b);
 			}
+		}
 		if (center_vertex!=null)
+		{
+			//if (!ret.contains(center_vertex))
+			//	Log.i("fplan","Check adding b "+center_vertex);
 			ret.add(center_vertex);
+		}
 		return ret;
 	}
 	public ArrayList<ThingIf> getAllChildren()
@@ -245,7 +253,11 @@ public class Thing implements ThingIf {
 		if (center_vertex!=null)
 		{
 			if (vstore.decrement(center_vertex))
+			{
+				//This probably never happens? Since the children are
+				//still alive at this point? Add an assert false here?
 				st.stitch(center_vertex,this.zoomlevel,parent,false);
+			}
 		}
 		center_vertex=null;
 		
@@ -437,8 +449,8 @@ public class Thing implements ThingIf {
 		if (base_vertices==null || isReleased())
 			throw new RuntimeException("calcElevs called for released Thing");
 		if (refine==0.0f) throw new RuntimeException("refine is 0.0");
-		short ref=(short)(100*refine);
-		if (ref<0) ref=1;
+		short ref=(short)(100.0f*refine);
+		if (ref<=0) ref=1;
 		for(int i=0;i<4;++i)
 		{
 			Vertex v=base_vertices.get(i);
@@ -450,6 +462,12 @@ public class Thing implements ThingIf {
 	{
 		if (base_vertices==null || isReleased())
 			throw new RuntimeException("calcElevs called for released Thing2");
+		for(int i=0;i<4;++i)
+		{
+			Vertex v=base_vertices.get(i);
+			if (!v.dbgHasElev())
+				throw new RuntimeException("Bad elev:"+i+" = "+v+" of thing: "+this);
+		}
 		if (center_vertex!=null)
 		{
 			int upperright_height=base_vertices.get(1).calcZ();

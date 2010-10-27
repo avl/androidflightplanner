@@ -162,11 +162,20 @@ public class VertexStore {
 				x*=0.01;
 				y*=0.01;
 				z*=0.01;
-				g=(byte)(calzraw);//-1;//(byte)z;
 				if (calzraw<50)
 				{
 					b=(byte)-1;
 					g=0;
+				}
+				if (calzraw>255)
+				{
+					int t=calzraw-255;
+					g=(byte)-1;
+					r+=t;
+				}
+				else
+				{
+					g=(byte)(calzraw);//-1;//(byte)z;					
 				}
 				//g=(byte)((i*8)%256);//(byte)z;
 				//b=(byte)((i*64)%256);//(byte)z;

@@ -32,12 +32,13 @@ public class Vertex {
 			throw new RuntimeException("No elev for vertex: "+this+" lastelev: "+lastElev);
 		}
 		lastElev=(100*elev)/elevcontributors;
-		Log.i("fplan","CalcZ(...)="+lastElev);
+		//Log.i("fplan","CalcZ(...)="+lastElev);
 		return lastElev;
 	}
 	public void contribElev(short hiElev,short strength) {
 		elev+=hiElev;
 		elevcontributors+=strength;		
+		if (elevcontributors<=0 || strength<=0) throw new RuntimeException("Bad elevcontributors value:"+elevcontributors+" resulting from add of "+strength);
 	}
 	public void resetElev()
 	{
@@ -156,5 +157,8 @@ public class Vertex {
 	}
 	public void setWhat(String w) {
 		what=w;
+	}
+	public boolean dbgHasElev() {
+		return elevcontributors>0;
 	}
 }
