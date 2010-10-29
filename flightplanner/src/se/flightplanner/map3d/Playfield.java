@@ -23,6 +23,7 @@ public class Playfield implements Stitcher {
 
 	VertexStore vstore;
 	TriangleStore tristore;
+	TextureStore tstore;
 	ThingFactory thingf;
 	private ArrayList<HashMap<iMerc,ThingIf>> levels;
 	
@@ -54,12 +55,13 @@ public class Playfield implements Stitcher {
 		rf.close();
 	}
 	
-	public Playfield(iMerc upperleft,iMerc lowerright,VertexStore vstore,TriangleStore tristore,ElevationStore estore,
+	public Playfield(iMerc upperleft,iMerc lowerright,VertexStore vstore,TextureStore tstore, TriangleStore tristore,ElevationStoreIf estore,
 			ThingFactory thingf)
 	{
 		this.thingf=thingf;
 		this.vstore=vstore;
 		this.tristore=tristore;
+		this.tstore=tstore;
 		levels=new ArrayList<HashMap<iMerc,ThingIf>>();
 		for(int i=0;i<coarsestlevel;++i)
 			levels.add(null);
@@ -82,8 +84,8 @@ public class Playfield implements Stitcher {
 					{
 						iMerc m=new iMerc(x,y);
 						
-						ThingIf t = thingf.createThing(vstore, estore, i, m,this);
-						
+						ThingIf t = thingf.createThing(vstore, tstore, estore, i, m,this);
+						t.adjustRefine(1.0f);
 						lh.put(m,t);
 						cnt+=1;
 					}
@@ -139,8 +141,12 @@ public class Playfield implements Stitcher {
 			}
 		}
 	}
-	public void changeLods(iMerc observer,short observerElev,VertexStore vstore,ElevationStore estore,LodCalc lodCalc,float bumpinessBias)
+	public void changeLods(iMerc observer,short observerElev,VertexStore vstore,ElevationStoreIf estore,LodCalc lodCalc,float bumpinessBias)
 	{
+		int nearLodLimit=250;
+		//System.out.println("changeLods running");
+		int freetri=tristore.getFreeTriangles();
+		int freevert=vstore.getFreeVertices();		
 		for(int i=coarsestlevel;i<finestlevel;++i)
 		{
 			HashMap<iMerc,ThingIf> lh=levels.get(i);
@@ -149,8 +155,10 @@ public class Playfield implements Stitcher {
 				///iMerc tpos=t.getPos();				
 				float bumpiness=t.bumpiness()+bumpinessBias;
 				float dist=t.getDistance(observer,observerElev);
+				if (dist<=nearLodLimit)
+					dist=nearLodLimit;
 				float refine=lodCalc.needRefining(bumpiness, dist);
-
+				//System.out.println("Thing: "+t.getPosStr()+": Refine calculated as "+refine);
 				//if (i>=6) refine=-1.0f;
 				//else refine=1;
 				if (i==coarsestlevel)
@@ -158,8 +166,9 @@ public class Playfield implements Stitcher {
 				if (i>10)
 					refine=-1;
 				if (refine>=1.0f) refine=1.0f;
-
-				if (refine<0)
+				if (refine>t.getRefine())
+					refine=t.getRefine();
+				if (refine<=0)
 				{					
 					if (t.isSubsumed())
 					{
@@ -185,31 +194,49 @@ public class Playfield implements Stitcher {
 				}
 				else
 				{
-					if (!t.isSubsumed())
+					if (freetri>16 &&
+						freevert>9)
 					{
-						//Log.i("fplan","Subsuming: Refine-value for "+t+" is "+refine);
-						ArrayList<ThingIf> newThings=new ArrayList<ThingIf>();
-						//verifyVertexUsage();
-						t.subsume(newThings,vstore,this,estore);
-						//Log.i("fplan","Newthings: "+newThings.size());
-						for(ThingIf t2:newThings)
+							
+						if (!t.isSubsumed())
 						{
-							int zl=t2.getZoomlevel();
-							if (zl<=i) throw new RuntimeException("Added things on same or higher zoomlevel!");
-							if (zl<=coarsestlevel) throw new RuntimeException("Bad (low) level for newly created Thing");
-							if (zl>finestlevel) throw new RuntimeException("Bad (high) level for newly created Thing");
-							HashMap<iMerc,ThingIf> lh2=levels.get(zl);
-							//Log.i("fplan","Physically putting thing "+t2+" into zoomlevel "+zl);
-							if (lh2.put(t2.getPos(),t2)!=null)
-								throw new RuntimeException("Attempt to replace existing child!");
-							//Log.i("fplan","Adding new thing "+t2);
-						}		
-						//Log.i("fplan","Verify to start");
-						//verifyVertexUsage();
-						//Log.i("fplan","Verify succeeded");
+							//Log.i("fplan","Subsuming: Refine-value for "+t+" is "+refine);
+							ArrayList<ThingIf> newThings=new ArrayList<ThingIf>();
+							//verifyVertexUsage();
+							t.subsume(newThings,vstore,this,estore);
+							
+							//the worst case really is pretty bad, when it comes to
+							//used vertices and triangles:
+							// + 5 new base vertices
+							// + 4 new center vertices for stitching
+							// + 8 new base triangles
+							// + 8 new stitching triangles
+							// ( also, 2 + 4 triangles would go away)
+							freevert-=9; 
+							freetri-=16;
+							//Log.i("fplan","Newthings: "+newThings.size());
+							for(ThingIf t2:newThings)
+							{
+								int zl=t2.getZoomlevel();
+								if (zl<=i) throw new RuntimeException("Added things on same or higher zoomlevel!");
+								if (zl<=coarsestlevel) throw new RuntimeException("Bad (low) level for newly created Thing");
+								if (zl>finestlevel) throw new RuntimeException("Bad (high) level for newly created Thing");
+								HashMap<iMerc,ThingIf> lh2=levels.get(zl);
+								//Log.i("fplan","Physically putting thing "+t2+" into zoomlevel "+zl);
+								if (lh2.put(t2.getPos(),t2)!=null)
+									throw new RuntimeException("Attempt to replace existing child!");
+								//Log.i("fplan","Adding new thing "+t2);
+							}		
+							//Log.i("fplan","Verify to start");
+							//verifyVertexUsage();
+							//Log.i("fplan","Verify succeeded");
+						}
 					}
-					for(ThingIf child : t.getAllChildren())
-						child.adjustRefine(refine);
+					if (t.isSubsumed())
+					{
+						for(ThingIf child : t.getAllChildren())
+							child.adjustRefine(refine);
+					}
 					continue;
 				}
 				//90 deg FOV
@@ -218,13 +245,14 @@ public class Playfield implements Stitcher {
 		}
 		//scanForCracks();
 	}
-	public void explicitSubsume(iMerc pos,int zoomlevel,VertexStore vstore,ElevationStore estore,boolean subsume)
+	public void explicitSubsume(iMerc pos,int zoomlevel,VertexStore vstore,ElevationStoreIf estore,boolean subsume)
 	{
 		ArrayList<ThingIf> newThings=new ArrayList<ThingIf>();
 		ArrayList<ThingIf> removedThings=new ArrayList<ThingIf>();
 		HashMap<iMerc,ThingIf> lh=levels.get(zoomlevel);
 		for(ThingIf t:lh.values())
 		{
+			t.adjustRefine(1.0f);
 			if (t.getPos().equals(pos))
 			{
 				if (t.isSubsumed() && !subsume)
@@ -244,6 +272,7 @@ public class Playfield implements Stitcher {
 			int zl=t.getZoomlevel();
 			if (zl<coarsestlevel) throw new RuntimeException("Bad level for newly created Thing");
 			HashMap<iMerc,ThingIf> lh2=levels.get(zl);
+			t.adjustRefine(1.0f);
 			lh2.put(t.getPos(),t);
 		}		
 		for(ThingIf t:removedThings)

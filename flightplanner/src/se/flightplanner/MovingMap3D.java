@@ -2,7 +2,8 @@ package se.flightplanner;
 
 import java.io.IOException;
 
-import se.flightplanner.map3d.ElevationStore;
+import se.flightplanner.map3d.ElevationStoreIf;
+import se.flightplanner.map3d.TextureStore;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -38,7 +39,8 @@ public class MovingMap3D extends GLSurfaceView {
 	private Airspace airspace;
 	private AirspaceLookup lookup;
 	private TripData tripdata;
-	private ElevationStore estore;
+	private ElevationStoreIf estore;
+	private TextureStore tstore;
 	public void update_tripdata(TripData tripdata) {
 		// TODO Auto-generated method stub
 		this.tripdata=tripdata;
@@ -50,8 +52,8 @@ public class MovingMap3D extends GLSurfaceView {
 		// TODO Auto-generated method stub
 		this.airspace=airspace;
 		this.lookup=lookup;
-		if (airspace!=null && lookup!=null && estore!=null)
-			rend.update(airspace,lookup,estore);
+		if (airspace!=null && lookup!=null && estore!=null && tstore!=null)
+			rend.update(airspace,lookup,estore,tstore);
 	}
 
 	public void gps_update(Location location) {
@@ -64,10 +66,11 @@ public class MovingMap3D extends GLSurfaceView {
 		
 	}
 
-	public void update_estore(ElevationStore estore) {
+	public void update_stores(ElevationStoreIf estore, TextureStore tstore) {
 		this.estore=estore;
-		if (airspace!=null && lookup!=null && estore!=null)
-			rend.update(airspace,lookup,estore);
+		this.tstore=tstore;
+		if (airspace!=null && lookup!=null && estore!=null && tstore!=null)
+			rend.update(airspace,lookup,estore,tstore);
 	}
 
 	public void debugdump() throws IOException {

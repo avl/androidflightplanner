@@ -29,9 +29,9 @@ public class Triangle {
 	}
 	
 	public void assign(Vertex a, Vertex b, Vertex c) {
-		idx[0]=a.getIndex();
-		idx[1]=b.getIndex();
-		idx[2]=c.getIndex();
+		idx[0]=a.getPointer();
+		idx[1]=b.getPointer();
+		idx[2]=c.getPointer();
 		used=true;
 	}
 	public short getPointer() {

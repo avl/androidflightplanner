@@ -181,11 +181,19 @@ public class Thing implements ThingIf {
 			y=pos2.y;
 		else 
 			y=obs.y;
-		
+		int z;
+		if (observerHeight<elev.loElev)
+			z=elev.loElev;
+		else if (observerHeight>elev.hiElev)
+			z=elev.hiElev;
+		else
+			z=observerHeight;
 		float a=(obs.x-x);
 		float b=(obs.y-y);
-		float c=feet2merc(obs,observerHeight-elev.hiElev);
+		float c=feet2merc(obs,observerHeight-z);
 		float dist=(float)Math.sqrt((a*a+b*b+c*c));
+		
+		//System.out.println("Distance="+dist+" of "+this+" calculated closest pos: "+x+","+y+","+z+" to observer at "+obs+" height: "+observerHeight);
 		return dist;
 	}
 	
@@ -205,7 +213,7 @@ public class Thing implements ThingIf {
 	/* (non-Javadoc)
 	 * @see se.flightplanner.map3d.ThingIf#subsume(java.util.ArrayList, se.flightplanner.map3d.VertexStore, se.flightplanner.map3d.Stitcher, se.flightplanner.map3d.ElevationStore)
 	 */
-	public void subsume(ArrayList<ThingIf> newThings,VertexStore vstore,Stitcher stitcher,ElevationStore estore)
+	public void subsume(ArrayList<ThingIf> newThings,VertexStore vstore,Stitcher stitcher,ElevationStoreIf estore)
 	{
 		if (children!=null) 
 			return; //Already subsumed
@@ -375,7 +383,7 @@ public class Thing implements ThingIf {
 		
 		releaseTriangles(tristore);
 	}
-	public Thing(iMerc pos,ThingIf parent,int zoomlevel,VertexStore vstore,ElevationStore elevStore, Stitcher stitcher)
+	public Thing(iMerc pos,ThingIf parent,int zoomlevel,VertexStore vstore,ElevationStoreIf elevStore, Stitcher stitcher)
 	{
 		int zoomgap=13-zoomlevel;
 		this.size=64<<zoomgap;
@@ -443,21 +451,70 @@ public class Thing implements ThingIf {
 		cmps.add(cmp2);
 		cmps.add(cmp3);
 	}
+	public short interpolateElev(iMerc t)
+	{
+		int elev0=base_vertices.get(0).calcZ();
+		int elev1=base_vertices.get(1).calcZ();
+		int elev2=base_vertices.get(2).calcZ();
+		int elev3=base_vertices.get(3).calcZ();
+		//System.out.println("Elevs: "+elev0+" "+elev1+" "+elev2+" "+elev3);
+		short ret=calcElevImpl(t, elev0, elev1, elev2, elev3);
+		//System.out.println("Thing "+this+" interpolated "+t+" to: "+ret);
+		return ret;
+	}
+	public short calcElevImpl(iMerc t, int elev0, int elev1, int elev2,
+			int elev3) {
+		int dx=t.x-pos.x;
+		int dy=t.y-pos.y;
+		if (dx<0 || dy<0 || dx>size || dy>size)
+			throw new RuntimeException("Bad coordinate to interpolateElev");
+		float fdx=(dx)/(float)size;
+		float fdy=(dy)/(float)size;
+		//Which sector is it in?
+		if (fdx+fdy<1.0f)
+		{ //upper left sector
+			float yleft=elev0+(elev2-elev0)*fdy;
+			float yres=yleft+(elev1-elev0)*fdx;
+			return (short)yres;
+		}
+		else
+		{ //lower right sector
+			float yright=elev1+(elev3-elev1)*fdy;
+			float yres=yright+(elev2-elev3)*(1.0f-fdx);
+			return (short)yres;			
+		}
+	}
 
 	public void calcElevs1(TriangleStore tristore, VertexStore vstore)
 	{
 		if (base_vertices==null || isReleased())
 			throw new RuntimeException("calcElevs called for released Thing");
 		if (refine==0.0f) throw new RuntimeException("refine is 0.0");
-		short ref=(short)(100.0f*refine);
+		if (refine>1.0f) throw new RuntimeException("refine >1.0f");
+		short ref=(short)(1000.0f*refine);
+		short invref=(short)(1000-ref);
+		float invrefine=1.0f-refine;
 		if (ref<=0) ref=1;
 		for(int i=0;i<4;++i)
 		{
 			Vertex v=base_vertices.get(i);
+			if (invref!=0 && parent!=null && !parent.isCorner(v))
+			{				
+				short ip=parent.interpolateElev(v.getimerc());				
+				//System.out.println("For "+v+" contributing "+ip+" from parent via interpolation.");
+				//System.out.println(" params: invrefine="+invrefine+" ip: "+ip+" invref: "+invref);
+				v.contribElev((short)(ip*invrefine),invref);	
+				//System.out.println("  elev after contrib: "+v.calcZ());
+			}
 			v.contribElev((short)(elev.hiElev*refine),ref);			
 		}
 		
 	}
+	public float getRefine()
+	{
+		return refine;
+	}
+	
 	public void calcElevs2(TriangleStore tristore, VertexStore vstore)
 	{
 		if (base_vertices==null || isReleased())
@@ -473,7 +530,7 @@ public class Thing implements ThingIf {
 			int upperright_height=base_vertices.get(1).calcZ();
 			int lowerleft_height=base_vertices.get(2).calcZ();
 			int middleheight=(upperright_height+lowerleft_height)/2;
-			center_vertex.contribElev((short)middleheight,(short)100);			
+			center_vertex.contribElev((short)middleheight,(short)1000);			
 		}
 	}
 	public void adjustRefine(float refine)
@@ -669,12 +726,12 @@ public class Thing implements ThingIf {
 			for(int i=0;i<this.base_vertices.size();++i)
 			{
 				if (i!=0) f.write(" , ");
-				f.write(""+base_vertices.get(i).getIndex());
+				f.write(""+base_vertices.get(i).getPointer());
 			}
 		}
 		f.write("],\n");
 		if (center_vertex!=null)
-			f.write("  \"center_vertex\" : "+center_vertex.getIndex()+",\n");
+			f.write("  \"center_vertex\" : "+center_vertex.getPointer()+",\n");
 		else
 			f.write("  \"center_vertex\" : null,\n");
 		f.write("  \"triangles\" : [\n");
@@ -708,7 +765,7 @@ public class Thing implements ThingIf {
 				for(Vertex edgev : edges.get(i))
 				{
 					if (cnt!=0) f.write(" , ");
-					f.write("      "+edgev.getIndex());
+					f.write("      "+edgev.getPointer());
 					++cnt;
 				}						
 				f.write("]\n");

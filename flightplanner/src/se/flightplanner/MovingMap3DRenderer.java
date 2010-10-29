@@ -12,11 +12,13 @@ import javax.microedition.khronos.opengles.GL10;
 
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.iMerc;
-import se.flightplanner.map3d.ElevationStore;
+import se.flightplanner.map3d.ElevationStoreIf;
+import se.flightplanner.map3d.GlHelper;
 import se.flightplanner.map3d.LodCalc;
 import se.flightplanner.map3d.Playfield;
 import se.flightplanner.map3d.PlayfieldDrawer;
 import se.flightplanner.map3d.Stitcher;
+import se.flightplanner.map3d.TextureStore;
 import se.flightplanner.map3d.Thing;
 import se.flightplanner.map3d.ThingFactory;
 import se.flightplanner.map3d.ThingIf;
@@ -75,11 +77,12 @@ public class MovingMap3DRenderer implements Renderer {
 	}
 	int b=0;
 	private void draw_vertices(GL10 gl) throws IOException {
+		GlHelper.checkGlError(gl);
 
 		LatLon cameraLatLon=new LatLon(61,17);//pos.getLatitude(),pos.getLongitude());
 		iMerc cameramerc=Project.latlon2imerc(cameraLatLon, 13);
 		cameramerc.y+=b;
-		b+=7;//17;
+		b+=17;
 
 		LatLon obstLatLon=new LatLon(59,17);
 		iMerc obstmerc=Project.latlon2imerc(obstLatLon, 13);
@@ -155,6 +158,7 @@ I/fplan   (18568): Drawed 2 triangles
 		si.put(indices);
 		si.position(0);
 
+		GlHelper.checkGlError(gl);
         gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT);
         gl.glMatrixMode(GL10.GL_MODELVIEW);
         gl.glLoadIdentity();
@@ -162,6 +166,7 @@ I/fplan   (18568): Drawed 2 triangles
         float hdg=pos.getBearing()+headturn;
         gl.glRotatef(hdg, 0, 0, 1); //compass heading
         
+		GlHelper.checkGlError(gl);
 /*        
 Probably calc mid-vertices in a separate pass, last.
 For transitioning Things, the mid would initially be a
@@ -180,9 +185,11 @@ from the Thing).
 		gl.glDrawElements(gl.GL_TRIANGLES, 6, gl.GL_UNSIGNED_SHORT,
 				si);
 		*/
-        gl.glPopMatrix();
+		GlHelper.checkGlError(gl);
+        //gl.glPopMatrix();
 		if (playfield!=null)
 			playfield.draw(gl,cameramerc,(short)altitude);
+		GlHelper.checkGlError(gl);
 		
 
 	}
@@ -195,6 +202,7 @@ from the Thing).
 	}
 
 	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
+		GlHelper.checkGlError(gl);
 		gl.glDisable(GL10.GL_DITHER);
         gl.glHint(GL10.GL_PERSPECTIVE_CORRECTION_HINT,
                 GL10.GL_FASTEST);
@@ -202,6 +210,7 @@ from the Thing).
         gl.glClearColor(0.75f,0.75f,1,1);
         gl.glShadeModel(GL10.GL_SMOOTH);
         gl.glEnable(GL10.GL_DEPTH_TEST);
+		GlHelper.checkGlError(gl);
 
 	}
 
@@ -232,10 +241,10 @@ from the Thing).
 	}
 
 	public void update(Airspace airspace, AirspaceLookup lookup,
-			ElevationStore estore) {
+			ElevationStoreIf estore, TextureStore tstore) {
 		// TODO Auto-generated method stub
 		Log.i("fplan","renderer update called!");
-		playfield=new PlayfieldDrawer(estore);		
+		playfield=new PlayfieldDrawer(estore,tstore);		
 		
 	}
 

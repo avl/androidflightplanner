@@ -31,7 +31,7 @@ public class Vertex {
 		{
 			throw new RuntimeException("No elev for vertex: "+this+" lastelev: "+lastElev);
 		}
-		lastElev=(100*elev)/elevcontributors;
+		lastElev=(1000*elev)/elevcontributors;
 		//Log.i("fplan","CalcZ(...)="+lastElev);
 		return lastElev;
 	}
@@ -67,7 +67,7 @@ public class Vertex {
 	private String what; //Debug description of what Vertex is used for.
 	public String toString()
 	{
-		return "Vertex("+mercx+","+mercy+",what="+what+")";
+		return "Vertex("+mercx+","+mercy+",what="+what+",lastElev="+lastElev+",use="+usage+")";
 	}
 	public boolean isUsed()
 	{
@@ -124,9 +124,10 @@ public class Vertex {
 		this.bufptr=bufptr;
 		this.usage=-1;
 	}
+	/*
 	public short getIndex() {
 		return bufptr;
-	}
+	}*/
 	public iMerc getimerc() {
 		return new iMerc(this.mercx,this.mercy);
 	}

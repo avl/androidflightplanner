@@ -15,6 +15,7 @@ import org.junit.Test;
 
 import se.flightplanner.Project.iMerc;
 import se.flightplanner.map3d.ElevationStore;
+import se.flightplanner.map3d.ElevationStoreIf;
 import se.flightplanner.map3d.ElevationStore.Elev;
 
 public class TestElevMap {
@@ -36,7 +37,7 @@ public class TestElevMap {
 		os.flush();
 		BufferedInputStream bui=new BufferedInputStream(new ByteArrayInputStream(bao.toByteArray()));
 		DataInputStream dai=new DataInputStream(bui);
-		ElevationStore estore2=ElevationStore.deserialize(dai);
+		ElevationStoreIf estore2=ElevationStore.deserialize(dai);
 		e=estore2.get(new iMerc(1155450,635331), 13);
 		Assert.assertTrue(e.loElev>=10 && e.hiElev<200);
 		e=estore2.get(new iMerc(1155450*10,635331), 13);

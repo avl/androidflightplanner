@@ -205,4 +205,8 @@ public class TriangleStore {
 		}
 		f.write("]\n");
 	}
+	public int getFreeTriangles() {
+		// TODO: Check if this is inefficient?
+		return free.size();
+	}
 }

@@ -5,6 +5,6 @@ import se.flightplanner.map3d.Stitcher;
 
 public interface ThingFactory {
 
-	public ThingIf createThing(VertexStore vstore, ElevationStore estore, int zoomlevel,
+	public ThingIf createThing(VertexStore vstore, TextureStore tstore,ElevationStoreIf estore, int zoomlevel,
 			iMerc m,Stitcher st);
 }

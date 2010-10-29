@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Random;
 
 import android.util.Log;
 
@@ -20,17 +21,27 @@ import se.flightplanner.Project.iMerc;
 
 public class VertexStore {
 
-	private FloatBuffer buf;
+	private FloatBuffer vertexbuf;
+	private FloatBuffer texcoordbuf;
 	private ByteBuffer colors;
 	private LinkedList<Vertex> free;
 	private HashMap<iMerc,Vertex> used;
 	private ArrayList<Vertex> all;
+	Random random=new Random();
 	
 	public HashMap<Short,Vertex> dbgGetVertices(){
 		HashMap<Short,Vertex> h=new HashMap<Short,Vertex>();
 		for(Vertex v:used.values())
 		{
 			h.put(new Short(v.getPointer()), v);
+		}
+		return h;
+	}
+	public HashMap<iMerc,Vertex> dbgGetVerticesMap(){
+		HashMap<iMerc,Vertex> h=new HashMap<iMerc,Vertex>();
+		for(Vertex v:used.values())
+		{
+			h.put(v.getimerc(),v);
 		}
 		return h;
 	}
@@ -105,11 +116,17 @@ public class VertexStore {
 			throw new RuntimeException("Invalid capacity for VertexStore:"+capacity);
 		free=new LinkedList<Vertex>();
 		used=new HashMap<iMerc,Vertex>(capacity);
-		ByteBuffer bytebuf= ByteBuffer.allocateDirect(capacity*4*3);
-		bytebuf.order(ByteOrder.nativeOrder());
 		colors=ByteBuffer.allocateDirect(capacity*4);
 		colors.order(ByteOrder.nativeOrder());
-		buf=bytebuf.asFloatBuffer();
+		
+		ByteBuffer bytebuf= ByteBuffer.allocateDirect(capacity*4*3);
+		bytebuf.order(ByteOrder.nativeOrder());
+		vertexbuf=bytebuf.asFloatBuffer();
+		
+		ByteBuffer bytebuf2= ByteBuffer.allocateDirect(capacity*4*2);
+		bytebuf2.order(ByteOrder.nativeOrder());
+		texcoordbuf=bytebuf2.asFloatBuffer();
+			
 		all=new ArrayList<Vertex>();
 		all.ensureCapacity(capacity);
 		for(short i=0;i<capacity;++i)
@@ -125,6 +142,7 @@ public class VertexStore {
 	static class VertAndColor
 	{
 		public FloatBuffer vertices;
+		public FloatBuffer texcoords;
 		public ByteBuffer colors;
 	}
 	HashSet<Vertex> dbgGetAllUsed()
@@ -142,7 +160,8 @@ public class VertexStore {
 	}
 	VertAndColor getVerticesReadyForRender(iMerc observer,int altitude)
 	{
-		buf.position(0);
+		vertexbuf.position(0);
+		texcoordbuf.position(0);
 		colors.position(0);
 		for(int i=0;i<all.size();++i)
 		{
@@ -181,20 +200,32 @@ public class VertexStore {
 				//b=(byte)((i*64)%256);//(byte)z;
 				//Log.i("fplan","Rendered vertex #"+i+": "+x+","+y+","+z+" rawZ:"+calzraw);
 			}
-			buf.put(x);
-			buf.put(y);
-			buf.put(z);
+
+			texcoordbuf.put(random.nextFloat());
+			texcoordbuf.put(random.nextFloat());
 			
+			vertexbuf.put(x);
+			vertexbuf.put(y);
+			vertexbuf.put(z);
+
+			/*
 			colors.put(r);
 			colors.put(g);
 			colors.put(b);
 			colors.put((byte)-1);
+			*/
+			colors.put((byte)-1);
+			colors.put((byte)-1);
+			colors.put((byte)-1);
+			colors.put((byte)-1);
 		}
-		buf.position(0);
+		vertexbuf.position(0);
 		colors.position(0);
+		texcoordbuf.position(0);
 		VertAndColor va=new VertAndColor();
 		va.colors=colors;
-		va.vertices=buf;
+		va.vertices=vertexbuf;
+		va.texcoords=texcoordbuf;
 		return va;
 	}
 	public void debugDump(Writer f) throws IOException {
@@ -211,6 +242,9 @@ public class VertexStore {
 	public boolean isUsed(short idx) {
 		if (idx<0 || idx>=all.size()) throw new RuntimeException("idx out of bounds");
 		return all.get(idx).isUsed();
+	}
+	public int getFreeVertices() {
+		return free.size(); //TODO: Check if this is inefficient
 	}
 	
 }

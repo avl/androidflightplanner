@@ -25,7 +25,7 @@ import se.flightplanner.vector.BBTree;
 import se.flightplanner.vector.BoundingBox;
 import se.flightplanner.vector.BBTree.Item;
 
-public class ElevationStore {
+public class ElevationStore implements ElevationStoreIf {
 
 	private static final int dim=64;
 	static private class Level
@@ -169,6 +169,9 @@ public class ElevationStore {
 		}
 		data.writeInt(0x1beef);
 	}
+	/* (non-Javadoc)
+	 * @see se.flightplanner.map3d.ElevationStoreIf#get(se.flightplanner.Project.iMerc, int)
+	 */
 	public Elev get(iMerc pos,int hlevel)
 	{
 		/*

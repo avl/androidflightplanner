@@ -47,7 +47,7 @@ public interface ThingIf {
 	 * all been created).
 	 */
 	public abstract void subsume(ArrayList<ThingIf> newThings,
-			VertexStore vstore, Stitcher stitcher, ElevationStore estore);
+			VertexStore vstore, Stitcher stitcher, ElevationStoreIf estore);
 
 	public abstract void unsubsume(VertexStore vstore, Stitcher st,ArrayList<ThingIf> removed_things,TriangleStore tristore);
 
@@ -120,5 +120,11 @@ public interface ThingIf {
 	public abstract void adjustRefine(float refine);
 
 	public abstract ArrayList<ThingIf> getAllChildren();
+
+	public abstract float getRefine();
+
+	///This function only works if you have calculated the vertex elevs
+	//of this Thing already.
+	public abstract short interpolateElev(iMerc pos);
 
 }

@@ -12,7 +12,7 @@ import junit.framework.Assert;
 import org.junit.Test;
 
 import se.flightplanner.Project.iMerc;
-import se.flightplanner.map3d.ElevationStore;
+import se.flightplanner.map3d.ElevationStoreIf;
 import se.flightplanner.map3d.Stitcher;
 import se.flightplanner.map3d.Thing;
 import se.flightplanner.map3d.ThingIf;
@@ -40,7 +40,7 @@ public class TestThing {
 			}		
 		};
 		VertexStore vstore=new VertexStore(100);
-		ElevationStore estore=TestElevMap.getSampleEstore();
+		ElevationStoreIf estore=TestElevMap.getSampleEstore();
 		int size13=64;
 		ThingIf t1=new Thing(
 				new iMerc(0,0),null,12,vstore,estore,st
@@ -121,7 +121,7 @@ public class TestThing {
 			}		
 		};
 		VertexStore vstore=new VertexStore(100);
-		ElevationStore estore=TestElevMap.getSampleEstore();
+		ElevationStoreIf estore=TestElevMap.getSampleEstore();
 		int size=64;
 		ThingIf t=new Thing(
 				new iMerc(256,256),null,13,vstore,estore,st
@@ -166,7 +166,7 @@ public class TestThing {
 					stitched.remove(v);
 			}		
 		};
-		ElevationStore estore=TestElevMap.getSampleEstore();
+		ElevationStoreIf estore=TestElevMap.getSampleEstore();
 		int zoomlevel=12;
 		int size=64;
 		ThingIf t=new Thing(
@@ -214,7 +214,7 @@ public class TestThing {
 		};
 		VertexStore vstore=new VertexStore(100);
 		TriangleStore tristore=new TriangleStore(100);
-		ElevationStore estore=TestElevMap.getSampleEstore();
+		ElevationStoreIf estore=TestElevMap.getSampleEstore();
 		int size=64;
 		ThingIf t=new Thing(
 				new iMerc(256,256),null,13,vstore,estore,st
