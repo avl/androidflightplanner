@@ -203,7 +203,7 @@ public class Playfield implements Stitcher {
 							//Log.i("fplan","Subsuming: Refine-value for "+t+" is "+refine);
 							ArrayList<ThingIf> newThings=new ArrayList<ThingIf>();
 							//verifyVertexUsage();
-							t.subsume(newThings,vstore,this,estore);
+							t.subsume(newThings,vstore,tstore,this,estore);
 							
 							//the worst case really is pretty bad, when it comes to
 							//used vertices and triangles:
@@ -262,7 +262,7 @@ public class Playfield implements Stitcher {
 				}
 				if (!t.isSubsumed() && subsume)
 				{
-					t.subsume(newThings,vstore,this,estore);
+					t.subsume(newThings,vstore,tstore,this,estore);
 					continue;
 				}
 			}

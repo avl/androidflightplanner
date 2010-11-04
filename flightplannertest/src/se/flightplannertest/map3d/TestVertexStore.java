@@ -18,10 +18,10 @@ public class TestVertexStore {
 		Vertex va=new Vertex((short)0);
 		Vertex vb=new Vertex((short)1);
 		assertEquals(va,vb);
-		VertexStore vstore=new VertexStore(5);
+		VertexStore vstore=new VertexStore(5,0);
 		iMerc im=new iMerc(256,256);
 		Vertex v=vstore.obtain(im, (byte)13,"debug1");
-		assertEquals(v.getIndex(),0);
+		assertEquals(v.getPointer(),0);
 		assertEquals(v.getx(),256);
 		assertEquals(v.gety(),256);
 		Vertex v2=vstore.obtain(im, (byte)13,"debug2");
@@ -36,7 +36,7 @@ public class TestVertexStore {
 	@Test 
 	public void testVertexStoreCapacity1()
 	{
-		VertexStore vstore=new VertexStore(5);
+		VertexStore vstore=new VertexStore(5,0);
 		for(int i=0;i<5;++i)
 		{
 			iMerc im=new iMerc(256+256*i,256);
@@ -59,7 +59,7 @@ public class TestVertexStore {
 	@Test 
 	public void testVertexStoreCapacity2()
 	{
-		VertexStore vstore=new VertexStore(5);
+		VertexStore vstore=new VertexStore(5,0);
 		Vertex v=null;
 		for(int i=0;i<10;++i)
 		{

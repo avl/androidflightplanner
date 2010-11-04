@@ -47,7 +47,7 @@ public interface ThingIf {
 	 * all been created).
 	 */
 	public abstract void subsume(ArrayList<ThingIf> newThings,
-			VertexStore vstore, Stitcher stitcher, ElevationStoreIf estore);
+			VertexStore vstore, TextureStore tstore,Stitcher stitcher, ElevationStoreIf estore);
 
 	public abstract void unsubsume(VertexStore vstore, Stitcher st,ArrayList<ThingIf> removed_things,TriangleStore tristore);
 

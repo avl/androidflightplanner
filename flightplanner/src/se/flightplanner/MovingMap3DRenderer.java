@@ -63,7 +63,6 @@ public class MovingMap3DRenderer implements Renderer {
 		gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT);
 		gl.glMatrixMode(GL10.GL_MODELVIEW);
 		gl.glLoadIdentity();
-		gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
 		try {
 			draw_vertices(gl);
 		} catch (IOException e1) {
@@ -79,10 +78,10 @@ public class MovingMap3DRenderer implements Renderer {
 	private void draw_vertices(GL10 gl) throws IOException {
 		GlHelper.checkGlError(gl);
 
-		LatLon cameraLatLon=new LatLon(61,17);//pos.getLatitude(),pos.getLongitude());
+		LatLon cameraLatLon=new LatLon(63.40,13.06);//pos.getLatitude(),pos.getLongitude());
 		iMerc cameramerc=Project.latlon2imerc(cameraLatLon, 13);
 		cameramerc.y+=b;
-		b+=17;
+		b+=1;
 
 		LatLon obstLatLon=new LatLon(59,17);
 		iMerc obstmerc=Project.latlon2imerc(obstLatLon, 13);
@@ -159,12 +158,12 @@ I/fplan   (18568): Drawed 2 triangles
 		si.position(0);
 
 		GlHelper.checkGlError(gl);
-        gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT);
+        //gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT);
         gl.glMatrixMode(GL10.GL_MODELVIEW);
         gl.glLoadIdentity();
-        gl.glRotatef(-90, 1.0f, 0, 0); //tilt to look to horizon (don't change)
-        float hdg=pos.getBearing()+headturn;
-        gl.glRotatef(hdg, 0, 0, 1); //compass heading
+        gl.glRotatef(90, 1.0f, 0, 0); //tilt to look to horizon (don't change)
+        float hdg=/*pos.getBearing()+*/headturn;
+        gl.glRotatef(-hdg, 0, 0, 1); //compass heading
         
 		GlHelper.checkGlError(gl);
 /*        
@@ -175,9 +174,11 @@ be same as before subsumtion. Then, as the subsumption deepends,
 the mid-vertex would be more and more its own (calculated
 from the Thing).
 */        
+		
+		/*
         gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
         gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
-		
+		*/
         /*
         gl.glFrontFace(gl.GL_CCW);
 		gl.glVertexPointer(3, gl.GL_FLOAT, 0, mVertexBuffer);
@@ -199,6 +200,8 @@ from the Thing).
 		
 		this.width=width;
 		this.height=height;
+		if (playfield!=null)
+			playfield.loadAllTextures(gl);
 	}
 
 	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
@@ -206,11 +209,15 @@ from the Thing).
 		gl.glDisable(GL10.GL_DITHER);
         gl.glHint(GL10.GL_PERSPECTIVE_CORRECTION_HINT,
                 GL10.GL_FASTEST);
-        gl.glDisable(GL10.GL_CULL_FACE);
+        gl.glEnable(GL10.GL_CULL_FACE);
         gl.glClearColor(0.75f,0.75f,1,1);
         gl.glShadeModel(GL10.GL_SMOOTH);
         gl.glEnable(GL10.GL_DEPTH_TEST);
 		GlHelper.checkGlError(gl);
+		
+		if (playfield!=null)
+			playfield.loadAllTextures(gl);
+
 
 	}
 

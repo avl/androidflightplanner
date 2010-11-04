@@ -26,6 +26,10 @@ public class Project {
 		private static final long serialVersionUID = 591341378114851064L;
 		public double lat;
 		public double lon;
+		public String toString()
+		{
+			return "LatLon("+lat+","+lon+")";
+		}
 		public LatLon(double plat,double plon)
 		{
 			lat=plat;

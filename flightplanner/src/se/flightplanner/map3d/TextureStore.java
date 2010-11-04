@@ -8,21 +8,26 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.Map.Entry;
+
+import javax.microedition.khronos.opengles.GL10;
 
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Bitmap.CompressFormat;
+import android.util.Log;
 
+import se.flightplanner.Project;
 import se.flightplanner.Project.iMerc;
 import se.flightplanner.vector.BBTree;
 
 public class TextureStore {
 
-	private HashMap<iMerc,Bitmap> store;
+	private HashMap<iMerc,Texture> store;
 	private int zoomlevel;
 	
 	public void serialize_to_file(Context context,String filename) throws Exception
@@ -44,7 +49,7 @@ public class TextureStore {
 	public static TextureStore deserialize(DataInputStream data) throws IOException
 	{
 		TextureStore tstore=new TextureStore();
-		tstore.store=new HashMap<iMerc,Bitmap>();
+		tstore.store=new HashMap<iMerc,Texture>();
 		int zoomlevels=data.readInt();
 		if (zoomlevels!=1) throw new RuntimeException("Only one zoomlevel of textures supported so far.");
 		int cnt=0;
@@ -54,13 +59,23 @@ public class TextureStore {
 			if (izoomlevel<0 || izoomlevel>15) throw new RuntimeException("Bad zoomlevel");
 			tstore.zoomlevel=izoomlevel;
 			int numtiles=data.readInt();
+			Log.i("fplan","Numtiles to read: "+numtiles);
 			for(int i=0;i<numtiles;++i)
 			{
-				iMerc merc=iMerc.deserialize(data);
-				int imgsize=data.readInt();
-				Bitmap bm=BitmapFactory.decodeStream(data);
-				tstore.store.put(merc,bm);
+				
+				Log.i("fplan","Reading #: "+i);
+				iMerc merc=Project.imerc2imerc(iMerc.deserialize(data),izoomlevel,13);
+				Log.i("fplan","Pos was "+merc);
+				int imgsize=data.readInt(); //Our java-implementation doesn't fill imgsize correctly, so we ignore it when reading (the python version does however fill imgsize)
+				
+				BitmapFactory.Options opts = new BitmapFactory.Options();
+				opts.inScaled = false;								
+				Bitmap bm=BitmapFactory.decodeStream(data,null,opts);
+				if (bm==null) 
+					throw new RuntimeException("Couldn't decode png-image");
+				tstore.store.put(merc,new Texture(merc,bm));
 				cnt+=1;
+				Log.i("fplan","Read #: "+i);
 			}
 		}
 		int magic=data.readInt();
@@ -72,10 +87,13 @@ public class TextureStore {
 		data.writeInt(1); ///only one zoomlevel supported right now
 		data.writeInt(zoomlevel); //write zoomlevel
 		data.writeInt(store.size());			
-		for(Entry<iMerc,Bitmap> entry : store.entrySet())
+		for(Entry<iMerc,Texture> entry : store.entrySet())
+
 		{
-			entry.getKey().serialize(data);
-			entry.getValue().compress(CompressFormat.PNG, 80, data);			
+			Project.imerc2imerc(entry.getKey(),13,zoomlevel).serialize(data);
+			data.writeInt(-1);
+			if (entry.getValue().getBitMap().compress(CompressFormat.PNG, 80, data)!=true)
+				throw new RuntimeException("Couldn't store compressed image to disk");
 		}
 		data.writeInt(0x1beef);
 	}
@@ -97,12 +115,41 @@ public class TextureStore {
 		}
 		return data;
 	}
-
+/*
 	public Bitmap get(iMerc im) {
 		return store.get(im);
 	}
+	*/
 	public Bitmap getRandomBitmap() {
-		return store.values().iterator().next();
+		return store.values().iterator().next().getBitMap();
+	}
+
+	public Texture getTextureAt(iMerc pos) {
+		Log.i("fplan","Tex zoomlevel: "+zoomlevel);
+		int zoomgap=13-zoomlevel;
+		int boxsize=256<<zoomgap;
+		int boxmask=boxsize-1;
+		int x=pos.x&(~boxmask);
+		int y=pos.y&(~boxmask);
+		Texture t=store.get(new iMerc(x,y));
+		return t;
+	}
+
+	public Collection<Texture> getAll() {
+		return store.values();
+	}
+
+	public void loadAllTextures(GL10 gl) {
+		for(Texture tex:store.values())
+		{
+			tex.deleteTex(gl);
+			tex.getTexName(gl);
+		}
+		
+	}
+
+	public int getZoomLevel() {
+		return this.zoomlevel;
 	}
 
 	

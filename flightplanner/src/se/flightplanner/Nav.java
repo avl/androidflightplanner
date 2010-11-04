@@ -99,7 +99,7 @@ public class Nav extends Activity implements LocationListener {
         if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER) {
         	try {
 				map.debugdump();
-				RookieHelper.showmsg(this, "Dump saved!");
+				//RookieHelper.showmsg(this, "Dump saved!");
 			} catch (IOException e) {
 				RookieHelper.showmsg(this, "Couldn't save debug dump: "+e);
 			}
@@ -299,6 +299,7 @@ public class Nav extends Activity implements LocationListener {
 	    	}
 	    	catch (Throwable e)
 	    	{
+	    		e.printStackTrace();
 	    		RookieHelper.showmsg(this, e.toString());
 	    	}	    	
 	    	try

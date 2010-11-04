@@ -4,17 +4,24 @@ public class Triangle {
 	short pointer;
 	short[] idx;
 	boolean used;
+	Texture texture;
 	
+	public Texture getTexture()
+	{
+		return texture;
+	}
 	public Triangle(short pointer)
 	{
 		this.pointer=pointer;
 		idx=new short[3];
 		this.used=false;
 	}
+	
 	public void reset() {
 		used=false;
 		for(int i=0;i<3;++i)
 			idx[i]=0;
+		texture=null;
 	}
 	@Override
 	public int hashCode()
@@ -28,10 +35,11 @@ public class Triangle {
 		return t.pointer==pointer;
 	}
 	
-	public void assign(Vertex a, Vertex b, Vertex c) {
+	public void assign(Vertex a, Vertex b, Vertex c, Texture texture) {
 		idx[0]=a.getPointer();
 		idx[1]=b.getPointer();
 		idx[2]=c.getPointer();
+		this.texture=texture;
 		used=true;
 	}
 	public short getPointer() {

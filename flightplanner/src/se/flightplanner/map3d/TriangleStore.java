@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Map.Entry;
 
 import android.util.Log;
 
@@ -20,7 +21,7 @@ import se.flightplanner.Project.iMerc;
 import se.flightplanner.map3d.Triangle;
 
 public class TriangleStore {
-	private ShortBuffer buf;
+	private ShortBuffer mainbuf;
 	private LinkedList<Triangle> free;
 	private HashSet<Triangle> used;
 	private ArrayList<Triangle> all;
@@ -31,7 +32,7 @@ public class TriangleStore {
 			throw new RuntimeException("Bad triangle count for TriangleStore");
 		ByteBuffer bytebuf= ByteBuffer.allocateDirect(capacity*2*3);
 		bytebuf.order(ByteOrder.nativeOrder());
-		buf=bytebuf.asShortBuffer();
+		mainbuf=bytebuf.asShortBuffer();
 		used=new HashSet<Triangle>();
 		all=new ArrayList<Triangle>();
 		all.ensureCapacity(capacity);
@@ -160,28 +161,100 @@ public class TriangleStore {
 		}
 		return ret;
 	}
-	public Indices getIndexForRender(VertexStore vstore)
+	public static interface RenderTexCb
 	{
-		buf.position(0);
-		Indices ret=new Indices();
-		ret.buf=buf;
-		ret.tricount=0;
-		int cnt=0;
+		public void renderTex(Texture tex,Indices ind); 
+	}
+	public void getIndexForRender(VertexStore vstore,RenderTexCb cb)
+	{
+		HashMap<Texture,ArrayList<Triangle>> s=new HashMap<Texture,ArrayList<Triangle>>();
+		for(Triangle t:all)
+		{
+			if (!t.isUsed()) continue;
+			Texture cp=t.getTexture();
+			//cp=null;
+			ArrayList<Triangle> tris=s.get(cp);
+			if (tris==null)
+			{
+				tris=new ArrayList<Triangle>();
+				s.put(cp,tris);
+			}
+			tris.add(t);
+		}
+		for(Entry<Texture, ArrayList<Triangle>> ent : s.entrySet())
+		{
+			Indices ind=new Indices();
+			mainbuf.position(0);
+			ind.buf=mainbuf;
+			ind.tricount=0;
+			for(Triangle t:ent.getValue())
+			{
+				for(int i=0;i<3;++i)
+					if (!vstore.isUsed(t.getidx(i)))
+						throw new RuntimeException("Triangle contains index which points to a presently non-used vertex! ("+t.getidx(i)+")");
+				ind.buf.put(t.getidx(0));
+				ind.buf.put(t.getidx(1));
+				ind.buf.put(t.getidx(2));
+				//Log.i("fplan","Index nr #"+cnt+": "+t.getidx(0)+","+t.getidx(1)+","+t.getidx(2));
+				ind.tricount+=1;
+			}			
+			mainbuf.position(0);
+			cb.renderTex(ent.getKey(),ind);
+
+		}
+		
+/*
+		HashMap<Texture,int[]> tex2cnt=new HashMap<Texture,int[]>(); 
+		for(Triangle t:all)
+		{
+			if (!t.isUsed()) continue;
+			Texture cp=t.getTexture();
+			int[] cnts=tex2cnt.get(cp);
+			if (cnts==null)
+			{
+				cnts=new int[1];
+				cnts[0]=1;
+				tex2cnt.put(cp, cnts);
+			}
+			else
+			{
+				cnts[0]+=1;
+			}			
+		}
+		HashMap<Texture,Indices> tex2buf=new HashMap<Texture,Indices>();
+		int idx=0;
+		for(Entry<Texture, int[]> cnt : tex2cnt.entrySet())
+		{
+			Indices ind=new Indices();
+			mainbuf.position(3*idx);
+			ind.buf=mainbuf.slice();
+			ind.buf.position(0);
+			ind.tricount=cnt.getValue()[0];
+			tex2buf.put(cnt.getKey(),ind);
+			idx+=ind.tricount;
+		}
+		
+
+
 		for(Triangle t:all)
 		{
 			if (!t.isUsed()) continue;
 			for(int i=0;i<3;++i)
 				if (!vstore.isUsed(t.getidx(i)))
 					throw new RuntimeException("Triangle contains index which points to a presently non-used vertex! ("+t.getidx(i)+")");
-			buf.put(t.getidx(0));
-			buf.put(t.getidx(1));
-			buf.put(t.getidx(2));
+			Indices ind=tex2buf.get(t.getTexture());
+			ind.buf.put(t.getidx(0));
+			ind.buf.put(t.getidx(1));
+			ind.buf.put(t.getidx(2));
 			//Log.i("fplan","Index nr #"+cnt+": "+t.getidx(0)+","+t.getidx(1)+","+t.getidx(2));
-			ret.tricount+=1;
-			cnt+=1;
+			ind.tricount+=1;
+
 		}
-		buf.position(0);
-		return ret;
+		for(Entry<Texture,Indices> ent:tex2buf.entrySet())
+			ent.getValue().buf.position(0);
+		return tex2buf;
+		
+		*/
 	}
 	public void debugDump(Writer f) throws IOException {
 		f.write("\"triangles\":[\n");

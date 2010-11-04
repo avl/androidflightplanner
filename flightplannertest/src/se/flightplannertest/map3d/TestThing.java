@@ -39,7 +39,7 @@ public class TestThing {
 				stitchrequiredmerc.add(v.getimerc());
 			}		
 		};
-		VertexStore vstore=new VertexStore(100);
+		VertexStore vstore=new VertexStore(100,0);
 		ElevationStoreIf estore=TestElevMap.getSampleEstore();
 		int size13=64;
 		ThingIf t1=new Thing(
@@ -120,7 +120,7 @@ public class TestThing {
 			public void stitch(Vertex v, int level, ThingIf parent, boolean unstitch) {
 			}		
 		};
-		VertexStore vstore=new VertexStore(100);
+		VertexStore vstore=new VertexStore(100,0);
 		ElevationStoreIf estore=TestElevMap.getSampleEstore();
 		int size=64;
 		ThingIf t=new Thing(
@@ -143,7 +143,7 @@ public class TestThing {
 	@Test
 	public void testThingSubsume() throws FileNotFoundException, IOException
 	{
-		VertexStore vstore=new VertexStore(100);
+		VertexStore vstore=new VertexStore(100,0);
 		TriangleStore tristore=new TriangleStore(100);
 		final HashSet<Vertex> stitched=new HashSet<Vertex>();
 		final HashSet<Vertex> unstitched=new HashSet<Vertex>();
@@ -212,7 +212,7 @@ public class TestThing {
 				
 			}		
 		};
-		VertexStore vstore=new VertexStore(100);
+		VertexStore vstore=new VertexStore(100,0);
 		TriangleStore tristore=new TriangleStore(100);
 		ElevationStoreIf estore=TestElevMap.getSampleEstore();
 		int size=64;

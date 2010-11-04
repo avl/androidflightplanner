@@ -28,6 +28,7 @@ public class VertexStore {
 	private HashMap<iMerc,Vertex> used;
 	private ArrayList<Vertex> all;
 	Random random=new Random();
+	private int texture_zoomlevel;
 	
 	public HashMap<Short,Vertex> dbgGetVertices(){
 		HashMap<Short,Vertex> h=new HashMap<Short,Vertex>();
@@ -110,8 +111,10 @@ public class VertexStore {
 		dbg.deploy(iMerc.x,iMerc.y,b,"debug");
 		return dbg;
 	}		
-	public VertexStore(int capacity)
+	public VertexStore(int capacity,int texture_zoomlevel)
 	{
+		this.texture_zoomlevel=texture_zoomlevel;
+		
 		if (capacity<=0 || capacity>32000)
 			throw new RuntimeException("Invalid capacity for VertexStore:"+capacity);
 		free=new LinkedList<Vertex>();
@@ -163,6 +166,7 @@ public class VertexStore {
 		vertexbuf.position(0);
 		texcoordbuf.position(0);
 		colors.position(0);
+		int texture_shift=(13-texture_zoomlevel);
 		for(int i=0;i<all.size();++i)
 		{
 			Vertex v=all.get(i);
@@ -174,9 +178,21 @@ public class VertexStore {
 				calzraw=v.calcZ();
 				int calz=(int)(calzraw);
 				v.resetElev();
-				z=calz-altitude;			
-				x=v.getx()-observer.x;
-				y=v.gety()-observer.y;
+				z=-1.0f*(calz-altitude);			
+				x=(v.getx()-observer.x);
+				y=(v.gety()-observer.y);
+				
+				int tx=v.getx()>>(texture_shift);
+				int ty=v.gety()>>(texture_shift);
+				tx&=511;				
+				ty&=511;
+				if (tx>256)
+					tx=512-tx;
+				if (ty>256)
+					ty=512-ty;
+				texcoordbuf.put(tx/256.0f);
+				texcoordbuf.put(ty/256.0f);				
+				
 				
 				x*=0.01;
 				y*=0.01;
@@ -200,10 +216,11 @@ public class VertexStore {
 				//b=(byte)((i*64)%256);//(byte)z;
 				//Log.i("fplan","Rendered vertex #"+i+": "+x+","+y+","+z+" rawZ:"+calzraw);
 			}
-
-			texcoordbuf.put(random.nextFloat());
-			texcoordbuf.put(random.nextFloat());
-			
+			else
+			{
+				texcoordbuf.put(0.0f);
+				texcoordbuf.put(0.0f);				
+			}
 			vertexbuf.put(x);
 			vertexbuf.put(y);
 			vertexbuf.put(z);
@@ -212,12 +229,14 @@ public class VertexStore {
 			colors.put(r);
 			colors.put(g);
 			colors.put(b);
-			colors.put((byte)-1);
+			colors.put((byte)-1); //alpha
 			*/
+			
 			colors.put((byte)-1);
 			colors.put((byte)-1);
 			colors.put((byte)-1);
 			colors.put((byte)-1);
+			
 		}
 		vertexbuf.position(0);
 		colors.position(0);

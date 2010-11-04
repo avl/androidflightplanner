@@ -53,7 +53,8 @@ public class Thing implements ThingIf {
 	private boolean known_ready;//ready when all vertices have received their elevation
 	private boolean deployed; //set to true when a thing becomes visible. Implies that parent->subsumed is true.
 	private ArrayList<ThingIf> children; //order: upper row first; left-right, then second row; left-right.
-
+	Texture texture;
+	
 	public HashSet<Vertex> getEdgeVertices()
 	{
 		HashSet<Vertex> ret=new HashSet<Vertex>();
@@ -213,7 +214,7 @@ public class Thing implements ThingIf {
 	/* (non-Javadoc)
 	 * @see se.flightplanner.map3d.ThingIf#subsume(java.util.ArrayList, se.flightplanner.map3d.VertexStore, se.flightplanner.map3d.Stitcher, se.flightplanner.map3d.ElevationStore)
 	 */
-	public void subsume(ArrayList<ThingIf> newThings,VertexStore vstore,Stitcher stitcher,ElevationStoreIf estore)
+	public void subsume(ArrayList<ThingIf> newThings,VertexStore vstore,TextureStore tstore,Stitcher stitcher,ElevationStoreIf estore)
 	{
 		if (children!=null) 
 			return; //Already subsumed
@@ -223,7 +224,7 @@ public class Thing implements ThingIf {
 		{
 			for(int curx=pos.x;curx<pos.x+size;curx+=size/2)
 			{
-				Thing child=new Thing(new iMerc(curx,cury),this,zoomlevel+1,vstore,estore,stitcher);
+				Thing child=new Thing(new iMerc(curx,cury),this,zoomlevel+1,vstore,tstore,estore,stitcher);
 				if (edges!=null)
 				{
 					for(HashSet<Vertex> vs:edges)
@@ -383,7 +384,7 @@ public class Thing implements ThingIf {
 		
 		releaseTriangles(tristore);
 	}
-	public Thing(iMerc pos,ThingIf parent,int zoomlevel,VertexStore vstore,ElevationStoreIf elevStore, Stitcher stitcher)
+	public Thing(iMerc pos,ThingIf parent,int zoomlevel,VertexStore vstore,TextureStore tstore,ElevationStoreIf elevStore, Stitcher stitcher)
 	{
 		int zoomgap=13-zoomlevel;
 		this.size=64<<zoomgap;
@@ -392,6 +393,7 @@ public class Thing implements ThingIf {
 		this.zoomlevel=zoomlevel;
 		this.triangles=new ArrayList<Triangle>();
 		this.elev=elevStore.get(pos,zoomlevel-6);
+		this.texture=tstore.getTextureAt(this.pos);
 		this.released=false;
 		Elev oelev=this.elev;
 		if (this.elev==null)
@@ -611,7 +613,7 @@ public class Thing implements ThingIf {
 	}
 	private void addTri(TriangleStore tristore, Vertex v1, Vertex v2, Vertex v3) {
 		Triangle t1=tristore.alloc();
-		t1.assign(v1,v2,v3);
+		t1.assign(v1,v2,v3,this.texture);
 		triangles.add(t1);
 	}
 	boolean haveSharedVertex()
