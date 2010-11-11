@@ -23,7 +23,7 @@ import se.flightplanner.map3d.Thing;
 import se.flightplanner.map3d.ThingFactory;
 import se.flightplanner.map3d.ThingIf;
 import se.flightplanner.map3d.TriangleStore;
-import se.flightplanner.map3d.VertexStore;
+import se.flightplanner.map3d.TerrainVertexStore;
 
 import android.location.Location;
 import android.opengl.GLSurfaceView.Renderer;

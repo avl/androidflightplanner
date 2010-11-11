@@ -47,9 +47,9 @@ public interface ThingIf {
 	 * all been created).
 	 */
 	public abstract void subsume(ArrayList<ThingIf> newThings,
-			VertexStore vstore, TextureStore tstore,Stitcher stitcher, ElevationStoreIf estore);
+			TerrainVertexStore vstore, TextureStore tstore,Stitcher stitcher, ElevationStoreIf estore);
 
-	public abstract void unsubsume(VertexStore vstore, Stitcher st,ArrayList<ThingIf> removed_things,TriangleStore tristore);
+	public abstract void unsubsume(TerrainVertexStore vstore, Stitcher st,ArrayList<ThingIf> removed_things,TriangleStore tristore);
 
 	/**
 	 * Called when the life of a Thing ends. 
@@ -61,9 +61,9 @@ public interface ThingIf {
 	 * the criteria for needing stitching?) 
 	 */
 	public abstract void release(HashSet<Vertex> neededStitching,
-			VertexStore vstore, Stitcher st,ArrayList<ThingIf> removed_things,TriangleStore tristore);
+			TerrainVertexStore vstore, Stitcher st,ArrayList<ThingIf> removed_things,TriangleStore tristore);
 
-	public abstract void triangulate(TriangleStore tristore,VertexStore vstore);
+	public abstract void triangulate(TriangleStore tristore,TerrainVertexStore vstore);
 	public abstract ThingIf getChild(int i,int j);
 	/**
 	 * The following events may happen for a vertex:
@@ -106,7 +106,7 @@ public interface ThingIf {
 	 * 
 	 * 
 	 */
-	public abstract void shareVertex(VertexStore vstore, Vertex v, boolean share);
+	public abstract void shareVertex(TerrainVertexStore vstore, Vertex v, boolean share);
 
 	public abstract ThingIf getParent();
 
@@ -114,8 +114,8 @@ public interface ThingIf {
 
 	public abstract String getPosStr();
 
-	public abstract void calcElevs1(TriangleStore tristore, VertexStore vstore);
-	public abstract void calcElevs2(TriangleStore tristore, VertexStore vstore);
+	public abstract void calcElevs1(TriangleStore tristore, TerrainVertexStore vstore);
+	public abstract void calcElevs2(TriangleStore tristore, TerrainVertexStore vstore);
 
 	public abstract void adjustRefine(float refine);
 

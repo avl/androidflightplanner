@@ -18,8 +18,9 @@ public class Vector implements Serializable {
 		x=px;
 		y=py;
 	}
-	public boolean equals(Vector v)
+	public boolean equals(Vector vo)
 	{
+		Vector v=(Vector)vo;
 		return x==v.x && y==v.y;
 	}
 	public boolean almostEquals(Vector v,double epsilon)

@@ -19,11 +19,12 @@ import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.iMerc;
 import se.flightplanner.map3d.TriangleStore.Indices;
 import se.flightplanner.map3d.TriangleStore.RenderTexCb;
-import se.flightplanner.map3d.VertexStore.VertAndColor;
+import se.flightplanner.map3d.TerrainVertexStore.VertAndColor;
 
 public class PlayfieldDrawer {
 
-	VertexStore vstore;
+	VertexStore3D vs3d;
+	TerrainVertexStore vstore;
 	TriangleStore tristore;
 	ElevationStoreIf elevstore;
 	TextureStore tstore;
@@ -39,7 +40,8 @@ public class PlayfieldDrawer {
 		rand=new Random();
 		iMerc p1=Project.latlon2imerc(new LatLon(70,10),13);
 		iMerc p2=Project.latlon2imerc(new LatLon(50,20),13);
-		vstore=new VertexStore(2000,tstore.getZoomLevel());
+		this.vs3d=new VertexStore3D(1000);
+		vstore=new TerrainVertexStore(2000,tstore.getZoomLevel(),vs3d);
 		tristore=new TriangleStore(2000);
 		deftex=-1;
 		lodc=new LodCalc(480,100); //TODO: Screenheight isn't always 480. Also, tolerance 1000 is too big!
@@ -50,7 +52,7 @@ public class PlayfieldDrawer {
 		playfield=new Playfield(p1,p2,vstore,tstore,tristore,elevstore,
 				new ThingFactory()
 			{
-				public ThingIf createThing(VertexStore vstore,
+				public ThingIf createThing(TerrainVertexStore vstore,
 						TextureStore tstore,ElevationStoreIf estore, int zoomlevel, iMerc m, Stitcher st) {
 					return new Thing(m,null,zoomlevel,vstore,tstore,estore,st);
 				}
@@ -78,7 +80,7 @@ public class PlayfieldDrawer {
 				playfield.completeDebugDump("/sdcard/dump.json");
 				dodump=false;
 			}
-			final VertAndColor va=vstore.getVerticesReadyForRender(observer,observerElev);
+			final VertAndColor va=vstore.vstore3d.getVerticesReadyForRender(vstore, observer,observerElev);
 			GlHelper.checkGlError(gl);
 	        gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
 	        gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
@@ -91,7 +93,7 @@ public class PlayfieldDrawer {
 			gl.glFrontFace(gl.GL_CCW);
 			
 
-			tristore.getIndexForRender(vstore, new RenderTexCb()
+			tristore.getIndexForRender(vs3d, new RenderTexCb()
 			{
 
 				public void renderTex(Texture tex,Indices ind) {

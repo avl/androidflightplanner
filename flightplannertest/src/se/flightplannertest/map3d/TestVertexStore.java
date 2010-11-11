@@ -8,7 +8,8 @@ import org.junit.Test;
 
 import se.flightplanner.Project.iMerc;
 import se.flightplanner.map3d.Vertex;
-import se.flightplanner.map3d.VertexStore;
+import se.flightplanner.map3d.TerrainVertexStore;
+import se.flightplanner.map3d.VertexStore3D;
 
 public class TestVertexStore {
 
@@ -18,7 +19,8 @@ public class TestVertexStore {
 		Vertex va=new Vertex((short)0);
 		Vertex vb=new Vertex((short)1);
 		assertEquals(va,vb);
-		VertexStore vstore=new VertexStore(5,0);
+		VertexStore3D vs3d=new VertexStore3D(1000);
+		TerrainVertexStore vstore=new TerrainVertexStore(5,0,vs3d);
 		iMerc im=new iMerc(256,256);
 		Vertex v=vstore.obtain(im, (byte)13,"debug1");
 		assertEquals(v.getPointer(),0);
@@ -31,12 +33,13 @@ public class TestVertexStore {
 		
 		vstore.decrement(v2);
 		
-		Assert.assertFalse(v2.getimerc().equals(im));
+		Assert.assertFalse(v2.isUsed());
 	}
 	@Test 
 	public void testVertexStoreCapacity1()
 	{
-		VertexStore vstore=new VertexStore(5,0);
+		VertexStore3D vs3d=new VertexStore3D(5);
+		TerrainVertexStore vstore=new TerrainVertexStore(5,0,vs3d);
 		for(int i=0;i<5;++i)
 		{
 			iMerc im=new iMerc(256+256*i,256);
@@ -59,7 +62,8 @@ public class TestVertexStore {
 	@Test 
 	public void testVertexStoreCapacity2()
 	{
-		VertexStore vstore=new VertexStore(5,0);
+		VertexStore3D vs3d=new VertexStore3D(1000);
+		TerrainVertexStore vstore=new TerrainVertexStore(5,0,vs3d);
 		Vertex v=null;
 		for(int i=0;i<10;++i)
 		{

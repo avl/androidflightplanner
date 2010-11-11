@@ -14,12 +14,14 @@ import org.junit.Test;
 import se.flightplanner.Project.iMerc;
 import se.flightplanner.map3d.ElevationStoreIf;
 import se.flightplanner.map3d.Stitcher;
+import se.flightplanner.map3d.TextureStore;
 import se.flightplanner.map3d.Thing;
 import se.flightplanner.map3d.ThingIf;
 import se.flightplanner.map3d.Triangle;
 import se.flightplanner.map3d.TriangleStore;
 import se.flightplanner.map3d.Vertex;
-import se.flightplanner.map3d.VertexStore;
+import se.flightplanner.map3d.TerrainVertexStore;
+import se.flightplanner.map3d.VertexStore3D;
 
 public class TestThing {
 
@@ -39,14 +41,16 @@ public class TestThing {
 				stitchrequiredmerc.add(v.getimerc());
 			}		
 		};
-		VertexStore vstore=new VertexStore(100,0);
+		VertexStore3D vs3d=new VertexStore3D(1000);
+		TerrainVertexStore vstore=new TerrainVertexStore(100,0,vs3d);
 		ElevationStoreIf estore=TestElevMap.getSampleEstore();
+		TextureStore tstore=null;
 		int size13=64;
 		ThingIf t1=new Thing(
-				new iMerc(0,0),null,12,vstore,estore,st
+				new iMerc(0,0),null,12,vstore,tstore,estore,st
 				);
 		ThingIf t2=new Thing(
-				new iMerc(2*size13,size13),null,13,vstore,estore,st
+				new iMerc(2*size13,size13),null,13,vstore,tstore,estore,st
 				); //will require t1 to have stitches!
 		Assert.assertTrue(stitchrequiredmerc.contains(new iMerc(128,64)));
 		for(Vertex s : stitchrequired)
@@ -120,11 +124,13 @@ public class TestThing {
 			public void stitch(Vertex v, int level, ThingIf parent, boolean unstitch) {
 			}		
 		};
-		VertexStore vstore=new VertexStore(100,0);
+		VertexStore3D vs3d=new VertexStore3D(1000);
+		TerrainVertexStore vstore=new TerrainVertexStore(100,0,vs3d);
 		ElevationStoreIf estore=TestElevMap.getSampleEstore();
+		TextureStore tstore=null;
 		int size=64;
 		ThingIf t=new Thing(
-				new iMerc(256,256),null,13,vstore,estore,st
+				new iMerc(256,256),null,13,vstore,tstore,estore,st
 				);
 		TriangleStore tristore=new TriangleStore(10);
 		t.triangulate(tristore,vstore);
@@ -143,7 +149,8 @@ public class TestThing {
 	@Test
 	public void testThingSubsume() throws FileNotFoundException, IOException
 	{
-		VertexStore vstore=new VertexStore(100,0);
+		VertexStore3D vs3d=new VertexStore3D(1000);
+		TerrainVertexStore vstore=new TerrainVertexStore(100,0,vs3d);
 		TriangleStore tristore=new TriangleStore(100);
 		final HashSet<Vertex> stitched=new HashSet<Vertex>();
 		final HashSet<Vertex> unstitched=new HashSet<Vertex>();
@@ -167,17 +174,18 @@ public class TestThing {
 			}		
 		};
 		ElevationStoreIf estore=TestElevMap.getSampleEstore();
+		TextureStore tstore=null;
 		int zoomlevel=12;
 		int size=64;
 		ThingIf t=new Thing(
-				new iMerc(0,0),null,zoomlevel,vstore,estore,st
+				new iMerc(0,0),null,zoomlevel,vstore,tstore,estore,st
 				);
 		Assert.assertTrue(t.isCorner(vstore.obtaindbg(new iMerc(0,0), (byte)zoomlevel)));
 		Assert.assertTrue(t.isCorner(vstore.obtaindbg(new iMerc(128,0), (byte)zoomlevel)));
 		Assert.assertTrue(t.getCorner(0).dbgUsage()==1);
 		
 		ArrayList<ThingIf> newThings=new ArrayList<ThingIf>();
-		t.subsume(newThings, vstore, st, estore);
+		t.subsume(newThings, vstore, tstore, st, estore);
 		Assert.assertTrue(t.getCorner(0).dbgUsage()==2);
 		Assert.assertTrue(t.getCorner(1).dbgUsage()==2);
 
@@ -212,12 +220,14 @@ public class TestThing {
 				
 			}		
 		};
-		VertexStore vstore=new VertexStore(100,0);
+		VertexStore3D vs3d=new VertexStore3D(1000);
+		TerrainVertexStore vstore=new TerrainVertexStore(100,0,vs3d);
 		TriangleStore tristore=new TriangleStore(100);
 		ElevationStoreIf estore=TestElevMap.getSampleEstore();
+		TextureStore tstore=null;
 		int size=64;
 		ThingIf t=new Thing(
-				new iMerc(256,256),null,13,vstore,estore,st
+				new iMerc(256,256),null,13,vstore,tstore,estore,st
 				);
 		
 		Assert.assertTrue(t.getCorner(0).dbgUsage()==1);

@@ -165,7 +165,7 @@ public class TriangleStore {
 	{
 		public void renderTex(Texture tex,Indices ind); 
 	}
-	public void getIndexForRender(VertexStore vstore,RenderTexCb cb)
+	public void getIndexForRender(VertexStore3D vstore,RenderTexCb cb)
 	{
 		HashMap<Texture,ArrayList<Triangle>> s=new HashMap<Texture,ArrayList<Triangle>>();
 		for(Triangle t:all)

@@ -65,6 +65,10 @@ public class Vertex {
 	private byte owninglevel; //Level on which the Things which own this vertex are (have it as corners)
 	
 	private String what; //Debug description of what Vertex is used for.
+	
+	private float u; //texture coords
+	private float v; //texture coords
+	
 	public String toString()
 	{
 		return "Vertex("+mercx+","+mercy+",what="+what+",lastElev="+lastElev+",use="+usage+")";
@@ -92,25 +96,29 @@ public class Vertex {
 	}
 	
 	///Level of the Thing which would own a vertex at this level
-	public int owningLevel()
+	/* 
+	 * We'd like to get rid of the owninglevel variable if possible. 
+	 * public int owningLevel()
 	{
 		return owninglevel;
-	}
+	}*/
 	
 	public boolean equals(Object oo)
 	{
 		Vertex o=(Vertex)oo;
 		return o.mercx==mercx && o.mercy==mercy;
 	}
-	/** Must only be called by VertexStore! 
-	 * @param what */
-	public void deploy(int mercx,int mercy,byte owninglevel, String what)
+	
+	/** Must only be called by VertexStore! */
+	public void deploy(int mercx,int mercy,byte owninglevel, String what, float u, float v)
 	{
 		this.usage=1;
 		this.mercx=mercx;
 		this.mercy=mercy;
 		this.owninglevel=owninglevel;
 		this.what=what;
+		this.u=u;
+		this.v=v;
 	}
 	
 	public int hashCode()
@@ -161,5 +169,11 @@ public class Vertex {
 	}
 	public boolean dbgHasElev() {
 		return elevcontributors>0;
+	}
+	public float getu() {
+		return u;
+	}
+	public float getv() {
+		return u;
 	}
 }

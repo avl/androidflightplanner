@@ -214,7 +214,7 @@ public class Thing implements ThingIf {
 	/* (non-Javadoc)
 	 * @see se.flightplanner.map3d.ThingIf#subsume(java.util.ArrayList, se.flightplanner.map3d.VertexStore, se.flightplanner.map3d.Stitcher, se.flightplanner.map3d.ElevationStore)
 	 */
-	public void subsume(ArrayList<ThingIf> newThings,VertexStore vstore,TextureStore tstore,Stitcher stitcher,ElevationStoreIf estore)
+	public void subsume(ArrayList<ThingIf> newThings,TerrainVertexStore vstore,TextureStore tstore,Stitcher stitcher,ElevationStoreIf estore)
 	{
 		if (children!=null) 
 			return; //Already subsumed
@@ -244,7 +244,7 @@ public class Thing implements ThingIf {
 	/* (non-Javadoc)
 	 * @see se.flightplanner.map3d.ThingIf#unsubsume(se.flightplanner.map3d.VertexStore, se.flightplanner.map3d.Stitcher)
 	 */
-	public void unsubsume(VertexStore vstore,Stitcher st,ArrayList<ThingIf> removed_things,TriangleStore tristore)
+	public void unsubsume(TerrainVertexStore vstore,Stitcher st,ArrayList<ThingIf> removed_things,TriangleStore tristore)
 	{
 		if (children==null)
 			return; //already unsubsumed
@@ -307,7 +307,7 @@ public class Thing implements ThingIf {
 	 *   caller. However, the array removed_things will have 'this' appended.
 	 * 
 	 */
-	public void release(HashSet<Vertex> neededStitching,VertexStore vstore,Stitcher st,ArrayList<ThingIf> removed_things,TriangleStore tristore) {
+	public void release(HashSet<Vertex> neededStitching,TerrainVertexStore vstore,Stitcher st,ArrayList<ThingIf> removed_things,TriangleStore tristore) {
 
 		Vertex old_center=center_vertex;
 		if (center_vertex!=null)
@@ -384,7 +384,7 @@ public class Thing implements ThingIf {
 		
 		releaseTriangles(tristore);
 	}
-	public Thing(iMerc pos,ThingIf parent,int zoomlevel,VertexStore vstore,TextureStore tstore,ElevationStoreIf elevStore, Stitcher stitcher)
+	public Thing(iMerc pos,ThingIf parent,int zoomlevel,TerrainVertexStore vstore,TextureStore tstore,ElevationStoreIf elevStore, Stitcher stitcher)
 	{
 		int zoomgap=13-zoomlevel;
 		this.size=64<<zoomgap;
@@ -393,7 +393,8 @@ public class Thing implements ThingIf {
 		this.zoomlevel=zoomlevel;
 		this.triangles=new ArrayList<Triangle>();
 		this.elev=elevStore.get(pos,zoomlevel-6);
-		this.texture=tstore.getTextureAt(this.pos);
+		if (tstore!=null)
+			this.texture=tstore.getTextureAt(this.pos);
 		this.released=false;
 		Elev oelev=this.elev;
 		if (this.elev==null)
@@ -487,7 +488,7 @@ public class Thing implements ThingIf {
 		}
 	}
 
-	public void calcElevs1(TriangleStore tristore, VertexStore vstore)
+	public void calcElevs1(TriangleStore tristore, TerrainVertexStore vstore)
 	{
 		if (base_vertices==null || isReleased())
 			throw new RuntimeException("calcElevs called for released Thing");
@@ -517,7 +518,7 @@ public class Thing implements ThingIf {
 		return refine;
 	}
 	
-	public void calcElevs2(TriangleStore tristore, VertexStore vstore)
+	public void calcElevs2(TriangleStore tristore, TerrainVertexStore vstore)
 	{
 		if (base_vertices==null || isReleased())
 			throw new RuntimeException("calcElevs called for released Thing2");
@@ -539,7 +540,7 @@ public class Thing implements ThingIf {
 	{
 		this.refine=refine;
 	}
-	public void triangulate(TriangleStore tristore,VertexStore vstore)
+	public void triangulate(TriangleStore tristore,TerrainVertexStore vstore)
 	{
 		if (base_vertices==null || isReleased())
 			throw new RuntimeException("triangulate called for released Thing");
@@ -628,7 +629,7 @@ public class Thing implements ThingIf {
 	{
 		return size;
 	}
-	public void shareVertex(VertexStore vstore,Vertex v, boolean share)
+	public void shareVertex(TerrainVertexStore vstore,Vertex v, boolean share)
 	{
 		if (base_vertices==null)
 		{

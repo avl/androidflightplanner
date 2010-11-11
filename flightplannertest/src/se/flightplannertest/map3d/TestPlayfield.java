@@ -25,8 +25,9 @@ import se.flightplanner.map3d.ThingFactory;
 import se.flightplanner.map3d.ThingIf;
 import se.flightplanner.map3d.TriangleStore;
 import se.flightplanner.map3d.Vertex;
-import se.flightplanner.map3d.VertexStore;
+import se.flightplanner.map3d.TerrainVertexStore;
 import se.flightplanner.map3d.Stitcher;
+import se.flightplanner.map3d.VertexStore3D;
 import se.flightplanner.map3d.ElevationStore.Elev;
 import se.flightplanner.map3d.TriangleStore.DbgTriangle2D;
 
@@ -43,7 +44,8 @@ public class TestPlayfield {
 		final int parentsize=64<<pgap;
 		iMerc p1=new iMerc(0,0);
 		iMerc p2=new iMerc(parentsize*2,parentsize);
-		final VertexStore vstore=new VertexStore(100,0);
+		VertexStore3D vs3d=new VertexStore3D(1000);
+		final TerrainVertexStore vstore=new TerrainVertexStore(100,0,vs3d);
 		final ElevationStoreIf estore=TestElevMap.getSampleEstore();
 		TriangleStore tristore=new TriangleStore(100);
 		LodCalc lc=new LodCalc(100, 10);
@@ -65,7 +67,7 @@ public class TestPlayfield {
 		ThingFactory thingf=new ThingFactory()
 		{
 			@Override
-			public ThingIf createThing(VertexStore vstore, TextureStore tstore,ElevationStoreIf estore,
+			public ThingIf createThing(TerrainVertexStore vstore, TextureStore tstore,ElevationStoreIf estore,
 					int i, iMerc m,Stitcher st) {
 				++cnt[0];
 				if (cnt[0]-1==0) return parent;
@@ -122,13 +124,13 @@ public class TestPlayfield {
     			allowing(t).getDistance(observerpos,observerheight);will(returnValue((float)(2.0*childsize)));
 	        }});
 		}
-		TextureStore tstore=null;
+		final TextureStore tstore=null;
 		final Playfield play=new Playfield(p1,p2,vstore,tstore,tristore,estore,thingf);
 		
 		for(final ThingIf t:parents)
 		{
 	        mock.checking(new Expectations() {{
-	        	allowing(t).subsume(new ArrayList<ThingIf>(), vstore, play, estore);
+	        	allowing(t).subsume(new ArrayList<ThingIf>(), vstore, tstore, play, estore);
 	        }});
 		}
 
@@ -146,16 +148,17 @@ public class TestPlayfield {
 	{
 		iMerc p1=Project.latlon2imerc(new LatLon(59,17), 13);
 		iMerc p2=Project.latlon2imerc(new LatLon(57,19), 13);
-		VertexStore vstore=new VertexStore(1000,0);
+		VertexStore3D vs3d=new VertexStore3D(1000);
+		TerrainVertexStore vstore=new TerrainVertexStore(1000,0,vs3d);
 		ElevationStoreIf estore=TestElevMap.getSampleEstore();
 		TriangleStore tristore=new TriangleStore(1000);
 		LodCalc lc=new LodCalc(100, 1000);
 		ThingFactory thingf=new ThingFactory()
 		{
 			@Override
-			public ThingIf createThing(VertexStore vstore, TextureStore tstore,ElevationStoreIf estore,
+			public ThingIf createThing(TerrainVertexStore vstore, TextureStore tstore,ElevationStoreIf estore,
 					int i, iMerc m,Stitcher st) {
-				Thing t=new Thing(m,null,i,vstore,estore,st);
+				Thing t=new Thing(m,null,i,vstore,tstore,estore,st);
 				return t;
 			}
 			
@@ -169,16 +172,17 @@ public class TestPlayfield {
 	{
 		iMerc p1=new iMerc(0,0);
 		iMerc p2=new iMerc(16384,16384);
-		VertexStore vstore=new VertexStore(1000,0);
+		VertexStore3D vs3d=new VertexStore3D(1000);
+		TerrainVertexStore vstore=new TerrainVertexStore(1000,0,vs3d);
 		ElevationStoreIf estore=TestElevMap.getSampleEstore();
 		TriangleStore tristore=new TriangleStore(1000);
 
 		ThingFactory thingf=new ThingFactory()
 		{
 			@Override
-			public ThingIf createThing(VertexStore vstore, TextureStore tstore,ElevationStoreIf estore,
+			public ThingIf createThing(TerrainVertexStore vstore, TextureStore tstore,ElevationStoreIf estore,
 					int i, iMerc m,Stitcher st) {
-				Thing t=new Thing(m,null,i,vstore,estore,st);
+				Thing t=new Thing(m,null,i,vstore,tstore,estore,st);
 				return t;
 			}
 			
@@ -269,16 +273,17 @@ public class TestPlayfield {
 		iMerc p1=new iMerc(0,0);
 		iMerc p2=new iMerc(16384,16384);
 		Mockery mock=new Mockery();
-		VertexStore vstore=new VertexStore(1000,0);
+		VertexStore3D vs3d=new VertexStore3D(1000);
+		TerrainVertexStore vstore=new TerrainVertexStore(1000,0,vs3d);
 			
 		TriangleStore tristore=new TriangleStore(1000);
 
 		ThingFactory thingf=new ThingFactory()
 		{
 			@Override
-			public ThingIf createThing(VertexStore vstore, TextureStore tstore,ElevationStoreIf estore,
+			public ThingIf createThing(TerrainVertexStore vstore, TextureStore tstore,ElevationStoreIf estore,
 					int i, iMerc m,Stitcher st) {
-				Thing t=new Thing(m,null,i,vstore,estore,st);
+				Thing t=new Thing(m,null,i,vstore,tstore,estore,st);
 				return t;
 			}
 			
@@ -353,16 +358,17 @@ public class TestPlayfield {
 	{
 		iMerc p1=new iMerc(0,0);
 		iMerc p2=new iMerc(16384,16384);
-		VertexStore vstore=new VertexStore(1000,0);
+		VertexStore3D vs3d=new VertexStore3D(1000);
+		TerrainVertexStore vstore=new TerrainVertexStore(1000,0,vs3d);
 		ElevationStoreIf estore=TestElevMap.getSampleEstore();
 		TriangleStore tristore=new TriangleStore(1000);
 
 		ThingFactory thingf=new ThingFactory()
 		{
 			@Override
-			public ThingIf createThing(VertexStore vstore, TextureStore tstore,ElevationStoreIf estore,
+			public ThingIf createThing(TerrainVertexStore vstore, TextureStore tstore,ElevationStoreIf estore,
 					int i, iMerc m,Stitcher st) {
-				Thing t=new Thing(m,null,i,vstore,estore,st);
+				Thing t=new Thing(m,null,i,vstore,tstore,estore,st);
 				return t;
 			}
 			

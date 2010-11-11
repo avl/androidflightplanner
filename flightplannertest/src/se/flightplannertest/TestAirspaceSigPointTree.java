@@ -7,6 +7,7 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FilterReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 
@@ -28,19 +29,10 @@ public class TestAirspaceSigPointTree {
 		
 		
 		StringBuilder fakedata=new StringBuilder();
-		BufferedReader fr=new BufferedReader(
-				new InputStreamReader(
-						new FileInputStream("/home/anders/workspace/flightplannertest/airspaces.json"),
-						"UTF-8"
-					));
-		for(;;)
-		{
-			String r=fr.readLine();
-			if (r==null) break;
-			fakedata.append(r);
-			fakedata.append("\n");
-		}				
-		Airspace s=Airspace.download(fakedata.toString());
+		InputStream is=
+						new FileInputStream("/home/anders/workspace/flightplannertest/airspaces.json");
+					
+		Airspace s=Airspace.download(is);
 		int zoomlevel=8;
 		int zoomgap=13-zoomlevel;
 		Merc center13=Project.latlon2merc(new LatLon(59.4,17.9),13);

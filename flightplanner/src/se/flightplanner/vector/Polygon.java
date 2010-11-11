@@ -10,7 +10,20 @@ public class Polygon implements Serializable {
 
 	private static final long serialVersionUID = -4421004724531424354L;
 	private ArrayList<Vector> points;
-	
+
+	public int numPoints()
+	{
+		return points.size();
+	}
+	public String toString()
+	{
+		StringBuilder b=new StringBuilder();
+		b.append("Polygon(");
+		for(Vector v : points)
+			b.append(" "+v.toString());
+		b.append(" )");
+		return b.toString();
+	}
 	/**
 	 * Get the points of the Polygon.
 	 * The returned points is not a copy, but

@@ -21,7 +21,7 @@ public class Playfield implements Stitcher {
 	final static int coarsestlevel=5;
 	final static int finestlevel=13;
 
-	VertexStore vstore;
+	TerrainVertexStore vstore;
 	TriangleStore tristore;
 	TextureStore tstore;
 	ThingFactory thingf;
@@ -55,7 +55,7 @@ public class Playfield implements Stitcher {
 		rf.close();
 	}
 	
-	public Playfield(iMerc upperleft,iMerc lowerright,VertexStore vstore,TextureStore tstore, TriangleStore tristore,ElevationStoreIf estore,
+	public Playfield(iMerc upperleft,iMerc lowerright,TerrainVertexStore vstore,TextureStore tstore, TriangleStore tristore,ElevationStoreIf estore,
 			ThingFactory thingf)
 	{
 		this.thingf=thingf;
@@ -141,7 +141,7 @@ public class Playfield implements Stitcher {
 			}
 		}
 	}
-	public void changeLods(iMerc observer,short observerElev,VertexStore vstore,ElevationStoreIf estore,LodCalc lodCalc,float bumpinessBias)
+	public void changeLods(iMerc observer,short observerElev,TerrainVertexStore vstore,ElevationStoreIf estore,LodCalc lodCalc,float bumpinessBias)
 	{
 		int nearLodLimit=250;
 		//System.out.println("changeLods running");
@@ -245,7 +245,7 @@ public class Playfield implements Stitcher {
 		}
 		//scanForCracks();
 	}
-	public void explicitSubsume(iMerc pos,int zoomlevel,VertexStore vstore,ElevationStoreIf estore,boolean subsume)
+	public void explicitSubsume(iMerc pos,int zoomlevel,TerrainVertexStore vstore,ElevationStoreIf estore,boolean subsume)
 	{
 		ArrayList<ThingIf> newThings=new ArrayList<ThingIf>();
 		ArrayList<ThingIf> removedThings=new ArrayList<ThingIf>();
@@ -290,7 +290,7 @@ public class Playfield implements Stitcher {
 
 	public void prepareForRender()
 	{
-		verifyVertexUsage();
+		//verifyVertexUsage();
 		for(int i=coarsestlevel;i<=finestlevel;++i)
 		{
 			HashMap<iMerc,ThingIf> lh=levels.get(i);
@@ -303,7 +303,7 @@ public class Playfield implements Stitcher {
 				}
 			}
 		}
-		verifyVertexUsage();
+		//verifyVertexUsage();
 		for(int i=coarsestlevel;i<=finestlevel;++i)
 		{
 			HashMap<iMerc,ThingIf> lh=levels.get(i);
@@ -321,11 +321,12 @@ public class Playfield implements Stitcher {
 				}
 			}
 		}
-		verifyVertexUsage();
+		//verifyVertexUsage();
 			
 		
 	}
-
+	/*
+	 * Temporarily decomissioned since we now have other vertices than terrain vertices...
 	private void verifyVertexUsage() {
 		HashSet<Vertex> allInStore=vstore.dbgGetAllUsed();
 		int good=0;
@@ -355,6 +356,7 @@ public class Playfield implements Stitcher {
 			throw new RuntimeException("Bad cnt="+allInStore.size()+", good cnt="+good+", first is "+vf+" vf.isUsed="+vf.isUsed());
 		}
 	}
+	*/
 	public void stitch(Vertex v,int level,ThingIf parent,boolean dostitch) {
 		level-=1;
 		int zoomgap=13-level;

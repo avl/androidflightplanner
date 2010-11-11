@@ -11,6 +11,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.io.StringBufferInputStream;
+import java.io.StringReader;
 import java.util.ArrayList;
 
 import org.apache.http.NameValuePair;
@@ -96,10 +98,18 @@ public class Airspace implements Serializable{
 	{
 		return download(null);
 	}
-	public static Airspace download(String fakeDataForTest) throws Exception
+	public static Airspace download(InputStream fakeDataForTest) throws Exception
 	{		
 		System.out.println("Start download operation");
-		InputStream inp=DataDownloader.postRaw("/api/get_airspaces",null, null, new ArrayList<NameValuePair>(),false);
+		InputStream inp;
+		if (fakeDataForTest!=null)
+		{			
+			inp=fakeDataForTest;
+		}
+		else
+		{
+			inp=DataDownloader.postRaw("/api/get_airspaces",null, null, new ArrayList<NameValuePair>(),false);
+		}
 		Airspace airspace=deserialize(new DataInputStream(inp));
 		inp.close();
 		System.out.println("Finish download operation");
