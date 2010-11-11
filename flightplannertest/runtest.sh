@@ -4,6 +4,9 @@ cd bin
 java -ea -classpath .:/home/anders/junit4.8.2/junit-4.8.2.jar:/home/anders/Downloads/jmock/jmock-2.5.1/jmock-2.5.1.jar:/home/anders/Downloads/jmock/hamcrest-core-1.1.jar:/home/anders/Downloads/jmock/hamcrest-library-1.1.jar:/home/anders/workspace/flightplanner/bin/ org.junit.runner.JUnitCore se.flightplannertest.map3d.TestPlayfield
 
 java -ea -classpath .:/home/anders/junit4.8.2/junit-4.8.2.jar:/home/anders/workspace/flightplanner/bin/ \
+    org.junit.runner.JUnitCore se.flightplannertest.map3d.TestAirspaceDrawer
+
+java -ea -classpath .:/home/anders/junit4.8.2/junit-4.8.2.jar:/home/anders/workspace/flightplanner/bin/ \
     org.junit.runner.JUnitCore se.flightplannertest.map3d.TestTriangulator
 
 java -ea -classpath .:/home/anders/junit4.8.2/junit-4.8.2.jar:/home/anders/workspace/flightplanner/bin/ \

@@ -41,6 +41,7 @@ public class MovingMap3D extends GLSurfaceView {
 	private TripData tripdata;
 	private ElevationStoreIf estore;
 	private TextureStore tstore;
+	
 	public void update_tripdata(TripData tripdata) {
 		// TODO Auto-generated method stub
 		this.tripdata=tripdata;

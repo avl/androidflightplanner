@@ -8,6 +8,7 @@ import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Random;
 
 import se.flightplanner.Project.iMerc;
 import se.flightplanner.map3d.TerrainVertexStore.VertAndColor;
@@ -20,6 +21,7 @@ public class VertexStore3D {
 	private LinkedList<Vertex> free;
 	private HashMap<iMerc,Vertex> used;
 	private ArrayList<Vertex> all;
+	private Random random=new Random();
 	public VertexStore3D(int capacity)
 	{
 		free=new LinkedList<Vertex>();
@@ -109,12 +111,16 @@ public class VertexStore3D {
 			colors.put(b);
 			colors.put((byte)-1); //alpha
 			*/
-			
+			colors.put((byte)v.r);
+			colors.put((byte)v.g);
+			colors.put((byte)v.b);
+			colors.put((byte)-1); //alpha
+			/*
 			colors.put((byte)-1);
 			colors.put((byte)-1);
 			colors.put((byte)-1);
 			colors.put((byte)-1);
-			
+			*/
 		}
 		vertexbuf.position(0);
 		colors.position(0);

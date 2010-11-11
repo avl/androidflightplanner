@@ -80,8 +80,8 @@ public class TerrainVertexStore {
 		used.put(p, shiny);
 		
 		int texture_shift=(13-texture_zoomlevel);
-		int tx=shiny.getx()>>(texture_shift);
-		int ty=shiny.gety()>>(texture_shift);
+		int tx=p.x>>(texture_shift);
+		int ty=p.y>>(texture_shift);
 		tx&=511;				
 		ty&=511;
 		if (tx>256)

@@ -12,6 +12,8 @@ import javax.microedition.khronos.opengles.GL10;
 
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.iMerc;
+import se.flightplanner.map3d.AirspaceDrawer;
+import se.flightplanner.map3d.AltParser;
 import se.flightplanner.map3d.ElevationStoreIf;
 import se.flightplanner.map3d.GlHelper;
 import se.flightplanner.map3d.LodCalc;
@@ -78,7 +80,8 @@ public class MovingMap3DRenderer implements Renderer {
 	private void draw_vertices(GL10 gl) throws IOException {
 		GlHelper.checkGlError(gl);
 
-		LatLon cameraLatLon=new LatLon(63.40,13.06);//pos.getLatitude(),pos.getLongitude());
+		//LatLon cameraLatLon=new LatLon(63.40,13.06);//pos.getLatitude(),pos.getLongitude());
+		LatLon cameraLatLon=new LatLon(59.3,17.66);//pos.getLatitude(),pos.getLongitude());
 		iMerc cameramerc=Project.latlon2imerc(cameraLatLon, 13);
 		cameramerc.y+=b;
 		b+=1;
@@ -190,6 +193,7 @@ from the Thing).
         //gl.glPopMatrix();
 		if (playfield!=null)
 			playfield.draw(gl,cameramerc,(short)altitude);
+		
 		GlHelper.checkGlError(gl);
 		
 
@@ -209,9 +213,9 @@ from the Thing).
 		gl.glDisable(GL10.GL_DITHER);
         gl.glHint(GL10.GL_PERSPECTIVE_CORRECTION_HINT,
                 GL10.GL_FASTEST);
-        gl.glEnable(GL10.GL_CULL_FACE);
+        gl.glDisable(GL10.GL_CULL_FACE);
         gl.glClearColor(0.75f,0.75f,1,1);
-        gl.glShadeModel(GL10.GL_SMOOTH);
+        gl.glShadeModel(GL10.GL_FLAT);
         gl.glEnable(GL10.GL_DEPTH_TEST);
 		GlHelper.checkGlError(gl);
 		
@@ -251,13 +255,12 @@ from the Thing).
 			ElevationStoreIf estore, TextureStore tstore) {
 		// TODO Auto-generated method stub
 		Log.i("fplan","renderer update called!");
-		playfield=new PlayfieldDrawer(estore,tstore);		
+		playfield=new PlayfieldDrawer(estore,tstore,lookup);		
 		
 	}
 
 	public void update_tripdata(TripData tripdata) {
-		// TODO Auto-generated method stub
-		
+		// TODO Finish this when we actually start using trip data.			
 	}
 
 	public void debugdump() throws IOException {

@@ -14,6 +14,7 @@ import android.graphics.Bitmap;
 import android.opengl.GLUtils;
 import android.util.Log;
 
+import se.flightplanner.AirspaceLookup;
 import se.flightplanner.Project;
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.iMerc;
@@ -31,12 +32,16 @@ public class PlayfieldDrawer {
 	LodCalc lodc;
 	boolean dodump;
 	Playfield playfield;
+    private AirspaceDrawer airspacedrawer;
+	
 	int deftex;
 	int gtex;
 	Random rand;
-	public PlayfieldDrawer(ElevationStoreIf estore, TextureStore tstore)
+	public PlayfieldDrawer(ElevationStoreIf estore, TextureStore tstore,AirspaceLookup lookup)
 	{
 		gtex=0;
+		airspacedrawer=new AirspaceDrawer(lookup,new AltParser());
+		
 		rand=new Random();
 		iMerc p1=Project.latlon2imerc(new LatLon(70,10),13);
 		iMerc p2=Project.latlon2imerc(new LatLon(50,20),13);
@@ -74,7 +79,10 @@ public class PlayfieldDrawer {
 	        //gl.glEnable(GL10.GL_TEXTURE_2D);
 			final Texture temptex=tstore.getTextureAt(observer);
 			playfield.changeLods(observer, observerElev, vstore, elevstore,lodc,0);
+			
+			airspacedrawer.updateAirspaces(observer, vs3d, tristore);
 			playfield.prepareForRender();
+			airspacedrawer.prepareForRender();
 			if (dodump)
 			{
 				playfield.completeDebugDump("/sdcard/dump.json");
@@ -187,6 +195,7 @@ public class PlayfieldDrawer {
 	}
 
 	public void debugdump() throws IOException {
+		/*
 		gtex+=1;
 		if (gtex>9) gtex=0;
 		Log.i("fplan","Gtex:"+gtex);
@@ -198,8 +207,8 @@ public class PlayfieldDrawer {
 				Log.i("fplan"," This is at : "+Project.imerc2latlon(tex.getPos(), 13));
 			}
 			
-		}
-		//dodump=true;
+		}*/
+		dodump=true;
 	}
 	public void loadAllTextures(GL10 gl) {
 		tstore.loadAllTextures(gl);

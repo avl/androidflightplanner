@@ -11,7 +11,9 @@ import se.flightplanner.Project.iMerc;
 public class Vertex {
 	private int mercx; //mercx
 	private int mercy; //mercy
-	
+	public byte r;
+	public byte g;
+	public byte b;
 	/**
 	 * Get the mercator x-position of this vertex.
 	 */
@@ -127,6 +129,7 @@ public class Vertex {
 	}
 	public Vertex(short bufptr)
 	{
+		r=g=b=(byte)-1;
 		this.mercx=-1;
 		this.mercy=-1;
 		this.bufptr=bufptr;
@@ -174,6 +177,6 @@ public class Vertex {
 		return u;
 	}
 	public float getv() {
-		return u;
+		return v;
 	}
 }

@@ -100,11 +100,43 @@ public class TestTriangulator {
 		doTestTriangularizationCase(p, expect);
 
 	}
-
+	
+	
+	@Test
+	public void testTriangulator4()
+	{
+		Polygon p=new Polygon(
+				new Vector[]{
+						new Vector(1154674.000000,605505.978995),
+						new Vector(1156665.000000,605897.016690),
+						new Vector(1159237.000000,612689.020044),
+						new Vector(1157453.000000,615867.996373),
+						new Vector(1154385.000000,616134.991650),
+						new Vector(1154385.000000,617657.021489),
+						new Vector(1151957.000000,617657.021489),
+						new Vector(1151957.000000,616802.003594),
+						new Vector(1151666.000000,616802.003594),
+						new Vector(1151666.000000,616326.013745),
+						new Vector(1151957.000000,616326.013745),
+						new Vector(1151957.000000,615468.010725),
+						new Vector(1153171.000000,615468.010725),
+						new Vector(1153220.000000,614894.003430),
+						new Vector(1152152.000000,614703.018669),
+						new Vector(1151666.000000,614128.007440),
+						new Vector(1152152.000000,611146.989521),
+						new Vector(1154480.000000,611146.989521),
+						new Vector(1154092.000000,610019.017214),
+						new Vector(1154868.000000,607898.996289)	
+				});
+		
+		doTestTriangularizationCase(p, null);
+	}
 	private void doTestTriangularizationCase(Polygon p,
 			ArrayList<SimpleTriangle> expect) {
 		ArrayList<SimpleTriangle> out=new ArrayList<SimpleTriangle>();
 		PolygonTriangulator.triangulate(p, out);
+		if (expect==null)
+			return;
 		if (expect.size()!=out.size())
 		{
 			System.out.println("----------------");

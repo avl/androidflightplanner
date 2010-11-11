@@ -2,10 +2,20 @@ package se.flightplanner.vector;
 
 import java.util.ArrayList;
 
+import se.flightplanner.Project;
+import se.flightplanner.Project.LatLon;
+import se.flightplanner.Project.Merc;
+
 public class PolygonTriangulator {
 
 	static public void triangulate(Polygon p,ArrayList<SimpleTriangle> out)	
 	{
+		/*System.out.println("Subtri:");
+		for(Vector v:p.get_points())
+		{
+			LatLon l=Project.merc2latlon(new Merc(v.x,v.y), 13);
+			System.out.println("Latlon:"+l);
+		}*/
 		int nump=p.numPoints();
 		ArrayList<Vector> ps=p.get_points();
 		if (nump<3) throw new RuntimeException("Polygon must have at least 3 points");
@@ -57,7 +67,7 @@ public class PolygonTriangulator {
 				}
 			}
 		}
-		throw new RuntimeException("Triangle was impossible to triangulate - no interior line could be drawn without intersecting an edge! This is geometrically impossible, so this must be a bug.");
+		throw new RuntimeException("Triangle was impossible to triangulate - no interior line could be drawn without intersecting an edge! This is geometrically impossible, so this must be a bug:"+p.toString());
 	}
 
 	private static boolean intersectbadly(Polygon p, int a, int b) {
@@ -72,7 +82,7 @@ public class PolygonTriangulator {
 			throw new RuntimeException("Bad a b values");
 		for(int i=0;i<num;++i)
 		{
-			if (i==a || i==b || (i+1)%num==a || (i+1)%num==b || (b+1)%num==i || (a+1)%num==i)
+			if (i==a || i==b || (i+1)%num==a || (i+1)%num==b)
 				continue;
 			Line l2=new Line(p.get_points().get(i),p.get_points().get((i+1)%num));
 			Vector v=Line.intersect(l,l2);
