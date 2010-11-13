@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Random;
 
+import se.flightplanner.Project;
 import se.flightplanner.Project.iMerc;
 import se.flightplanner.map3d.TerrainVertexStore.VertAndColor;
 
@@ -55,6 +56,7 @@ public class VertexStore3D {
 		vertexbuf.position(0);
 		texcoordbuf.position(0);
 		colors.position(0);
+		float htscale=10.0f*Project.approx_ft_pixels(observer, 13);
 		for(int i=0;i<all.size();++i)
 		{
 			Vertex v=all.get(i);
@@ -67,16 +69,16 @@ public class VertexStore3D {
 				int calz=(int)(calzraw);
 				v.resetElev();
 				
-				z=-1.0f*(calz-altitude);			
+				z=htscale*-1.0f*(calz-altitude);			
 				x=(v.getx()-observer.x);
 				y=(v.gety()-observer.y);
 				
 				texcoordbuf.put(v.getu());
 				texcoordbuf.put(v.getv());
 				
-				x*=0.01;
-				y*=0.01;
-				z*=0.01;
+				/*x*=0.1;
+				y*=0.1;
+				z*=0.1;*/
 				if (calzraw<50)
 				{
 					b=(byte)-1;
@@ -114,7 +116,7 @@ public class VertexStore3D {
 			colors.put((byte)v.r);
 			colors.put((byte)v.g);
 			colors.put((byte)v.b);
-			colors.put((byte)-1); //alpha
+			colors.put((byte)v.a); //alpha
 			/*
 			colors.put((byte)-1);
 			colors.put((byte)-1);

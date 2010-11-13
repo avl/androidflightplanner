@@ -373,7 +373,7 @@ public class MovingMap extends View {
 				//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
 				//textpaint.setARGB(0, 255,255,255);
 				textpaint.setARGB(0xff, 0xff, 0xa0, 0xff);
-				canvas.drawText(String.format("%s %.0fft",sp.name,sp.alt), (float)(p.x), (float)(p.y), textpaint);			
+				canvas.drawText(String.format("%.0fft",sp.name,sp.alt), (float)(p.x), (float)(p.y), textpaint);			
 				linepaint.setARGB(0xff, 0xff, 0xa0, 0xff);
 				canvas.drawPoint((float)p.x,(float)p.y,linepaint);
 			}

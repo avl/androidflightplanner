@@ -11,6 +11,7 @@ import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map.Entry;
 
@@ -167,7 +168,7 @@ public class TriangleStore {
 	}
 	public void getIndexForRender(VertexStore3D vstore,RenderTexCb cb)
 	{
-		HashMap<Texture,ArrayList<Triangle>> s=new HashMap<Texture,ArrayList<Triangle>>();
+		final HashMap<Texture,ArrayList<Triangle>> s=new HashMap<Texture,ArrayList<Triangle>>();
 		for(Triangle t:all)
 		{
 			if (!t.isUsed()) continue;
@@ -181,13 +182,43 @@ public class TriangleStore {
 			}
 			tris.add(t);
 		}
-		for(Entry<Texture, ArrayList<Triangle>> ent : s.entrySet())
+		Iterator<ArrayList<Triangle> > myit=new Iterator<ArrayList<Triangle>>() {
+			//Oh please, is there a better way to do this?
+			//Basically a list comprehension to remove the 'null' key from the iteration
+			//and then a 'chain' to put it back in last, without having to generate
+			//a new collection with this desired order...
+			int cnt=s.size();
+			Iterator<ArrayList<Triangle>> under=s.values().iterator();
+			public boolean hasNext() {
+				return cnt>0;
+			}
+			public ArrayList<Triangle> next() {
+				if (cnt==1)
+				{
+					--cnt;
+					return s.get(null);
+				}
+				ArrayList<Triangle> ret=under.next();
+				if (ret.size()!=0 && ret.get(0).texture==null) ret=under.next();
+				--cnt;
+				return ret;
+			}
+			public void remove() {
+				throw new RuntimeException("remove Not supported");
+			}
+		};
+		for(;;)
 		{
+			if (!myit.hasNext()) break;
+			ArrayList<Triangle> arr=myit.next();
+			if (arr.size()==0) continue;
+			Texture tex=arr.get(0).texture;
+
 			Indices ind=new Indices();
 			mainbuf.position(0);
 			ind.buf=mainbuf;
-			ind.tricount=0;
-			for(Triangle t:ent.getValue())
+			ind.tricount=0;			
+			for(Triangle t:arr)
 			{
 				for(int i=0;i<3;++i)
 					if (!vstore.isUsed(t.getidx(i)))
@@ -199,7 +230,7 @@ public class TriangleStore {
 				ind.tricount+=1;
 			}			
 			mainbuf.position(0);
-			cb.renderTex(ent.getKey(),ind);
+			cb.renderTex(tex,ind);
 
 		}
 		

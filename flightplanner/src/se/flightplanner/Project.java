@@ -86,6 +86,12 @@ public class Project {
 			y=p.y;
 			
 		}
+		public iMerc(Merc p)
+		{
+			x=(int)p.x;
+			y=(int)p.y;
+			
+		}
 		@Override
 		public int hashCode()
 		{

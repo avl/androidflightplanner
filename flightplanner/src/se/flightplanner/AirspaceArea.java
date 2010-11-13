@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 
+import android.util.Log;
+
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
 import se.flightplanner.vector.Polygon;
@@ -22,12 +24,17 @@ public class AirspaceArea implements Serializable
 	public ArrayList<String> freqs;
 	public String floor;
 	public String ceiling;
+	public byte r,g,b,a;
 	public void serialize(DataOutputStream os) throws IOException
 	{
 		if (name!=null)
 			os.writeUTF(name);
 		else
 			os.writeUTF("");
+		os.writeByte(r);
+		os.writeByte(g);
+		os.writeByte(b);
+		os.writeByte(a);
 		int numpoints=points.size();
 		os.writeInt(numpoints);
 		for(int i=0;i<numpoints;++i)
@@ -51,18 +58,26 @@ public class AirspaceArea implements Serializable
 		else
 			os.writeUTF("");
 	}
-	public static AirspaceArea deserialize(DataInputStream is) throws IOException
+	public static AirspaceArea deserialize(DataInputStream is, int version) throws IOException
 	{
 		AirspaceArea a=new AirspaceArea();
 		a.name=is.readUTF();		
+		if (version>=2)
+		{
+			a.r=is.readByte();
+			a.g=is.readByte();
+			a.b=is.readByte();
+			a.a=is.readByte();
+		}
 		int numpoints=is.readInt();
-		if (numpoints>100)
+		if (numpoints<0 || numpoints>100)
 			throw new RuntimeException("Too many points in area: "+a.name+" : "+numpoints);
 		a.points=new ArrayList<LatLon>();
 		for(int i=0;i<numpoints;++i)
 			a.points.add(LatLon.deserialize(is));
+		
 		int numfreqs=is.readInt();
-		if (numfreqs>50)
+		if (numfreqs<0 || numfreqs>50)
 			throw new RuntimeException("Too many freqs in area: "+a.name+" : "+numpoints);
 		a.freqs=new ArrayList<String>();
 		for(int i=0;i<numfreqs;++i)

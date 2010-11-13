@@ -163,7 +163,7 @@ public class Playfield implements Stitcher {
 				//else refine=1;
 				if (i==coarsestlevel)
 					t.adjustRefine(1.0f); //Coarsest level is always fully refined".
-				if (i>10)
+				if (i>13)
 					refine=-1;
 				if (refine>=1.0f) refine=1.0f;
 				if (refine>t.getRefine())

@@ -33,6 +33,7 @@ public class PlayfieldDrawer {
 	boolean dodump;
 	Playfield playfield;
     private AirspaceDrawer airspacedrawer;
+    private PointDrawer pointdrawer;
 	
 	int deftex;
 	int gtex;
@@ -41,15 +42,16 @@ public class PlayfieldDrawer {
 	{
 		gtex=0;
 		airspacedrawer=new AirspaceDrawer(lookup,new AltParser());
+		pointdrawer=new PointDrawer(lookup.allObst);
 		
 		rand=new Random();
 		iMerc p1=Project.latlon2imerc(new LatLon(70,10),13);
 		iMerc p2=Project.latlon2imerc(new LatLon(50,20),13);
-		this.vs3d=new VertexStore3D(1000);
-		vstore=new TerrainVertexStore(2000,tstore.getZoomLevel(),vs3d);
-		tristore=new TriangleStore(2000);
+		this.vs3d=new VertexStore3D(2500);
+		vstore=new TerrainVertexStore(2500,tstore.getZoomLevel(),vs3d);
+		tristore=new TriangleStore(2500);
 		deftex=-1;
-		lodc=new LodCalc(480,100); //TODO: Screenheight isn't always 480. Also, tolerance 1000 is too big!
+		lodc=new LodCalc(480,400); //TODO: Screenheight isn't always 480. Also, tolerance 1000 is too big!
 		elevstore=estore;
 		this.tstore=tstore;
 		if (elevstore==null)
@@ -73,16 +75,18 @@ public class PlayfieldDrawer {
 			GlHelper.checkGlError(gl);
 
 	        gl.glDisable(GL10.GL_LIGHTING);
-	        gl.glEnable(gl.GL_BLEND);
+	        gl.glDisable(gl.GL_BLEND);
 			GlHelper.checkGlError(gl);
 
 	        //gl.glEnable(GL10.GL_TEXTURE_2D);
-			final Texture temptex=tstore.getTextureAt(observer);
+			//final Texture temptex=tstore.getTextureAt(observer);
 			playfield.changeLods(observer, observerElev, vstore, elevstore,lodc,0);
 			
 			airspacedrawer.updateAirspaces(observer, vs3d, tristore);
+			pointdrawer.update(observer, vs3d, tristore);
 			playfield.prepareForRender();
 			airspacedrawer.prepareForRender();
+			pointdrawer.prepareForRender();
 			if (dodump)
 			{
 				playfield.completeDebugDump("/sdcard/dump.json");
@@ -147,6 +151,7 @@ public class PlayfieldDrawer {
 					else
 					{
 						gl.glDisable(gl.GL_TEXTURE_2D);
+						
 					}
 					GlHelper.checkGlError(gl);
 					//gl.gl

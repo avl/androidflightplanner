@@ -14,6 +14,7 @@ public class Vertex {
 	public byte r;
 	public byte g;
 	public byte b;
+	public byte a;
 	/**
 	 * Get the mercator x-position of this vertex.
 	 */
@@ -129,7 +130,7 @@ public class Vertex {
 	}
 	public Vertex(short bufptr)
 	{
-		r=g=b=(byte)-1;
+		r=g=b=a=(byte)-1;
 		this.mercx=-1;
 		this.mercy=-1;
 		this.bufptr=bufptr;

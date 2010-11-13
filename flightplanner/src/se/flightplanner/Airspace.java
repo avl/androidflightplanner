@@ -16,6 +16,7 @@ import java.io.StringReader;
 import java.util.ArrayList;
 
 import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -38,16 +39,16 @@ public class Airspace implements Serializable{
 		int magic=is.readInt();
 		int version=is.readInt();
 		if (magic!=0x8A31CDA)
-			throw new RuntimeException("Couldn't load stored data, bad magic. Was: "+magic+" should be: "+0x8A31CDA);
-		if (version!=1)
-			throw new RuntimeException("Couldn't load stored data, bad version");
+			throw new RuntimeException("Couldn't load airspace data, bad header magic. Was: "+magic+" should be: "+0x8A31CDA);
+		if (version!=1 && version!=2)
+			throw new RuntimeException("Couldn't load airspace data, bad version");
 		
 		int numspaces=is.readInt();
 		if (numspaces>1000)
 			throw new RuntimeException("Too many airspace definitions: "+numspaces);
 		a.spaces=new ArrayList<AirspaceArea>();
 		for(int i=0;i<numspaces;++i)
-			a.spaces.add(AirspaceArea.deserialize(is));
+			a.spaces.add(AirspaceArea.deserialize(is,version));
 
 		int numpoints=is.readInt();
 		if (numpoints>10000)
@@ -62,7 +63,7 @@ public class Airspace implements Serializable{
 		
 		int numspaces=spaces.size();
 		os.writeInt(0x8A31CDA);
-		os.writeInt(1);
+		os.writeInt(2); //version 2
 		os.writeInt(numspaces);
 		for(int i=0;i<numspaces;++i)
 			spaces.get(i).serialize(os);
@@ -108,7 +109,9 @@ public class Airspace implements Serializable{
 		}
 		else
 		{
-			inp=DataDownloader.postRaw("/api/get_airspaces",null, null, new ArrayList<NameValuePair>(),false);
+			ArrayList<NameValuePair> nvps=new ArrayList<NameValuePair>();
+			nvps.add(new BasicNameValuePair("version","2"));			
+			inp=DataDownloader.postRaw("/api/get_airspaces",null, null, nvps,false);
 		}
 		Airspace airspace=deserialize(new DataInputStream(inp));
 		inp.close();

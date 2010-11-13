@@ -56,11 +56,6 @@ public class MovingMap3DRenderer implements Renderer {
 
 	public void onDrawFrame(GL10 gl) {
 		//TODO: Move the below to OnSurfaceChanged
-		float ratio = (float) width / height;
-		gl.glViewport(0, 0, width, height);
-		gl.glMatrixMode(GL10.GL_PROJECTION);
-		gl.glLoadIdentity();
-		gl.glFrustumf(-ratio, ratio, -1, 1, 1.0f, 1e4f);
 		
 		gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT);
 		gl.glMatrixMode(GL10.GL_MODELVIEW);
@@ -71,6 +66,7 @@ public class MovingMap3DRenderer implements Renderer {
 			e1.printStackTrace();
 			throw new RuntimeException(e1);
 		}
+		
 		try {
 			Thread.sleep(50);
 		} catch (InterruptedException e) {
@@ -80,11 +76,12 @@ public class MovingMap3DRenderer implements Renderer {
 	private void draw_vertices(GL10 gl) throws IOException {
 		GlHelper.checkGlError(gl);
 
-		//LatLon cameraLatLon=new LatLon(63.40,13.06);//pos.getLatitude(),pos.getLongitude());
-		LatLon cameraLatLon=new LatLon(59.3,17.66);//pos.getLatitude(),pos.getLongitude());
+		
+		LatLon cameraLatLon=new LatLon(63.397,13.056);
+		//LatLon cameraLatLon=new LatLon(59.344,18.111);//pos.getLatitude(),pos.getLongitude());
 		iMerc cameramerc=Project.latlon2imerc(cameraLatLon, 13);
 		cameramerc.y+=b;
-		b+=1;
+		//b+=1;
 
 		LatLon obstLatLon=new LatLon(59,17);
 		iMerc obstmerc=Project.latlon2imerc(obstLatLon, 13);
@@ -204,6 +201,13 @@ from the Thing).
 		
 		this.width=width;
 		this.height=height;
+		
+		float ratio = (float) width / height;
+		gl.glViewport(0, 0, width, height);
+		gl.glMatrixMode(GL10.GL_PROJECTION);
+		gl.glLoadIdentity();
+		gl.glFrustumf(-ratio, ratio, -1, 1, 1.0f, 1e4f);
+		
 		if (playfield!=null)
 			playfield.loadAllTextures(gl);
 	}
@@ -213,10 +217,11 @@ from the Thing).
 		gl.glDisable(GL10.GL_DITHER);
         gl.glHint(GL10.GL_PERSPECTIVE_CORRECTION_HINT,
                 GL10.GL_FASTEST);
-        gl.glDisable(GL10.GL_CULL_FACE);
+        gl.glEnable(GL10.GL_CULL_FACE);
         gl.glClearColor(0.75f,0.75f,1,1);
         gl.glShadeModel(GL10.GL_FLAT);
         gl.glEnable(GL10.GL_DEPTH_TEST);
+        gl.glBlendFunc(gl.GL_SRC_ALPHA,gl.GL_ONE_MINUS_SRC_ALPHA);
 		GlHelper.checkGlError(gl);
 		
 		if (playfield!=null)
