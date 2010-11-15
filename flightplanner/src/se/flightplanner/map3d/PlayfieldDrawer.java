@@ -42,14 +42,14 @@ public class PlayfieldDrawer {
 	{
 		gtex=0;
 		airspacedrawer=new AirspaceDrawer(lookup,new AltParser());
-		pointdrawer=new PointDrawer(lookup.allObst);
+		pointdrawer=new PointDrawer(lookup.allObst,lookup.allAirfields);
 		
 		rand=new Random();
 		iMerc p1=Project.latlon2imerc(new LatLon(70,10),13);
 		iMerc p2=Project.latlon2imerc(new LatLon(50,20),13);
 		this.vs3d=new VertexStore3D(2500);
 		vstore=new TerrainVertexStore(2500,tstore.getZoomLevel(),vs3d);
-		tristore=new TriangleStore(2500);
+		tristore=new TriangleStore(3500);
 		deftex=-1;
 		lodc=new LodCalc(480,400); //TODO: Screenheight isn't always 480. Also, tolerance 1000 is too big!
 		elevstore=estore;
@@ -87,6 +87,7 @@ public class PlayfieldDrawer {
 			playfield.prepareForRender();
 			airspacedrawer.prepareForRender();
 			pointdrawer.prepareForRender();
+			Log.i("fplan","Triangles: "+tristore.getUsedTriangles()+" Vertices: "+vs3d.getUsedVertices());
 			if (dodump)
 			{
 				playfield.completeDebugDump("/sdcard/dump.json");

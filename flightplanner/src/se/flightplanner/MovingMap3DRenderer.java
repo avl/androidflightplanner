@@ -77,11 +77,12 @@ public class MovingMap3DRenderer implements Renderer {
 		GlHelper.checkGlError(gl);
 
 		
-		LatLon cameraLatLon=new LatLon(63.397,13.056);
+		//LatLon cameraLatLon=new LatLon(63.397,13.056);
 		//LatLon cameraLatLon=new LatLon(59.344,18.111);//pos.getLatitude(),pos.getLongitude());
+		LatLon cameraLatLon=new LatLon(59.45,17.706);//pos.getLatitude(),pos.getLongitude());
 		iMerc cameramerc=Project.latlon2imerc(cameraLatLon, 13);
 		cameramerc.y+=b;
-		//b+=1;
+		b+=2;
 
 		LatLon obstLatLon=new LatLon(59,17);
 		iMerc obstmerc=Project.latlon2imerc(obstLatLon, 13);

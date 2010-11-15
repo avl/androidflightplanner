@@ -313,4 +313,7 @@ public class TriangleStore {
 		// TODO: Check if this is inefficient?
 		return free.size();
 	}
+	public int getUsedTriangles() {
+		return used.size();
+	}
 }

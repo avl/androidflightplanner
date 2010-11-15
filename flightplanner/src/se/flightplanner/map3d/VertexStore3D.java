@@ -20,13 +20,13 @@ public class VertexStore3D {
 	private FloatBuffer vertexbuf;
 	private FloatBuffer texcoordbuf;
 	private LinkedList<Vertex> free;
-	private HashMap<iMerc,Vertex> used;
+	///private HashMap<iMerc,Vertex> used;
 	private ArrayList<Vertex> all;
 	private Random random=new Random();
 	public VertexStore3D(int capacity)
 	{
 		free=new LinkedList<Vertex>();
-		used=new HashMap<iMerc,Vertex>(capacity);
+		///used=new HashMap<iMerc,Vertex>(capacity);
 		if (capacity<=0 || capacity>32000)
 			throw new RuntimeException("Invalid capacity for VertexStore:"+capacity);
 
@@ -56,7 +56,7 @@ public class VertexStore3D {
 		vertexbuf.position(0);
 		texcoordbuf.position(0);
 		colors.position(0);
-		float htscale=10.0f*Project.approx_ft_pixels(observer, 13);
+		float htscale=Project.approx_ft_pixels(observer, 13);
 		for(int i=0;i<all.size();++i)
 		{
 			Vertex v=all.get(i);
@@ -113,9 +113,17 @@ public class VertexStore3D {
 			colors.put(b);
 			colors.put((byte)-1); //alpha
 			*/
+			//colors.put((byte)random.nextInt(256));
+			//colors.put((byte)random.nextInt(256));
+			//colors.put((byte)random.nextInt(256));
+			//v.r=(byte)((i)%256);//(byte)z;
+			//v.g=(byte)((i*8)%256);//(byte)z;
+			//v.b=(byte)((i*64)%256);//(byte)z;
+			
 			colors.put((byte)v.r);
 			colors.put((byte)v.g);
 			colors.put((byte)v.b);
+			
 			colors.put((byte)v.a); //alpha
 			/*
 			colors.put((byte)-1);
@@ -139,7 +147,7 @@ public class VertexStore3D {
 		if (v.decrementUsage())
 		{
 			short ptr=v.getPointer();
-			used.remove(v.getimerc());
+			///used.remove(v.getimerc());
 			//Some explanation for the next line.
 			//Initially it was aimed for not having to
 			//use new in the render loop, for vertices. 
@@ -183,6 +191,9 @@ public class VertexStore3D {
 	}
 	public int getFreeVertices() {
 		return free.size(); //TODO: Check if this is inefficient
+	}
+	public int getUsedVertices() {
+		return all.size()-free.size();
 	}
 	
 }
