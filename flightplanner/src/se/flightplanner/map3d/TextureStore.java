@@ -27,7 +27,7 @@ import se.flightplanner.vector.BBTree;
 
 public class TextureStore {
 
-	private HashMap<iMerc,Texture> store;
+	private HashMap<iMerc,TerrainTexture> store;
 	private int zoomlevel;
 	
 	public void serialize_to_file(Context context,String filename) throws Exception
@@ -49,7 +49,7 @@ public class TextureStore {
 	public static TextureStore deserialize(DataInputStream data) throws IOException
 	{
 		TextureStore tstore=new TextureStore();
-		tstore.store=new HashMap<iMerc,Texture>();
+		tstore.store=new HashMap<iMerc,TerrainTexture>();
 		int zoomlevels=data.readInt();
 		if (zoomlevels!=1) throw new RuntimeException("Only one zoomlevel of textures supported so far.");
 		int cnt=0;
@@ -73,7 +73,7 @@ public class TextureStore {
 				Bitmap bm=BitmapFactory.decodeStream(data,null,opts);
 				if (bm==null) 
 					throw new RuntimeException("Couldn't decode png-image");
-				tstore.store.put(merc,new Texture(merc,bm));
+				tstore.store.put(merc,new TerrainTexture(merc,bm));
 				cnt+=1;
 				Log.i("fplan","Read #: "+i);
 			}
@@ -87,7 +87,7 @@ public class TextureStore {
 		data.writeInt(1); ///only one zoomlevel supported right now
 		data.writeInt(zoomlevel); //write zoomlevel
 		data.writeInt(store.size());			
-		for(Entry<iMerc,Texture> entry : store.entrySet())
+		for(Entry<iMerc,TerrainTexture> entry : store.entrySet())
 
 		{
 			Project.imerc2imerc(entry.getKey(),13,zoomlevel).serialize(data);
@@ -124,23 +124,23 @@ public class TextureStore {
 		return store.values().iterator().next().getBitMap();
 	}
 
-	public Texture getTextureAt(iMerc pos) {
-		Log.i("fplan","Tex zoomlevel: "+zoomlevel);
+	public TerrainTexture getTextureAt(iMerc pos) {
+		//Log.i("fplan","Tex zoomlevel: "+zoomlevel);
 		int zoomgap=13-zoomlevel;
 		int boxsize=256<<zoomgap;
 		int boxmask=boxsize-1;
 		int x=pos.x&(~boxmask);
 		int y=pos.y&(~boxmask);
-		Texture t=store.get(new iMerc(x,y));
+		TerrainTexture t=store.get(new iMerc(x,y));
 		return t;
 	}
 
-	public Collection<Texture> getAll() {
+	public Collection<TerrainTexture> getAll() {
 		return store.values();
 	}
 
 	public void loadAllTextures(GL10 gl) {
-		for(Texture tex:store.values())
+		for(TerrainTexture tex:store.values())
 		{
 			tex.deleteTex(gl);
 			tex.getTexName(gl);

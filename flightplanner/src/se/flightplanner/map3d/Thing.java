@@ -53,7 +53,7 @@ public class Thing implements ThingIf {
 	private boolean known_ready;//ready when all vertices have received their elevation
 	private boolean deployed; //set to true when a thing becomes visible. Implies that parent->subsumed is true.
 	private ArrayList<ThingIf> children; //order: upper row first; left-right, then second row; left-right.
-	Texture texture;
+	TerrainTexture texture;
 	
 	public HashSet<Vertex> getEdgeVertices()
 	{

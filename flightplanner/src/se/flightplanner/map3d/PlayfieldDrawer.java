@@ -34,16 +34,16 @@ public class PlayfieldDrawer {
 	Playfield playfield;
     private AirspaceDrawer airspacedrawer;
     private PointDrawer pointdrawer;
-	
+	private FontHandler fonthandler;
 	int deftex;
 	int gtex;
 	Random rand;
-	public PlayfieldDrawer(ElevationStoreIf estore, TextureStore tstore,AirspaceLookup lookup)
+	public PlayfieldDrawer(ElevationStoreIf estore, TextureStore tstore,AirspaceLookup lookup, Bitmap fontbitmap)
 	{
 		gtex=0;
 		airspacedrawer=new AirspaceDrawer(lookup,new AltParser());
 		pointdrawer=new PointDrawer(lookup.allObst,lookup.allAirfields);
-		
+		fonthandler=new FontHandler(fontbitmap);
 		rand=new Random();
 		iMerc p1=Project.latlon2imerc(new LatLon(70,10),13);
 		iMerc p2=Project.latlon2imerc(new LatLon(50,20),13);
@@ -68,10 +68,20 @@ public class PlayfieldDrawer {
 		
 	}
 	@SuppressWarnings("static-access")
-	public void draw(final GL10 gl,iMerc observer,short observerElev) throws IOException
+	public void draw(final GL10 gl,iMerc observer,int observerElev,float hdg,int width,int height) throws IOException
 	{
 		try
 		{
+			
+			GlHelper.checkGlError(gl);
+	        
+			gl.glMatrixMode(GL10.GL_MODELVIEW);
+	        gl.glLoadIdentity();
+	        gl.glRotatef(90, 1.0f, 0, 0); //tilt to look to horizon (don't change)
+	        gl.glRotatef(-hdg, 0, 0, 1); //compass heading
+	        
+			GlHelper.checkGlError(gl);
+			
 			GlHelper.checkGlError(gl);
 
 	        gl.glDisable(GL10.GL_LIGHTING);
@@ -98,53 +108,30 @@ public class PlayfieldDrawer {
 	        gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
 	        gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
 	        gl.glEnableClientState(GL10.GL_TEXTURE_COORD_ARRAY);
+	        /*
 			gl.glVertexPointer(3, gl.GL_FLOAT, 0, va.vertices);
 			gl.glColorPointer(4, gl.GL_UNSIGNED_BYTE, 0, va.colors);
 			gl.glTexCoordPointer(2,gl.GL_FLOAT,0,va.texcoords);
+			*/
 	        //Different possible texture parameters, e.g	        
 					
 			gl.glFrontFace(gl.GL_CCW);
 			
-
+			/*
 			tristore.getIndexForRender(vs3d, new RenderTexCb()
 			{
 
-				public void renderTex(Texture tex,Indices ind) {
-					// TODO Auto-generated method stub
-					//if (tex!=temptex)
-					//	tex=null;
+				public void renderTex(TerrainTexture tex,Indices ind) {
 					if (tex!=null)
 					{					
 						//Log.i("fplan","Loading bmap: "+bmap.getWidth()+"x"+bmap.getHeight()+" with middle pixel: "+
 						//			bmap.getPixel(128,128));
 						GlHelper.checkGlError(gl);
-						//GLUtils.
 						gl.glEnable(gl.GL_TEXTURE_2D);
 						int texname=tex.getTexName(gl);//+gtex;
-						//gl.glFinish();
-						//if (rand.nextInt(5)==0)
-						//	texname+=gtex;
-						//texname=gtex;
-						/*+itr[0];
-						itr[0]+=1-0;
-						if (itr[0]>9)
-							itr[0]=0;
-						*/
-
-						//Log.i("fplan","Drawing tex "+texname);
-						/*
-						if (deftex == -1) {
-							Bitmap bmap = tstore.getRandomBitmap();
-							GlHelper.checkGlError(gl);
-							deftex = Texture.loadTexture(bmap, gl);
-							GlHelper.checkGlError(gl);
-						}
-						*/
-						
+									
 						
 						GlHelper.checkGlError(gl);
-						//texname=gtex;//rand.nextInt(9)+1;
-						//Log.i("fplan","Drawing tex: "+texname);
 						gl.glBindTexture(GL10.GL_TEXTURE_2D, texname);
 						GlHelper.checkGlError(gl);	
 						//gl.glDisable(gl.GL_TEXTURE_2D);
@@ -155,41 +142,18 @@ public class PlayfieldDrawer {
 						
 					}
 					GlHelper.checkGlError(gl);
-					//gl.gl
 					gl.glDrawElements(gl.GL_TRIANGLES, 3*ind.tricount, gl.GL_UNSIGNED_SHORT,ind.buf);
 					GlHelper.checkGlError(gl);
 					
 				}
 				
 			});
-			/*		
-			int tottris=0;
-			for(Entry<Texture, Indices> entry : inds.entrySet())
-			{
-				Texture tex=entry.getKey();
-				if (tex!=null)
-				{					
-					//Log.i("fplan","Loading bmap: "+bmap.getWidth()+"x"+bmap.getHeight()+" with middle pixel: "+
-					//			bmap.getPixel(128,128));
-					GlHelper.checkGlError(gl);
-					int texname=tex.getTexName(gl);
-					gl.glBindTexture(GL10.GL_TEXTURE_2D, texname);
-					GlHelper.checkGlError(gl);
-					gl.glEnable(gl.GL_TEXTURE_2D);
-					//gl.glDisable(gl.GL_TEXTURE_2D);
-				}
-				else
-				{
-					gl.glDisable(gl.GL_TEXTURE_2D);
-				}
-				GlHelper.checkGlError(gl);
-				Indices ind=entry.getValue();
-				gl.glDrawElements(gl.GL_TRIANGLES, 3*ind.tricount, gl.GL_UNSIGNED_SHORT,ind.buf);
-				GlHelper.checkGlError(gl);
-				tottris+=entry.getValue().tricount;
-			Log.i("fplan","Drawed "+tottris+" triangles");
-			}
 			*/
+			//gl.glDisable(gl.GL_CULL_FACE);
+			GlHelper.checkGlError(gl);
+			fonthandler.draw(gl,width,height);
+			GlHelper.checkGlError(gl);
+			
 		}
 		catch(RuntimeException e)
 		{

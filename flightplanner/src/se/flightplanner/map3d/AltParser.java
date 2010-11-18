@@ -6,7 +6,7 @@ public class AltParser {
 	{
 		alt=alt.toLowerCase().trim();
 		if (alt.equals("unl"))
-			return 20000;
+			return 49999;
 		if (alt.equals("gnd"))
 			return 0;
 		if (alt.endsWith("ft"))

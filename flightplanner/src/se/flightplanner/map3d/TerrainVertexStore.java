@@ -57,7 +57,7 @@ public class TerrainVertexStore {
 	///next frame!
 	public boolean decrement(Vertex v)
 	{
-		boolean removed=vstore3d.decrement(this, v);
+		boolean removed=vstore3d.decrement(v);
 		if (removed)
 			used.remove(v.getimerc());
 		return removed;

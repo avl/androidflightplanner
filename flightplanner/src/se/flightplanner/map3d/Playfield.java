@@ -141,7 +141,7 @@ public class Playfield implements Stitcher {
 			}
 		}
 	}
-	public void changeLods(iMerc observer,short observerElev,TerrainVertexStore vstore,ElevationStoreIf estore,LodCalc lodCalc,float bumpinessBias)
+	public void changeLods(iMerc observer,int observerElev,TerrainVertexStore vstore,ElevationStoreIf estore,LodCalc lodCalc,float bumpinessBias)
 	{
 		int nearLodLimit=100;
 		//System.out.println("changeLods running");

@@ -27,6 +27,7 @@ import se.flightplanner.map3d.ThingIf;
 import se.flightplanner.map3d.TriangleStore;
 import se.flightplanner.map3d.TerrainVertexStore;
 
+import android.graphics.Bitmap;
 import android.location.Location;
 import android.opengl.GLSurfaceView.Renderer;
 import android.util.Log;
@@ -42,8 +43,10 @@ public class MovingMap3DRenderer implements Renderer {
     float altitude_feet;
     private float headturn;
     private PlayfieldDrawer playfield;
-    public MovingMap3DRenderer() {
+    private Bitmap fontbitmap;
+    public MovingMap3DRenderer(Bitmap fontbitmap) {
 		// vstore=new Vertex
+    	this.fontbitmap=fontbitmap;
 		a=0.0f;
 		headturn=0.0f;
 		pos=new Location("gps");
@@ -82,7 +85,7 @@ public class MovingMap3DRenderer implements Renderer {
 		LatLon cameraLatLon=new LatLon(59.45,17.706);//pos.getLatitude(),pos.getLongitude());
 		iMerc cameramerc=Project.latlon2imerc(cameraLatLon, 13);
 		cameramerc.y+=b;
-		b+=2;
+		b+=10;
 
 		LatLon obstLatLon=new LatLon(59,17);
 		iMerc obstmerc=Project.latlon2imerc(obstLatLon, 13);
@@ -101,8 +104,8 @@ I/fplan   (18568): Drawed 2 triangles
 
 		 */
 		
-        short altitude=(short)(altitude_feet);
-		
+        int altitude=(int)(altitude_feet);
+        /*
 		float vertices[] = 
 		{ -65,90,10.0f-altitude/100.0f,
 		   98,90,10.0f-altitude/100.0f,
@@ -118,7 +121,7 @@ I/fplan   (18568): Drawed 2 triangles
 
 		short indices[] = {0,2,1,
 					2,3,1};
-		
+		*/
 		/*
 		float onec=1.0f; 
 		float yd=0;//-10.0f+a;
@@ -140,7 +143,7 @@ I/fplan   (18568): Drawed 2 triangles
 				3, 3, 7, 4, 3, 4, 0, 4, 7, 6, 4, 6, 5, 3, 0, 1, 3, 1, 2 };
 		*/
 		
-		
+		/*
 		ByteBuffer vbb = ByteBuffer.allocateDirect(vertices.length * 4);
 		vbb.order(ByteOrder.nativeOrder());
 		mVertexBuffer = vbb.asFloatBuffer();
@@ -157,16 +160,7 @@ I/fplan   (18568): Drawed 2 triangles
 		ShortBuffer si=mIndexBuffer.asShortBuffer();
 		si.put(indices);
 		si.position(0);
-
-		GlHelper.checkGlError(gl);
-        //gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT);
-        gl.glMatrixMode(GL10.GL_MODELVIEW);
-        gl.glLoadIdentity();
-        gl.glRotatef(90, 1.0f, 0, 0); //tilt to look to horizon (don't change)
-        float hdg=/*pos.getBearing()+*/headturn;
-        gl.glRotatef(-hdg, 0, 0, 1); //compass heading
-        
-		GlHelper.checkGlError(gl);
+		 */
 /*        
 Probably calc mid-vertices in a separate pass, last.
 For transitioning Things, the mid would initially be a
@@ -187,10 +181,11 @@ from the Thing).
 		gl.glDrawElements(gl.GL_TRIANGLES, 6, gl.GL_UNSIGNED_SHORT,
 				si);
 		*/
+        float hdg=/*pos.getBearing()+*/headturn;
 		GlHelper.checkGlError(gl);
         //gl.glPopMatrix();
 		if (playfield!=null)
-			playfield.draw(gl,cameramerc,(short)altitude);
+			playfield.draw(gl,cameramerc,altitude,hdg,width,height);
 		
 		GlHelper.checkGlError(gl);
 		
@@ -216,8 +211,7 @@ from the Thing).
 	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
 		GlHelper.checkGlError(gl);
 		gl.glDisable(GL10.GL_DITHER);
-        gl.glHint(GL10.GL_PERSPECTIVE_CORRECTION_HINT,
-                GL10.GL_FASTEST);
+        gl.glHint(GL10.GL_PERSPECTIVE_CORRECTION_HINT,GL10.GL_FASTEST);
         gl.glEnable(GL10.GL_CULL_FACE);
         gl.glClearColor(0.75f,0.75f,1,1);
         gl.glShadeModel(GL10.GL_FLAT);
@@ -261,7 +255,7 @@ from the Thing).
 			ElevationStoreIf estore, TextureStore tstore) {
 		// TODO Auto-generated method stub
 		Log.i("fplan","renderer update called!");
-		playfield=new PlayfieldDrawer(estore,tstore,lookup);		
+		playfield=new PlayfieldDrawer(estore,tstore,lookup,fontbitmap);		
 		
 	}
 

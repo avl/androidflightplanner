@@ -164,15 +164,15 @@ public class TriangleStore {
 	}
 	public static interface RenderTexCb
 	{
-		public void renderTex(Texture tex,Indices ind); 
+		public void renderTex(TerrainTexture tex,Indices ind); 
 	}
 	public void getIndexForRender(VertexStore3D vstore,RenderTexCb cb)
 	{
-		final HashMap<Texture,ArrayList<Triangle>> s=new HashMap<Texture,ArrayList<Triangle>>();
+		final HashMap<TerrainTexture,ArrayList<Triangle>> s=new HashMap<TerrainTexture,ArrayList<Triangle>>();
 		for(Triangle t:all)
 		{
 			if (!t.isUsed()) continue;
-			Texture cp=t.getTexture();
+			TerrainTexture cp=t.getTexture();
 			//cp=null;
 			ArrayList<Triangle> tris=s.get(cp);
 			if (tris==null)
@@ -212,7 +212,7 @@ public class TriangleStore {
 			if (!myit.hasNext()) break;
 			ArrayList<Triangle> arr=myit.next();
 			if (arr.size()==0) continue;
-			Texture tex=arr.get(0).texture;
+			TerrainTexture tex=arr.get(0).texture;
 
 			Indices ind=new Indices();
 			mainbuf.position(0);

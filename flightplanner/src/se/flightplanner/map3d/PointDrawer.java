@@ -114,21 +114,27 @@ public class PointDrawer {
 			triangles.add(t);
 		}
 
-		public void release(TriangleStore tristore) {
+		public void release(TriangleStore tristore,VertexStore3D vstore) {
 			for (Triangle t : triangles)
 				tristore.release(t);
+			Log.i("fplan","Releasing point:"+sigpoint.name);
 			for (Vertex v : vertices)
-				v.decrementUsage();
+			{
+				boolean freed=vstore.decrement(v);
+				if (!freed)
+					throw new RuntimeException("Unexpected resource leak in PointDrawer");
+
+			}
 		}
 
 		public void calcElev() {
 			for (int i = 0; i < 4; ++i) {
 				Vertex v = vertices.get(i);
-				v.contribElev((short) 0, (short) 1000);
+				v.contribElev( 0, 1000);
 			}
 			for (int i = 4; i < vertices.size(); ++i) {
 				Vertex top = vertices.get(i);
-				top.contribElev((short) alt, (short) 1000);
+				top.contribElev( (int)alt,  1000);
 			}
 
 		}
@@ -161,7 +167,7 @@ public class PointDrawer {
 		{
 			if (freevert<20 || freetri<40)
 				break;
-			Log.i("fplan","Sigpoint:"+sig.name);
+			//Log.i("fplan","Sigpoint:"+sig.name);
 			DrawnPoint p=points.get(sig);
 			if (p==null)
 			{
@@ -178,7 +184,7 @@ public class PointDrawer {
 			Entry<SigPoint,DrawnPoint> e=it.next();
 			if (e.getValue().used==false)
 			{
-				e.getValue().release(tristore);
+				e.getValue().release(tristore,vstore);
 				it.remove();
 			}
 		}		

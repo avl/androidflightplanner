@@ -3,6 +3,7 @@ package se.flightplanner.map3d;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Set;
 
 import android.util.Log;
 
@@ -32,17 +33,19 @@ public class AirspaceDrawer {
 		{
 			for(Column col : vertices.values())
 			{
-				col.updn[0].contribElev((short)(floor),(short) 1000);
-				col.updn[1].contribElev((short)(ceiling),(short) 1000);
+				col.updn[0].contribElev((int)(floor),(short) 1000);
+				col.updn[1].contribElev((int)(ceiling),(short) 1000);
 			}
 		}
-		public void free(TriangleStore tristore) {
+		public void free(TriangleStore tristore,VertexStore3D vstore) {
 			for(Column c : vertices.values())
 			{
 				for(int i=0;i<2;++i)
 				{
 					///Log.i("fplan",source.name+" Freeing "+c.updn[i]+" up/dn:"+i);
-					c.updn[i].decrementUsage();
+					boolean freed=vstore.decrement(c.updn[i]);
+					if (!freed)
+						throw new RuntimeException("Unexpected resource leak in AirspaceDrawer");
 				}
 			}
 			for(Triangle tri:triangles)
@@ -91,7 +94,7 @@ public class AirspaceDrawer {
 				Vector nextv=ps.get((i+1)%num);
 				Vector d=nextv.minus(curv).normalized().rot90r();
 				float bright=0.5f*(1.0f+(float)d.gety());
-				Log.i("fplan","Bright:"+curv+" / "+nextv+" d: "+d+" bright: "+bright);
+				//Log.i("fplan","Bright:"+curv+" / "+nextv+" d: "+d+" bright: "+bright);
 				iMerc cur=new iMerc(curv.getx(),curv.gety());
 				iMerc next=new iMerc(nextv.getx(),nextv.gety());
 
@@ -141,7 +144,7 @@ public class AirspaceDrawer {
 						iMerc pos=new iMerc(vec.getx(),vec.gety());						
 						triverts[i]=obtain(pos,updn,vstore);						
 					}
-					Log.i("fplan","Outtri: "+t);
+					//Log.i("fplan","Outtri: "+t);
 					int start=0;
 					while (start<2 && outerEdges.contains(triverts[(start+2)%3]))
 						start+=1;
@@ -199,6 +202,10 @@ public class AirspaceDrawer {
 	AirspaceLookup airspace;
 	AltParser altp;
 	HashMap<AirspaceArea,DrawnAirspace> spaces;
+	Set<AirspaceArea> getLastAirspaces()
+	{
+		return spaces.keySet();
+	}
 	public void updateAirspaces(iMerc pos,VertexStore3D vstore,TriangleStore tristore)
 	{
 		BoundingBox bb=new BoundingBox(pos.x,pos.y,pos.x,pos.y);
@@ -224,7 +231,7 @@ public class AirspaceDrawer {
 		{
 			if (!existing.used)
 			{
-				existing.free(tristore);
+				existing.free(tristore,vstore);
 				toRemove.add(existing);
 			}
 		}

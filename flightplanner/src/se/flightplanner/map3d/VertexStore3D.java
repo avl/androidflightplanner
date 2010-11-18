@@ -142,7 +142,7 @@ public class VertexStore3D {
 		return va;
 	}
 
-	public boolean decrement(TerrainVertexStore terrainVertexStore, Vertex v)
+	public boolean decrement(Vertex v)
 	{
 		if (v.decrementUsage())
 		{

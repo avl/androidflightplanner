@@ -4,9 +4,9 @@ public class Triangle {
 	short pointer;
 	short[] idx;
 	boolean used;
-	Texture texture;
+	TerrainTexture texture;
 	
-	public Texture getTexture()
+	public TerrainTexture getTexture()
 	{
 		return texture;
 	}
@@ -35,7 +35,7 @@ public class Triangle {
 		return t.pointer==pointer;
 	}
 	
-	public void assign(Vertex a, Vertex b, Vertex c, Texture texture) {
+	public void assign(Vertex a, Vertex b, Vertex c, TerrainTexture texture) {
 		idx[0]=a.getPointer();
 		idx[1]=b.getPointer();
 		idx[2]=c.getPointer();

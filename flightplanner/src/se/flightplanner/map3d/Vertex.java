@@ -38,7 +38,7 @@ public class Vertex {
 		//Log.i("fplan","CalcZ(...)="+lastElev);
 		return lastElev;
 	}
-	public void contribElev(short hiElev,short strength) {
+	public void contribElev(int hiElev,int strength) {
 		elev+=hiElev;
 		elevcontributors+=strength;		
 		if (elevcontributors<=0 || strength<=0) throw new RuntimeException("Bad elevcontributors value:"+elevcontributors+" resulting from add of "+strength);
