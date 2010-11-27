@@ -1,6 +1,7 @@
 package se.flightplanner;
 
 import java.io.DataInputStream;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
@@ -91,6 +92,10 @@ public class Project {
 			x=(int)p.x;
 			y=(int)p.y;
 			
+		}
+		public Vector toVector()
+		{
+			return new Vector(x,y);
 		}
 		@Override
 		public int hashCode()
@@ -185,9 +190,10 @@ public class Project {
 	    		x*360.0/(256.0*factor)-180.0);
 	}
 
-	/**Return the number of mercator proj 'pixels'
-    which correspond most closely to the distance given in nautical miles.
-    This scale is only valid at the latitude of the given mercator coords. 
+	/**
+	 * Return the number of mercator proj 'pixels'
+     * which correspond most closely to the distance given in nautical miles.
+     * This scale is only valid at the latitude of the given mercator coords. 
     */  
 	static public double approx_scale(Merc merc_coords,int zoomlevel,double length_in_nautical_miles)
 	{
@@ -208,6 +214,11 @@ public class Project {
 	    return (float)one_foot;
 	}
 	
+	/**
+	 * Return the number of mercator proj 'pixels'
+     * which correspond most closely to the distance given in nautical miles.
+     * This scale is only valid at the latitude of the given mercator coords. 
+    */  
 	static public double approx_scale(double merc_coords_y,int zoomlevel,double length_in_nautical_miles)
 	{	    
 	    double factor=(Math.pow(2.0,(zoomlevel)));

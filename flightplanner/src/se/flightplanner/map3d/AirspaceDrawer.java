@@ -193,26 +193,24 @@ public class AirspaceDrawer {
 			vertex.b=(byte)ib;
 		}
 	}
-	public AirspaceDrawer(AirspaceLookup airspace,AltParser altp)
+	public AirspaceDrawer(ObserverContext obs,AltParser altp)
 	{
-		this.airspace=airspace;
+		this.obs=obs;
 		this.altp=altp;
 		spaces=new HashMap<AirspaceArea, DrawnAirspace>();
 	}
-	AirspaceLookup airspace;
+	ObserverContext obs;
 	AltParser altp;
 	HashMap<AirspaceArea,DrawnAirspace> spaces;
 	Set<AirspaceArea> getLastAirspaces()
 	{
 		return spaces.keySet();
 	}
-	public void updateAirspaces(iMerc pos,VertexStore3D vstore,TriangleStore tristore)
+	public void updateAirspaces(VertexStore3D vstore,TriangleStore tristore)
 	{
-		BoundingBox bb=new BoundingBox(pos.x,pos.y,pos.x,pos.y);
-		bb=bb.expand(Project.approx_scale(pos.y, 13, 20));
 		for(DrawnAirspace existing : spaces.values())
 			existing.used=false;
-		for(AirspaceArea area : airspace.areas.get_areas(bb))
+		for(AirspaceArea area : obs.getState().spaces)
 		{
 			//Log.i("fplan","BB:"+bb+"Drawing "+area.name);
 			/*if (!area.name.contains("CTR"))

@@ -85,7 +85,7 @@ public class MovingMap3DRenderer implements Renderer {
 		LatLon cameraLatLon=new LatLon(59.45,17.706);//pos.getLatitude(),pos.getLongitude());
 		iMerc cameramerc=Project.latlon2imerc(cameraLatLon, 13);
 		cameramerc.y+=b;
-		b+=10;
+		//b+=10;
 
 		LatLon obstLatLon=new LatLon(59,17);
 		iMerc obstmerc=Project.latlon2imerc(obstLatLon, 13);
@@ -218,7 +218,7 @@ from the Thing).
         gl.glEnable(GL10.GL_DEPTH_TEST);
         gl.glBlendFunc(gl.GL_SRC_ALPHA,gl.GL_ONE_MINUS_SRC_ALPHA);
 		GlHelper.checkGlError(gl);
-		
+
 		if (playfield!=null)
 			playfield.loadAllTextures(gl);
 
@@ -260,13 +260,24 @@ from the Thing).
 	}
 
 	public void update_tripdata(TripData tripdata) {
-		// TODO Finish this when we actually start using trip data.			
+		// TODO Finish this when we actually start using trip data.
+		///throw new RuntimeException("Not implemented");
 	}
 
 	public void debugdump() throws IOException {
 		if (playfield!=null)
 			playfield.debugdump();
 		
+	}
+
+	public void onTouchEvent(float x, float y) {
+		if (playfield!=null)
+			playfield.onTouch(x,y);		
+	}
+
+	public void onFingerUp(float x, float y) {
+		if (playfield!=null)
+			playfield.onTouchUp(x,y);				
 	}
 
 }

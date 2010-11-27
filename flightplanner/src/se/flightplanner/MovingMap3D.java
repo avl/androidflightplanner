@@ -13,6 +13,8 @@ import android.graphics.Typeface;
 import android.graphics.Paint.Style;
 import android.location.Location;
 import android.opengl.GLSurfaceView;
+import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 
 public class MovingMap3D extends GLSurfaceView {
@@ -29,7 +31,23 @@ public class MovingMap3D extends GLSurfaceView {
 		rend=new MovingMap3DRenderer(fontbitmap);
 		this.setRenderer(rend);
 	}
-
+	@Override
+	public boolean onTouchEvent(MotionEvent ev)
+	{
+		float x=ev.getX();
+		float y=ev.getY();
+		//Log.d("fplan","Touch event!"+x+","+y);
+		
+		
+		if (ev.getAction()==MotionEvent.ACTION_DOWN ||
+			ev.getAction()==MotionEvent.ACTION_MOVE)	
+			rend.onTouchEvent(x,y);	
+		else
+		if (ev.getAction()==MotionEvent.ACTION_UP)
+			rend.onFingerUp(x,y);
+					
+		return true;
+	}
 	public void zoom(int i) {
 		// TODO Auto-generated method stub
 		rend.zoom(i);

@@ -11,6 +11,7 @@ import java.util.Map.Entry;
 import javax.microedition.khronos.opengles.GL10;
 
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.opengl.GLUtils;
 import android.util.Log;
 
@@ -29,21 +30,29 @@ public class PlayfieldDrawer {
 	TriangleStore tristore;
 	ElevationStoreIf elevstore;
 	TextureStore tstore;
+	ObserverContext observercontext;
+	//FontHandler fonthandler;
+	GuiState guiState;
+	GuiDrawer guiDrawer;
 	LodCalc lodc;
 	boolean dodump;
 	Playfield playfield;
     private AirspaceDrawer airspacedrawer;
     private PointDrawer pointdrawer;
-	private FontHandler fonthandler;
 	int deftex;
 	int gtex;
 	Random rand;
 	public PlayfieldDrawer(ElevationStoreIf estore, TextureStore tstore,AirspaceLookup lookup, Bitmap fontbitmap)
 	{
 		gtex=0;
-		airspacedrawer=new AirspaceDrawer(lookup,new AltParser());
+		observercontext=new ObserverContext(lookup);
+		airspacedrawer=new AirspaceDrawer(observercontext,new AltParser());
 		pointdrawer=new PointDrawer(lookup.allObst,lookup.allAirfields);
-		fonthandler=new FontHandler(fontbitmap);
+		
+		//fonthandler=new FontHandler(fontbitmap);
+		guiDrawer=new GuiDrawer(new FontHandler(fontbitmap));
+		
+		
 		rand=new Random();
 		iMerc p1=Project.latlon2imerc(new LatLon(70,10),13);
 		iMerc p2=Project.latlon2imerc(new LatLon(50,20),13);
@@ -68,10 +77,14 @@ public class PlayfieldDrawer {
 		
 	}
 	@SuppressWarnings("static-access")
-	public void draw(final GL10 gl,iMerc observer,int observerElev,float hdg,int width,int height) throws IOException
+	public void draw(final GL10 gl,iMerc observer,int observerElev,float hdg, int width, int height) throws IOException
 	{
 		try
 		{
+			if (guiState==null)
+				guiState=new GuiState(observercontext,width,height);
+			else
+				guiState.setScreenDim(width,height);
 			
 			GlHelper.checkGlError(gl);
 	        
@@ -90,20 +103,21 @@ public class PlayfieldDrawer {
 
 	        //gl.glEnable(GL10.GL_TEXTURE_2D);
 			//final Texture temptex=tstore.getTextureAt(observer);
-			playfield.changeLods(observer, observerElev, vstore, elevstore,lodc,0);
-			
-			airspacedrawer.updateAirspaces(observer, vs3d, tristore);
+			//playfield.changeLods(observer, observerElev, vstore, elevstore,lodc,0);
+			observercontext.update(observer);
+			airspacedrawer.updateAirspaces(vs3d, tristore);
 			pointdrawer.update(observer, vs3d, tristore);
-			playfield.prepareForRender();
+			guiState.maybeDoUpdate();
+			//playfield.prepareForRender();
 			airspacedrawer.prepareForRender();
 			pointdrawer.prepareForRender();
-			Log.i("fplan","Triangles: "+tristore.getUsedTriangles()+" Vertices: "+vs3d.getUsedVertices());
+			//Log.i("fplan","Triangles: "+tristore.getUsedTriangles()+" Vertices: "+vs3d.getUsedVertices());
 			if (dodump)
 			{
 				playfield.completeDebugDump("/sdcard/dump.json");
 				dodump=false;
 			}
-			final VertAndColor va=vstore.vstore3d.getVerticesReadyForRender(vstore, observer,observerElev);
+			//final VertAndColor va=vstore.vstore3d.getVerticesReadyForRender(vstore, observer,observerElev);
 			GlHelper.checkGlError(gl);
 	        gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
 	        gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
@@ -116,6 +130,8 @@ public class PlayfieldDrawer {
 	        //Different possible texture parameters, e.g	        
 					
 			gl.glFrontFace(gl.GL_CCW);
+			
+			
 			
 			/*
 			tristore.getIndexForRender(vs3d, new RenderTexCb()
@@ -149,9 +165,10 @@ public class PlayfieldDrawer {
 				
 			});
 			*/
-			//gl.glDisable(gl.GL_CULL_FACE);
+			gl.glDisable(gl.GL_CULL_FACE);
 			GlHelper.checkGlError(gl);
-			fonthandler.draw(gl,width,height);
+			//fonthandler.draw(gl,width,height);
+			guiDrawer.draw(guiState,gl,this.observercontext.getState(),width,height);
 			GlHelper.checkGlError(gl);
 			
 		}
@@ -182,5 +199,11 @@ public class PlayfieldDrawer {
 	}
 	public void loadAllTextures(GL10 gl) {
 		tstore.loadAllTextures(gl);
+	}
+	public void onTouch(float x, float y) {
+		guiState.onTouchUpdate((int)x,(int)y);
+	}
+	public void onTouchUp(float x, float y) {
+		guiState.onTouchFingerUp((int)x, (int)y);
 	}
 }
