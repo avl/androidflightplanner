@@ -2,6 +2,7 @@ package se.flightplanner.map3d;
 
 import javax.microedition.khronos.opengles.GL10;
 
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -17,11 +18,11 @@ import se.flightplanner.vector.Vector;
 import se.flightplanner.vector.Polygon.InsideResult;
 
 public class GuiDrawer {
-	FontHandler fh;
+	FontBitmapCache fc;
 	int retreat;
-	public GuiDrawer(FontHandler fh)
+	public GuiDrawer()
 	{
-		this.fh=fh;
+		fc=new FontBitmapCache();
 		retreat=0;
 	}
 	public void draw(GuiState state,GL10 gl,ObserverState obs,int width,int height)
@@ -29,7 +30,7 @@ public class GuiDrawer {
 		DrawOrder draw=state.getDrawOrder();
 		if (draw==null)
 			return;
-		fh.clear();
+		fc.startframe();
 		int idx=0;
 		if (!draw.retreating)
 			retreat=0;
@@ -38,9 +39,11 @@ public class GuiDrawer {
 		//gl.glViewport(0,height/5,width,(3*height)/5);
 		gl.glEnable(gl.GL_SCISSOR_TEST);
 		gl.glDisable(gl.GL_DEPTH_TEST);
-		
+		//fc.addString("HEJ");
+		//fc.drawString(10,10,32,"HEJ",width,height);
 		gl.glScissor(0, height/5, width, (3*height)/5);
 		idx=0;
+		
 		for(AirspaceArea area:draw.spaces)
 		{
 			DrawPos pos=draw.get(idx);//scroll_y;
@@ -49,7 +52,7 @@ public class GuiDrawer {
 			if (y>height) continue;
 			if (y<-pos.size) continue;
 			//preload all needed
-			inittextureoffset(area.name);
+			fc.addString(area.name);
 		}
 		idx=0;
 		for(AirspaceArea area:draw.spaces)
@@ -61,13 +64,10 @@ public class GuiDrawer {
 			if (x>width) break;				
 			if (y>height) continue;
 			if (y<-pos.size) continue;
-			int tex=obtaintextureoffset(area.name);
-			fh.specialputstring(x,y,tex,pos.size,width,height);
-			//fh.putstring(x, y, area.name,pos.size,width,height);
-			//fh.putstring(50, 50, "Hejsan",width,height);
+			fc.drawString(x,y,pos.size, area.name,width,height);
 		}
-		fh.draw(gl,width,height);		
-		 
+		
+		 /*
 		if (draw.selected!=null)
 		{
 			fh.clear();
@@ -98,14 +98,11 @@ public class GuiDrawer {
 			
 			fh.draw(gl,width,height);		
 		}
-		
+		*/
+		fc.draw(gl,width,height);		
 
 		gl.glScissor(0, 0, width, height); ///see: http://code.google.com/p/android/issues/detail?id=3047
 		gl.glDisable(gl.GL_SCISSOR_TEST);
 		gl.glEnable(gl.GL_DEPTH_TEST);
-	}
-	private int obtaintextureoffset(String name) {
-		// TODO Auto-generated method stub
-		return 0;
 	}
 }

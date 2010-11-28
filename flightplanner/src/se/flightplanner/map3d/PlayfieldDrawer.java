@@ -50,7 +50,7 @@ public class PlayfieldDrawer {
 		pointdrawer=new PointDrawer(lookup.allObst,lookup.allAirfields);
 		
 		//fonthandler=new FontHandler(fontbitmap);
-		guiDrawer=new GuiDrawer(new FontHandler(fontbitmap));
+		guiDrawer=new GuiDrawer();
 		
 		
 		rand=new Random();
