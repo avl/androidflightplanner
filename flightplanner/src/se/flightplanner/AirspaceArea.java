@@ -24,6 +24,14 @@ public class AirspaceArea implements Serializable
 	public ArrayList<String> freqs;
 	public String floor;
 	public String ceiling;
+	/**
+	 * Dynamic information about this airspace area in relation to the single observer
+	 * From a high-level design level, this does not belong here. However, having it here
+	 * is good for performance, since diverse parts of the code which all need the
+	 * spacestats can have it without any extra lookup (since they already lookup
+	 * the airspace area). The disadvantage is that we can't support multiple observers. 
+	 */
+	volatile public SpaceStats dyninfo; 
 	public byte r,g,b,a;
 	public void serialize(DataOutputStream os) throws IOException
 	{

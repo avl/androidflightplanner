@@ -70,10 +70,12 @@ public class MovingMap3DRenderer implements Renderer {
 			throw new RuntimeException(e1);
 		}
 		
+		/*
 		try {
 			Thread.sleep(50);
 		} catch (InterruptedException e) {
 		}
+		*/
 	}
 	int b=0;
 	private void draw_vertices(GL10 gl) throws IOException {

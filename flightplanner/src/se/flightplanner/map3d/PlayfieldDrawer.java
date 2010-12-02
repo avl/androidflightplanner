@@ -19,6 +19,7 @@ import se.flightplanner.AirspaceLookup;
 import se.flightplanner.Project;
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.iMerc;
+import se.flightplanner.map3d.ObserverContext.ObserverState;
 import se.flightplanner.map3d.TriangleStore.Indices;
 import se.flightplanner.map3d.TriangleStore.RenderTexCb;
 import se.flightplanner.map3d.TerrainVertexStore.VertAndColor;
@@ -82,11 +83,17 @@ public class PlayfieldDrawer {
 		try
 		{
 			if (guiState==null)
-				guiState=new GuiState(observercontext,width,height);
+				guiState=new GuiState(width,height);
 			else
 				guiState.setScreenDim(width,height);
-			
+			ObserverState obsstate=this.observercontext.getState();
 			GlHelper.checkGlError(gl);
+			
+			float ratio = (float) width / height;
+			gl.glViewport(0, 0, width, height);
+			gl.glMatrixMode(GL10.GL_PROJECTION);
+			gl.glLoadIdentity();
+			gl.glFrustumf(-ratio, ratio, -1, 1, 1.0f, 1e4f);
 	        
 			gl.glMatrixMode(GL10.GL_MODELVIEW);
 	        gl.glLoadIdentity();
@@ -99,16 +106,17 @@ public class PlayfieldDrawer {
 
 	        gl.glDisable(GL10.GL_LIGHTING);
 	        gl.glDisable(gl.GL_BLEND);
+	        gl.glEnable(gl.GL_DEPTH_TEST);
 			GlHelper.checkGlError(gl);
 
 	        //gl.glEnable(GL10.GL_TEXTURE_2D);
 			//final Texture temptex=tstore.getTextureAt(observer);
-			//playfield.changeLods(observer, observerElev, vstore, elevstore,lodc,0);
-			observercontext.update(observer);
+			playfield.changeLods(observer, observerElev, vstore, elevstore,lodc,0);
+			observercontext.update(observer,(int)hdg);
 			airspacedrawer.updateAirspaces(vs3d, tristore);
 			pointdrawer.update(observer, vs3d, tristore);
-			guiState.maybeDoUpdate();
-			//playfield.prepareForRender();
+			guiState.maybeDoUpdate(obsstate);
+			playfield.prepareForRender();
 			airspacedrawer.prepareForRender();
 			pointdrawer.prepareForRender();
 			//Log.i("fplan","Triangles: "+tristore.getUsedTriangles()+" Vertices: "+vs3d.getUsedVertices());
@@ -117,23 +125,23 @@ public class PlayfieldDrawer {
 				playfield.completeDebugDump("/sdcard/dump.json");
 				dodump=false;
 			}
-			//final VertAndColor va=vstore.vstore3d.getVerticesReadyForRender(vstore, observer,observerElev);
+			final VertAndColor va=vstore.vstore3d.getVerticesReadyForRender(vstore, observer,observerElev);
 			GlHelper.checkGlError(gl);
 	        gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
 	        gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
 	        gl.glEnableClientState(GL10.GL_TEXTURE_COORD_ARRAY);
-	        /*
+	        
 			gl.glVertexPointer(3, gl.GL_FLOAT, 0, va.vertices);
 			gl.glColorPointer(4, gl.GL_UNSIGNED_BYTE, 0, va.colors);
 			gl.glTexCoordPointer(2,gl.GL_FLOAT,0,va.texcoords);
-			*/
+			
 	        //Different possible texture parameters, e.g	        
 					
 			gl.glFrontFace(gl.GL_CCW);
 			
 			
 			
-			/*
+			
 			tristore.getIndexForRender(vs3d, new RenderTexCb()
 			{
 
@@ -164,11 +172,10 @@ public class PlayfieldDrawer {
 				}
 				
 			});
-			*/
+			
 			gl.glDisable(gl.GL_CULL_FACE);
 			GlHelper.checkGlError(gl);
-			//fonthandler.draw(gl,width,height);
-			guiDrawer.draw(guiState,gl,this.observercontext.getState(),width,height);
+			guiDrawer.draw(guiState,gl,obsstate,width,height);
 			GlHelper.checkGlError(gl);
 			
 		}

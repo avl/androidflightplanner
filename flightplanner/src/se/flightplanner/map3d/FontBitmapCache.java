@@ -47,17 +47,17 @@ public class FontBitmapCache {
 	int framecount;
 	int capacity;
 	boolean dirty;
-	final int fontsize=32;
+	final int fontsize=16;
 	ArrayList<Slot> slots;
 	HashMap<String,Slot> string2slot;
 	public FontBitmapCache()
 	{
-		capacity=16;
+		capacity=32;
 		if (capacity!=16 && capacity!=32)
 			throw new RuntimeException("Only 16 and 32 are acceptable capacities");
 		texsizex=512;
 		texsizey=fontsize*capacity;
-		b=Bitmap.createBitmap(texsizex,texsizey,Bitmap.Config.RGB_565);
+		b=Bitmap.createBitmap(texsizex,texsizey,Bitmap.Config.ARGB_8888);
 		canvas=new Canvas(b);
 		string2slot=new HashMap<String, Slot>();
 		slots=new ArrayList<Slot>();
@@ -77,7 +77,7 @@ public class FontBitmapCache {
 		textpaint.setColor(foreground);
 		textpaint.setStrokeCap(Paint.Cap.ROUND);
 		textpaint.setTextAlign(Align.LEFT);
-		textpaint.setTextSize(24);
+		textpaint.setTextSize((fontsize*2)/3);
 		textpaint.setTypeface(Typeface.create(Typeface.SANS_SERIF,
                                            Typeface.NORMAL));
 
@@ -105,15 +105,16 @@ public class FontBitmapCache {
 		vertex=0;
 		indexbuf.position(0);
 		index=0;
+		tex=-1;
 
 	}
-	public void putstring(int x,int y,int idx,int textsize,int width,int height) {
+	private void putstring(int x,int y,int idx,int textsize,int width,int height) {
 		if (vertex>vertcapacity-4)
 			return;
 		if (index>indexcapacity-6)
 			return;
 		Slot slot=slots.get(idx);
-		int dx=slot.xsize;
+		int dx=(slot.xsize*textsize)/fontsize;
 		int dy=textsize;
 		int tx1=0;
 		int tx2=slot.xsize;
@@ -134,9 +135,11 @@ public class FontBitmapCache {
 		indexbuf.put((short)a);
 		indexbuf.put((short)b);
 		indexbuf.put((short)c);
-		Log.i("fplan","Tri with end index: #"+index+" "+a+" "+b+" "+c);
+		///Log.i("fplan","Tri with end index: #"+index+" "+a+" "+b+" "+c);
 		index+=3;
 	}
+	
+	
 
 	private int vput(int x,int y,int u,int v,int width,int height)
 	{
@@ -149,7 +152,7 @@ public class FontBitmapCache {
 		colorbuf.put((byte)-1);
 		colorbuf.put((byte)-1);
 		colorbuf.put((byte)-1);
-		Log.i("fplan","Making vertex #"+vertex+" "+x+","+y+", u="+u+",v="+v);
+		///Log.i("fplan","Making vertex #"+vertex+" "+x+","+y+", u="+u+",v="+v);
 		int ret=vertex;
 		vertex+=1;
 		return ret;
@@ -159,11 +162,15 @@ public class FontBitmapCache {
 	 * Call at start of each frame. This does not clear the cache,
 	 * but marks each item as _clearable_.
 	 */
-	void startframe()
+	public void startframe()
 	{
 		framecount=0;
 		for(Slot slot:string2slot.values())
 			slot.used=false;
+		resetdraw();
+	}
+	private void resetdraw()
+	{
 		index=0;
 		vertex=0;
 		vertexbuf.position(0);
@@ -177,16 +184,15 @@ public class FontBitmapCache {
 	 * Calling this before each draw, will work but be inefficient.
 	 * Call startframe at start of scene frame.
 	 */
-	void addString(String s)
+	private Slot addString(String s)
 	{
 		if (framecount>=capacity) throw new RuntimeException("No capacity left");
 		Slot slot=string2slot.get(s);
 		if (slot!=null) 
 		{
 			slot.used=true;
-			return; //already present
+			return slot; //already present
 		}
-		boolean found=false;
 		for(int i=0;i<capacity;++i)
 		{
 			slot=slots.get(i);
@@ -197,11 +203,9 @@ public class FontBitmapCache {
 			slot.text=s;
 			string2slot.put(s, slot);
 			render(slot,i*fontsize,s);
-			found=true;
-			break;
+			return slot;
 		}		
-		if (!found)
-			throw new RuntimeException("Too many strings in scene");
+		throw new RuntimeException("Too many strings in scene");
 	}
 	private void render(Slot slot,int y, String s) {
 		canvas.drawRect(0,y,texsizex, y+fontsize,erasepaint);
@@ -215,32 +219,35 @@ public class FontBitmapCache {
 		dirty=true;
 		
 	}
-	void reloadTexture(GL10 gl)
+	public void reloadTexture(GL10 gl)
 	{
 		if (tex<0)
 		{
 			tex=TextureHelpers.loadTexture(this.b, gl);
-			Log.i("fplan","Loading texture from bitmap");
+			Log.i("fplan","Loading texture from bitmap: "+tex);
 		}
 		else
 		{
 			TextureHelpers.reloadTexture(b,gl,tex);
-			Log.i("fplan","reloading texture from bitmap");
+			Log.i("fplan","reloading texture from bitmap: "+tex);
 		}
 	}
 	
-	void drawString(int x,int y,int textsize,String s,int width,int height)
+	public void drawString(int x,int y,int textsize,String s,int width,int height)
 	{
-		Slot slot=string2slot.get(s);
+		Slot slot=addString(s);
 		if (slot==null) throw new RuntimeException("You must have called addString before calling drawString");
 		putstring(x,y,slot.idx,textsize,width,height);
 	}
 	
+	int cnt=0;
 	@SuppressWarnings("static-access")
 	void draw(GL10 gl,int width,int height)
 	{		
 		if (dirty)
 		{
+			cnt++;
+			//reloading the existing texture seems to crash things...
 			reloadTexture(gl);
 			dirty=false;
 		}
@@ -270,7 +277,7 @@ public class FontBitmapCache {
 		gl.glTexCoordPointer(2,gl.GL_FLOAT,0,texcoordbuf);
 		gl.glDrawElements(gl.GL_TRIANGLES, index, gl.GL_UNSIGNED_SHORT,indexbuf);		
 		GlHelper.checkGlError(gl);
-
+		resetdraw();
 	}
 
 }

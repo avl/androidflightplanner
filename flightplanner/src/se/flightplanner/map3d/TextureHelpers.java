@@ -4,6 +4,7 @@ import javax.microedition.khronos.opengles.GL10;
 
 import android.graphics.Bitmap;
 import android.opengl.GLUtils;
+import android.util.Log;
 
 public class TextureHelpers {
 
@@ -20,9 +21,18 @@ public class TextureHelpers {
 	}
 
 	public static void reloadTexture(Bitmap b, GL10 gl, int texid) {
-		gl.glBindTexture( GL10.GL_TEXTURE_2D, texid);
+		if (b.isRecycled())
+			throw new RuntimeException("Bitmap has been recycled!");
+		/*try {
+			Thread.sleep(25);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}*/
+		
 		if (texid<0)
 			throw new RuntimeException("Bad texture name");
+		gl.glBindTexture( GL10.GL_TEXTURE_2D, texid);
 		if (b==null)
 			throw new RuntimeException("Attempt to create texture from null Bitmap!");
 		
@@ -37,7 +47,9 @@ public class TextureHelpers {
 		//Bitmap scaled=Bitmap.createScaledBitmap(b, 64, 64, false);
 		//gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, GLUtils.getInternalFormat(scaled), 64, 64, 0, 0, GLUtils.getType(scaled), scaled);
 		
+		Log.i("fplan","Doing texImage2D");
 		GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, b, 0);
+		Log.i("fplan","Finished texImage2D");
 	
 		gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST);
 	    gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST);
@@ -45,8 +57,7 @@ public class TextureHelpers {
 	    //Different possible texture parameters, e.g	        
 	    gl.glTexEnvf( gl.GL_TEXTURE_ENV, gl.GL_TEXTURE_ENV_MODE, gl.GL_MODULATE );
 	    
-		gl.glBindTexture( gl.GL_TEXTURE_2D, texid);
-		// enable texturing
+		///gl.glBindTexture( gl.GL_TEXTURE_2D, texid);
 	}
 
 	static public void unloadTexture(GL10 gl,int texname) {

@@ -9,7 +9,6 @@ import se.flightplanner.map3d.ObserverContext.ObserverState;
 
 public class GuiState {
 	private ObserverState environ;
-	private ObserverContext ctxt;
 	private long lastUserAction;
 	private long lastUpdate;
 	private AirspaceArea shown_area;
@@ -82,7 +81,7 @@ public class GuiState {
 		}
 		
 		
-		Log.i("fplan","scroll ammount:"+scroll_ammount);
+		//Log.i("fplan","scroll ammount:"+scroll_ammount);
 		if (scroll_ammount<0)
 			scroll_ammount=0;
 		if (scroll_ammount>=32*ret.spaces.size())
@@ -101,7 +100,7 @@ public class GuiState {
 		for(int i=logidx-1;i>=0;--i)
 		{
 			logy-=32;
-			float step=32.0f/(1.0f+0.01f*Math.abs(logy));
+			float step=48.0f/(1.0f+0.01f*Math.abs(logy));
 			if (step>64) step=64;
 			if (step<16) step=16;
 			float prevy=y;
@@ -113,7 +112,7 @@ public class GuiState {
 		logy=-logrem;
 		for(int i=logidx;i<ret.spaces.size();++i)
 		{
-			float step=32.0f/(1.0f+0.01f*Math.abs(logy));
+			float step=48.0f/(1.0f+0.01f*Math.abs(logy));
 			if (step>64) step=64;
 			if (step<16) step=16;
 			float nexty=y;
@@ -147,7 +146,7 @@ public class GuiState {
 	private State state;
 
 	public void onTouchUpdate(int x, int y) {
-		Log.i("fplan", "onTouchUpdate" + x + "," + y);
+		//Log.i("fplan", "onTouchUpdate" + x + "," + y);
 		long now = SystemClock.uptimeMillis();
 		lastUserAction = now;
 		if (state == State.RETREATING && (x > width - width / 2)) {
@@ -180,7 +179,7 @@ public class GuiState {
 			int diff = Math.abs(y - start_scroll_y)+Math.abs(x-start_scroll_x);
 			if (diff > width/15+10) {
 				state = State.SCROLLING;
-				Log.d("fplan", "Start scrolling");
+				//Log.d("fplan", "Start scrolling");
 				// scroll_start=SystemClock.uptimeMillis();
 				start_scroll_y = y;
 				start_scroll_x = x;
@@ -193,7 +192,7 @@ public class GuiState {
 			cur_scroll_x = x;
 			if (cur_scroll_x < width / 2)
 				cur_scroll_x = width / 2;
-			Log.d("fplan", "Keep scrolling");
+			//Log.d("fplan", "Keep scrolling");
 			cur_scroll_y = get_cur_scroll(y);
 			createDrawOrder();
 			return;
@@ -205,9 +204,9 @@ public class GuiState {
 	}
 
 	public void onTouchFingerUp(int x, int y) {
-		Log.i("fplan", "onUp" + x + "," + y);
+		//Log.i("fplan", "onUp" + x + "," + y);
 		if (state == State.PRESCROLL) {
-			Log.d("fplan", "Generated click");
+			//Log.d("fplan", "Generated click");
 			generate_click(y);
 			createDrawOrder();
 			state=State.SHOW;
@@ -227,9 +226,9 @@ public class GuiState {
 				scroll_base=0;
 			}
 			cur_scroll_y = 0;
-			Log.d("fplan", "End scrolling, scroll_base: " + scroll_base);
-			if (environ.spaces != null)
-				Log.d("fplan", "Have " + environ.spaces.size() + " spaces");
+			//Log.d("fplan", "End scrolling, scroll_base: " + scroll_base);
+			/*if (environ.spaces != null)
+				Log.d("fplan", "Have " + environ.spaces.size() + " spaces");*/
 			if (cur_scroll_x>width/2+width/4)
 			{
 				state=State.RETREATING;
@@ -258,7 +257,7 @@ public class GuiState {
 						if (environ.spaces != null && idx<environ.spaces.size() && idx>=0)
 						{
 							shown_area=environ.spaces.get(idx);
-							Log.i("fplan","Showing area:"+shown_area.name);
+							//Log.i("fplan","Showing area:"+shown_area.name);
 							return;
 						}
 					}
@@ -280,9 +279,8 @@ public class GuiState {
 		}
 	}
 
-	public GuiState(ObserverContext ctxt, int width, int height) {
+	public GuiState(int width, int height) {
 		this.state = State.IDLE;
-		this.ctxt = ctxt;
 		this.width = width;
 		this.height = height;
 		this.cur_scroll_x = width;
@@ -295,10 +293,13 @@ public class GuiState {
 		 */
 	}
 
-	public void maybeDoUpdate() {
+	public void maybeDoUpdate(ObserverState obsstate) {
 		long now = SystemClock.uptimeMillis();
 		if (state == State.IDLE || now > lastUpdate + 60000)
-			environ = ctxt.getState();
+		{
+			
+			environ = obsstate;
+		}
 	}
 
 	public void setScreenDim(int width2, int height2) {
