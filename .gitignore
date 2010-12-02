@@ -22,3 +22,6 @@ flightplanner/bin
 flightplanner/gen
 flightplannertest/bin/
 *.class
+aipdata*cache*
+
+
