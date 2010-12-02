@@ -23,5 +23,8 @@ flightplanner/gen
 flightplannertest/bin/
 *.class
 aipdata*cache*
+Pyro_NS_URI
+fplan/fplan/notams
+out.bin
 
 
