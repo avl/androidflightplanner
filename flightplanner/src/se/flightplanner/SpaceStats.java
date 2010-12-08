@@ -15,6 +15,7 @@ public class SpaceStats
 	public String diststr;
 	public float dist;
 	public int bearing;
+	public boolean inside;
 	public long updated;
 	public static SpaceStats getStats(iMerc ipos, AirspaceArea area) {
 		SpaceStats stats=new SpaceStats();
@@ -28,9 +29,11 @@ public class SpaceStats
 			double nmdist=close.minus(pos).length()/Project.approx_scale(pos.y, 13, 1.0);
 			stats.diststr=String.format("%.0fnm", nmdist);
 			stats.dist=(float)nmdist;
+			stats.inside=false;
 		}
 		else
 		{
+			stats.inside=true;
 			stats.diststr="inside";
 			stats.dist=0;
 		}

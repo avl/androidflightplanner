@@ -16,6 +16,7 @@ import se.flightplanner.map3d.AirspaceDrawer;
 import se.flightplanner.map3d.AltParser;
 import se.flightplanner.map3d.ElevationStoreIf;
 import se.flightplanner.map3d.GlHelper;
+import se.flightplanner.map3d.GuiState;
 import se.flightplanner.map3d.LodCalc;
 import se.flightplanner.map3d.Playfield;
 import se.flightplanner.map3d.PlayfieldDrawer;
@@ -247,17 +248,20 @@ from the Thing).
 
 	public void sideways(int i) {
 		// TODO Auto-generated method stub
+		/*
 		if (i<0) headturn-=10f;
 		if (i>0) headturn+=10f;
 		if (headturn<-180) headturn=(float) 180;
 		if (headturn>180) headturn=(float) -180;
+		*/
+		playfield.arrowkeys(i);
 	}
 
 	public void update(Airspace airspace, AirspaceLookup lookup,
 			ElevationStoreIf estore, TextureStore tstore) {
 		// TODO Auto-generated method stub
-		Log.i("fplan","renderer update called!");
-		playfield=new PlayfieldDrawer(estore,tstore,lookup,fontbitmap);		
+		GuiState gui=new GuiState(0,0);
+		playfield=new PlayfieldDrawer(estore,tstore,lookup,fontbitmap,gui);		
 		
 	}
 

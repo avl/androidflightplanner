@@ -19,6 +19,7 @@ import se.flightplanner.AirspaceLookup;
 import se.flightplanner.Project;
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.iMerc;
+import se.flightplanner.map3d.GuiState.DrawOrder;
 import se.flightplanner.map3d.ObserverContext.ObserverState;
 import se.flightplanner.map3d.TriangleStore.Indices;
 import se.flightplanner.map3d.TriangleStore.RenderTexCb;
@@ -43,8 +44,9 @@ public class PlayfieldDrawer {
 	int deftex;
 	int gtex;
 	Random rand;
-	public PlayfieldDrawer(ElevationStoreIf estore, TextureStore tstore,AirspaceLookup lookup, Bitmap fontbitmap)
+	public PlayfieldDrawer(ElevationStoreIf estore, TextureStore tstore,AirspaceLookup lookup, Bitmap fontbitmap,GuiState gui)
 	{
+		guiState=gui;
 		gtex=0;
 		observercontext=new ObserverContext(lookup);
 		airspacedrawer=new AirspaceDrawer(observercontext,new AltParser());
@@ -82,13 +84,12 @@ public class PlayfieldDrawer {
 	{
 		try
 		{
-			if (guiState==null)
-				guiState=new GuiState(width,height);
-			else
-				guiState.setScreenDim(width,height);
+			guiState.setScreenDim(width,height);
 			ObserverState obsstate=this.observercontext.getState();
 			GlHelper.checkGlError(gl);
 			
+			DrawOrder draw=guiState.getDrawOrder();
+
 			float ratio = (float) width / height;
 			gl.glViewport(0, 0, width, height);
 			gl.glMatrixMode(GL10.GL_PROJECTION);
@@ -98,7 +99,10 @@ public class PlayfieldDrawer {
 			gl.glMatrixMode(GL10.GL_MODELVIEW);
 	        gl.glLoadIdentity();
 	        gl.glRotatef(90, 1.0f, 0, 0); //tilt to look to horizon (don't change)
-	        gl.glRotatef(-hdg, 0, 0, 1); //compass heading
+	        int glance=0;
+	        if (draw!=null)
+	        	glance=draw.glance;
+	        gl.glRotatef(-hdg-glance, 0, 0, 1); //compass heading
 	        
 			GlHelper.checkGlError(gl);
 			
@@ -173,9 +177,10 @@ public class PlayfieldDrawer {
 				
 			});
 			
+			
 			gl.glDisable(gl.GL_CULL_FACE);
 			GlHelper.checkGlError(gl);
-			guiDrawer.draw(guiState,gl,obsstate,width,height);
+			guiDrawer.draw(draw,gl,obsstate,width,height);
 			GlHelper.checkGlError(gl);
 			
 		}
@@ -212,5 +217,8 @@ public class PlayfieldDrawer {
 	}
 	public void onTouchUp(float x, float y) {
 		guiState.onTouchFingerUp((int)x, (int)y);
+	}
+	public void arrowkeys(int i) {
+		guiState.arrowkeys(i);
 	}
 }
