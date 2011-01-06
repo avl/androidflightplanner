@@ -1,5 +1,6 @@
 package se.flightplanner;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -9,11 +10,13 @@ import java.util.TimeZone;
 
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
+import se.flightplanner.Project.iMerc;
 import se.flightplanner.TripData.Waypoint;
 import se.flightplanner.TripState.WarningEvent;
 import se.flightplanner.vector.BoundingBox;
 import se.flightplanner.vector.Vector;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -112,10 +115,19 @@ public class MovingMap extends View {
 		invalidate();
 		
 	}
+	GetMapBitmap bitmaps;
 	public MovingMap(Context context)
 	{
 		super(context);
-		
+		Blob blob;
+		String path="/sdcard/level10";
+		try {
+			blob = new Blob(path,256);
+			bitmaps=new GetMapBitmap(blob);
+		} catch (IOException e) {
+			System.out.println("Failed opening terrain bitmap. Check file:"+path);
+			e.printStackTrace();
+		}
 		
 		bearingspeed=new BearingSpeedCalc();
 		//utctz = TimeZone.getTimeZone("UTC");		 
@@ -313,7 +325,39 @@ public class MovingMap extends View {
 		mDrawable.getPaint().setColor(0xff74AC23);
 		mDrawable.setBounds(x, y, x + width, y + height);
 		mDrawable.draw(canvas);*/
-
+		if (zoomlevel==10 && bitmaps!=null)
+		{
+			iMerc topleft=new iMerc(
+					(int)screen_center.x&(~255),
+					(int)screen_center.y&(~255));
+			topleft.x-=256;
+			topleft.y-=256;
+			canvas.save();
+			Vector v=tf.merc2screen(
+					new Merc(topleft.x,topleft.y));
+			float hdg=(float)(tf.hdgrad*(180.0/Math.PI));
+			canvas.rotate(hdg,(float)(v.x),(float)(v.y));
+			for(int j=0;j<3;++j)
+			{
+				for(int i=0;i<3;++i)
+				{
+					iMerc cur=new iMerc(topleft.x+256*i,topleft.y+256*j);
+					Bitmap b=null;
+					try {
+						b = bitmaps.getBitmap(cur);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					if (b!=null)
+					{
+						canvas.drawBitmap(b, (float)(v.x+i*256), (float)(v.y+j*256), null);						
+					}
+				}
+			}
+			canvas.restore();
+			
+		}
+		
 		
 		//sigPointTree.verify();
 		if (zoomlevel>=8)
@@ -373,7 +417,7 @@ public class MovingMap extends View {
 				//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
 				//textpaint.setARGB(0, 255,255,255);
 				textpaint.setARGB(0xff, 0xff, 0xa0, 0xff);
-				canvas.drawText(String.format("%.0fft",sp.name,sp.alt), (float)(p.x), (float)(p.y), textpaint);			
+				canvas.drawText(String.format("%.0fft",sp.alt), (float)(p.x), (float)(p.y), textpaint);			
 				linepaint.setARGB(0xff, 0xff, 0xa0, 0xff);
 				canvas.drawPoint((float)p.x,(float)p.y,linepaint);
 			}

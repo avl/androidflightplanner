@@ -29,7 +29,7 @@ public class DataDownloader {
 		//String addr="192.168.42.222:5000";
 		//String addr="http://192.168.1.150:5000";
 		//String addr="http://192.168.1.102:5000";
-		String addr="http://192.168.1.101:5000";
+		String addr="http://192.168.1.103:5000";
 		//String addr="http://79.99.0.86:5000";
 		//String addr="http://www.swflightplanner.se";
 		

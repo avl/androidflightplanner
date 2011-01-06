@@ -8,8 +8,8 @@ import java.util.ArrayList;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
 
-import se.flightplanner.map3d.ElevationStore;
-import se.flightplanner.map3d.TextureStore;
+//import se.flightplanner.map3d.ElevationStore;
+//import se.flightplanner.map3d.TextureStore;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -37,12 +37,12 @@ import android.widget.TextView;
 
 public class Nav extends Activity implements LocationListener {
     /** Called when the activity is first created. */
-	MovingMap3D map;
+	MovingMap map;
 	TripData tripdata;
 	Airspace airspace;
 	AirspaceLookup lookup;
-	ElevationStore estore;
-	TextureStore tstore;
+	//ElevationStore estore;
+	//TextureStore tstore;
 	//AirspaceAreaTree areaTree;
 	//AirspaceSigPointsTree sigPointTree;
 	final static int MENU_LOGIN=0;
@@ -56,8 +56,8 @@ public class Nav extends Activity implements LocationListener {
 	{
 		TripData tripdata;
 		Airspace airspace;
-		ElevationStore estore;
-		TextureStore tstore;
+		//ElevationStore estore;
+		//TextureStore tstore;
 		AirspaceLookup lookup;
 	}
 	
@@ -67,8 +67,8 @@ public class Nav extends Activity implements LocationListener {
 	    data.tripdata=tripdata;
 	    data.airspace=airspace;
 	    data.lookup=lookup;
-	    data.estore=estore;
-	    data.tstore=tstore;
+	    //data.estore=estore;
+	    //data.tstore=tstore;
 	    return data;
 	}
 	
@@ -96,15 +96,6 @@ public class Nav extends Activity implements LocationListener {
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
         	map.sideways(+1);
-    		return true;
-        }
-        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER) {
-        	try {
-				map.debugdump();
-				//RookieHelper.showmsg(this, "Dump saved!");
-			} catch (IOException e) {
-				RookieHelper.showmsg(this, "Couldn't save debug dump: "+e);
-			}
     		return true;
         }
          return false;
@@ -173,6 +164,9 @@ public class Nav extends Activity implements LocationListener {
 				    	try {
 							nav.tripdata=TripData.get_trip(user,password,trips[item]);
 							
+							/*
+							
+							
 							{
 								ArrayList<NameValuePair> nvps=new ArrayList<NameValuePair>();
 								nvps.add(new BasicNameValuePair("trip",trips[item]));
@@ -187,13 +181,13 @@ public class Nav extends Activity implements LocationListener {
 								nav.tstore=TextureStore.deserialize(new DataInputStream(strm));
 								strm.close();
 							}
-							
+							*/
 
 					    	try
 					    	{
 					    		nav.tripdata.serialize_to_file(nav,"tripdata.bin");
-					    		nav.estore.serialize_to_file(nav,"elev.bin");
-					    		nav.tstore.serialize_to_file(nav,"tex.bin");
+					    		//nav.estore.serialize_to_file(nav,"elev.bin");
+					    		//nav.tstore.serialize_to_file(nav,"tex.bin");
 					    	} 
 					    	catch(Throwable e) 
 					    	{
@@ -201,7 +195,6 @@ public class Nav extends Activity implements LocationListener {
 					    	}
 							
 							map.update_tripdata(nav.tripdata);
-							map.update_stores(nav.estore,nav.tstore);
 				    	} catch (Throwable e) {
 							RookieHelper.showmsg(nav,"Couldn't fetch trip from server:"+e.toString());
 						}
@@ -288,16 +281,16 @@ public class Nav extends Activity implements LocationListener {
         	tripdata=data.tripdata;
         	airspace=data.airspace;
         	lookup=data.lookup;
-        	estore=data.estore;
-        	tstore=data.tstore;
+        	//estore=data.estore;
+        	//tstore=data.tstore;
         }
         else
         {	
 	    	try
 	    	{
 	    		tripdata=TripData.deserialize_from_file(this,"tripdata.bin");
-	    		estore=ElevationStore.deserialize_from_file(this,"elev.bin");
-	    		tstore=TextureStore.deserialize_from_file(this,"tex.bin");
+	    		//estore=ElevationStore.deserialize_from_file(this,"elev.bin");
+	    		//tstore=TextureStore.deserialize_from_file(this,"tex.bin");
 	    	}
 	    	catch (Throwable e)
 	    	{
@@ -317,10 +310,9 @@ public class Nav extends Activity implements LocationListener {
 
         }
     	
-        map=new MovingMap3D(this);
+        map=new MovingMap(this);
         map.update_airspace(airspace,lookup);
         map.update_tripdata(tripdata);
-        map.update_stores(estore,tstore);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
 		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,5, this);
         
