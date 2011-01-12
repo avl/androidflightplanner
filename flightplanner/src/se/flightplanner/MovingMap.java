@@ -68,6 +68,13 @@ public class MovingMap extends View implements UpdatableUI {
 	private GetMapBitmap bitmaps;
 	private ArrayList<Blob> blobs;
 	
+	interface Clickable
+	{
+		Rect getRect();
+		void onClick();
+	}
+	ArrayList<Clickable> clickables;
+	
 	private Handler lostSignalTimer;
 	private Runnable curLostSignalRunnable;
 	@Override
@@ -90,7 +97,16 @@ public class MovingMap extends View implements UpdatableUI {
 		float r=getRight();
 		float w=getRight()-getLeft();
 		float h=getBottom()-getTop();
-		
+		Rect fat_finger=new Rect((int)x,(int)y,(int)x,(int)y);
+		grow(fat_finger,(int)(w*0.075f));
+		for(Clickable click : clickables)
+		{			
+			if (Rect.intersects(fat_finger,click.getRect()))
+			{
+				click.onClick();
+				return;
+			}
+		}
 		
 		if (y>b-0.2*h)
 		{
@@ -109,17 +125,11 @@ public class MovingMap extends View implements UpdatableUI {
 		}
 		else
 		{
-			/*
-			
-			if (lastpos!=null)
-			{
-				Transform tf = getTransform();
-				Merc m=tf.screen2merc(new Vector(x,y));
-				LatLon point=Project.merc2latlon(m,zoomlevel);
-				tripstate.showInfo(point,new LatLon(lastpos.getLatitude(),lastpos.getLongitude()));
-				invalidate();
-			}
-			*/
+			Transform tf = getTransform();
+			Merc m=tf.screen2merc(new Vector(x,y));
+			LatLon point=Project.merc2latlon(m,zoomlevel);
+			tripstate.showInfo(point,new LatLon(lastpos.getLatitude(),lastpos.getLongitude()));
+			invalidate();
 		}
 	}
 	private Transform getTransform() {
@@ -127,8 +137,9 @@ public class MovingMap extends View implements UpdatableUI {
 		{
 			Merc mypos;
 			float hdg=0;
-			if (drag_center!=null)
+			if (drag_center13!=null)
 			{
+				Merc drag_center=Project.merc2merc(drag_center13,13,zoomlevel);
 				mypos=new Merc(drag_center.x,drag_center.y);
 				hdg=drag_heading;
 			}
@@ -162,6 +173,7 @@ public class MovingMap extends View implements UpdatableUI {
 	public MovingMap(Context context,DisplayMetrics metrics)
 	{
 		super(context);
+		clickables=new ArrayList<MovingMap.Clickable>();
 		float dot_per_mm_y=metrics.ydpi/25.4f;
 		y_dpmm=dot_per_mm_y;
 		float dot_per_mm_x=metrics.xdpi/25.4f;
@@ -356,7 +368,10 @@ public class MovingMap extends View implements UpdatableUI {
 	{
 		int xsize=this.getRight()-this.getLeft();
 		int ysize=this.getBottom()-this.getTop();
-		return new Vector(xsize/2,ysize/2+ysize/4);		
+		Vector v=new Vector(xsize/2,ysize/2);
+		if (drag_center13==null)
+			v.y+=ysize/4;
+		return v;		
 	}
 	private boolean tileOnScreen(float cx,float cy,Transform tf)
 	{
@@ -403,12 +418,24 @@ public class MovingMap extends View implements UpdatableUI {
 		return true;
 		
 	}
+	private void grow(Rect r,int howmuch)
+	{
+		r.left-=howmuch;
+		r.right+=howmuch;
+		r.top-=howmuch;
+		r.bottom+=howmuch;
+	}
 	private void draw_actual_map(Canvas canvas, int sizex, int sizey) {
 		if (zoomlevel>13) throw new RuntimeException("zoomlevel must be <=13");
+		
+		clickables.clear();
 		//int zoomgap=13-zoomlevel;
 		//Merc mypos=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),zoomlevel);
-		//Merc mypos13=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),13);
+		
+
+			//Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),13);
 		Transform tf = getTransform();
+		Merc mypos13=Project.merc2merc(tf.getPos(),zoomlevel,13);
 				
 		Vector arrow=getArrow();
 		Merc screen_center=tf.screen2merc(new Vector(sizex/2,sizey/2));
@@ -427,8 +454,8 @@ public class MovingMap extends View implements UpdatableUI {
 				screen_center13.x,screen_center13.y,
 				screen_center13.x,screen_center13.y).expand(diagonal13);
 
-		BoundingBox smbb13=new BoundingBox(screen_center13.x,screen_center13.y,
-				screen_center13.x,screen_center13.y).expand(fivenm13);
+		BoundingBox smbb13=new BoundingBox(mypos13.x,mypos13.y,
+				mypos13.x,mypos13.y).expand(fivenm13);
 				
 		//bb13=new BoundingBox(-1e20,-1e20,1e20,1e20);		
 		/*ShapeDrawable mDrawable = new ShapeDrawable(new OvalShape());
@@ -709,10 +736,8 @@ public class MovingMap extends View implements UpdatableUI {
 			}
 		}
 		
-		if (drag_center==null)
+		if (drag_center13==null)
 		{
-			THe drag-stuff must be in zoomlevel independent units!!!
-			Also, we should draw an arrow even when dragging. Anything else is inconsistent.
 			arrowpaint.setColor(Color.BLACK);
 			Path path=new Path();
 			path.moveTo((int)arrow.x-10,(int)arrow.y+2);
@@ -740,8 +765,8 @@ public class MovingMap extends View implements UpdatableUI {
 				if (lastpos!=null && lastpos.hasBearing())
 				{
 					float hdg=lastpos.getBearing();
-					Vector d=new Vector(0,-(50<<(13-zoomlevel)));
-					Vector d2=d.rot((hdg)/(180.0f/Math.PI));					
+					Vector d=new Vector(0,-50);
+					Vector d2=d.rot(hdg/(180.0f/Math.PI));					
 					dest=new Merc(pos.x+d2.x,pos.y+d2.y);
 				}
 				else
@@ -791,12 +816,72 @@ public class MovingMap extends View implements UpdatableUI {
 		///canvas.drawText(String.format("Z%d",zoomlevel), 0,y,bigtextpaint);
 		addTextIfFits(canvas,"Z13",r,String.format("Z%d",zoomlevel),y,bigtextpaint);
 		
-		if (download_status!=null && !download_status.equals(""))
+		if (this.drag_center13!=null)
 		{
-			float y2=(y+bigtextpaint.getTextSize()*1.1f);
-			canvas.drawRect(0, y+2, getRight(), y2, backgroundpaint);
-			canvas.drawText("Download:"+download_status,getLeft()+3,y2,bigtextpaint);			
+			float h=bigtextpaint.getTextSize();
+			y+=h;
+			final Rect tr1=new Rect();
+			thinlinepaint.setColor(Color.WHITE);
+
+			String text="Center";
+			bigtextpaint.getTextBounds(text, 0, text.length(),tr1);
+			tr1.bottom=(int)(tr1.top+h);
+			tr1.offsetTo((int)(getRight()-tr1.width()-h), (int)y);
+			grow(tr1,(int)(0.4f*h));
+			canvas.drawRect(tr1, backgroundpaint);
+			canvas.drawRect(tr1, thinlinepaint);
+								
+			canvas.drawText(text,tr1.left+0.4f*h,tr1.bottom-0.4f*h,bigtextpaint);
+			clickables.add(new Clickable()
+				{
+					@Override
+					public Rect getRect() {
+						return tr1;
+					}
+					@Override
+					public void onClick() {
+						doCenterDragging();
+					}				
+				});
+			int edge=tr1.left;
+			
+			text="Set North Up";
+			final Rect tr2=new Rect();
+			bigtextpaint.getTextBounds(text, 0, text.length(),tr2);
+			tr2.bottom=(int)(tr2.top+h);
+			tr2.offsetTo((int)(h), (int)y);
+			grow(tr2,(int)(0.4f*h));
+			if (tr2.right<edge)
+			{
+				canvas.drawRect(tr2, backgroundpaint);
+				canvas.drawRect(tr2, thinlinepaint);
+									
+				canvas.drawText(text,tr2.left+0.4f*h,tr2.bottom-0.4f*h,bigtextpaint);			
+				clickables.add(new Clickable()
+				{
+					@Override
+					public Rect getRect() {
+						return tr2;
+					}
+					@Override
+					public void onClick() {
+						onNorthUp();
+					}				
+				});
+			}
+
 		}
+		else
+		{
+			if (download_status!=null && !download_status.equals(""))
+			{
+				float y2=(y+bigtextpaint.getTextSize()*1.1f);
+				canvas.drawRect(0, y+2, getRight(), y2, backgroundpaint);
+				canvas.drawText("Download:"+download_status,getLeft()+3,y2,bigtextpaint);			
+			}
+		}
+		
+		
 		
 	}
 	private void addTextIfFits(Canvas canvas,String sizetext, RectF r, String realtext,float y,
@@ -891,6 +976,10 @@ public class MovingMap extends View implements UpdatableUI {
 	}
 
 	public void zoom(int zd) {
+		
+		onTouchAbort();
+		state=GuiState.IDLE;
+		
 		zoomlevel+=zd;
 		if (zoomlevel<4)
 			zoomlevel=4;
@@ -993,6 +1082,24 @@ public class MovingMap extends View implements UpdatableUI {
 		DRAGGING
 	}
 	GuiState state=GuiState.IDLE;
+	public void onTouchAbort()
+	{ 
+		//this is called when zoomlevel is changed, which can happen
+		//while dragging, in principle.
+		state=GuiState.IDLE;
+	}
+	public void onNorthUp()
+	{
+		drag_heading=0;
+		invalidate();
+	}
+	public void doCenterDragging()
+	{
+		state=GuiState.IDLE;
+		drag_center13=null;
+		drag_base13=null;
+		invalidate();
+	}
 	public void onTouchFingerUp(Transform tf,float x, float y) {
 		switch(state)
 		{
@@ -1008,8 +1115,8 @@ public class MovingMap extends View implements UpdatableUI {
 		}
 	}
 	float dragstartx,dragstarty;	
-	Merc drag_center;
-	Merc drag_base;
+	Merc drag_center13;
+	Merc drag_base13;
 	float drag_heading;
 	
 	public void onTouchFingerDown(Transform tf,float x, float y) {
@@ -1023,22 +1130,35 @@ public class MovingMap extends View implements UpdatableUI {
 		case MAYBE_DRAG:
 		{
 			float dist=(dragstartx-x)*(dragstartx-x)+(dragstarty-y)*(dragstarty-y);
-			float thresh=5.0f*x_dpmm;
+			float thresh=4.0f*x_dpmm;
 			if (dist>thresh*thresh)
 			{
-				drag_base=tf.getPos();
+				dragstartx=x;
+				dragstarty=y;
+				float h=0.25f*(getBottom()-getTop());
+				float hdgrad=tf.getHdgRad();
+				Merc t=new Merc(tf.getPos().x,tf.getPos().y);
+				
+				if (drag_center13==null)
+				{
+					float deltax=(float)(Math.sin(hdgrad)*h);
+					float deltay=-(float)(Math.cos(hdgrad)*h);
+					t.x+=deltax;
+					t.y+=deltay;
+				}
+				drag_base13=Project.merc2merc(t, zoomlevel, 13);
 				drag_heading=tf.getHdg();
 				state=GuiState.DRAGGING;
 			}
 		}
 			break;
 		case DRAGGING:
-			float deltax1=x-dragstartx;
-			float deltay1=y-dragstarty;
+			float deltax1=(x-dragstartx)*(1<<(13-zoomlevel));
+			float deltay1=(y-dragstarty)*(1<<(13-zoomlevel));
 			float hdgrad=tf.getHdgRad();
 			float deltax=(float)(Math.cos(hdgrad)*deltax1-Math.sin(hdgrad)*deltay1);
 			float deltay=(float)(Math.sin(hdgrad)*deltax1+Math.cos(hdgrad)*deltay1);
-			drag_center=new Merc(drag_base.x-deltax,drag_base.y-deltay);
+			drag_center13=new Merc(drag_base13.x-deltax,drag_base13.y-deltay);
 			invalidate();
 			break;
 		}
