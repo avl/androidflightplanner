@@ -70,8 +70,8 @@ public class VertexStore3D {
 				v.resetElev();
 				
 				z=htscale*-1.0f*(calz-altitude);			
-				x=(v.getx()-observer.x);
-				y=(v.gety()-observer.y);
+				x=(v.getx()-observer.getX());
+				y=(v.gety()-observer.getY());
 				
 				texcoordbuf.put(v.getu());
 				texcoordbuf.put(v.getv());

@@ -13,7 +13,7 @@ public class BearingSpeedCalc {
 			//, "alt": 30, "lon": 
 			loc.setLatitude(59.458333333299997);
 			loc.setLongitude(17.706666666699999);
-			loc.setBearing(150);
+			loc.setBearing(45);
 			loc.setSpeed(50);
 		}
 		Location mylocation=loc;
@@ -50,6 +50,14 @@ public class BearingSpeedCalc {
 				double tt = Project.vector2heading(dx, dy);
 				mylocation.setBearing((float) tt);
 			}
+			if (!mylocation.hasSpeed() || Math.abs(mylocation.getSpeed())<1.25)
+			{
+				if (lastpos!=null && lastpos.hasBearing())
+					mylocation.setBearing(lastpos.getBearing());
+				else
+					mylocation.setBearing(0.0f);
+			}
+				
 		}
 		return mylocation;
 	}

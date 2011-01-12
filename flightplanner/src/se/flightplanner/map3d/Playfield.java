@@ -74,13 +74,13 @@ public class Playfield implements Stitcher {
 				int zoomgap=13-i;
 				int boxsize=64<<zoomgap;
 				int boxmask=boxsize-1;
-				int y=upperleft.y;
+				int y=upperleft.getY();
 				y&=~(boxmask);
-				for(;y<lowerright.y;y+=boxsize)
+				for(;y<lowerright.getY();y+=boxsize)
 				{
-					int x=upperleft.x;
+					int x=upperleft.getX();
 					x&=~(boxmask);
-					for(;x<lowerright.x;x+=boxsize)
+					for(;x<lowerright.getX();x+=boxsize)
 					{
 						iMerc m=new iMerc(x,y);
 						
@@ -126,10 +126,10 @@ public class Playfield implements Stitcher {
 							Thing tt=(Thing)t2;
 							for(Vertex v : tt.getCornersAndCenter())
 							{
-								if (v.getx()>=t.getPos().x &&
-									v.gety()>=t.getPos().y &&
-									v.getx()<=t.getPos().x+boxsize &&
-									v.gety()<=t.getPos().y+boxsize)
+								if (v.getx()>=t.getPos().getX() &&
+									v.gety()>=t.getPos().getY() &&
+									v.getx()<=t.getPos().getX()+boxsize &&
+									v.gety()<=t.getPos().getY()+boxsize)
 								{
 									if (!vs.contains(v))
 										throw new RuntimeException("Vertex "+v+" should have been stitched into "+t+" but it wasn't!");

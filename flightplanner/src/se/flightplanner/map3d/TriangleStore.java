@@ -95,10 +95,10 @@ public class TriangleStore {
 			int besti=0;
 			for(int i=0;i<3;++i)
 			{
-				if (pos[i].x<minx || (minx==pos[i].x && pos[i].y<miny)) 
+				if (pos[i].getX()<minx || (minx==pos[i].getX() && pos[i].getY()<miny)) 
 				{
-					minx=pos[i].x;
-					miny=pos[i].y;
+					minx=pos[i].getX();
+					miny=pos[i].getY();
 					besti=i;
 				}
 			}

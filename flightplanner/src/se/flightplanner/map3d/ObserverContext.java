@@ -37,8 +37,8 @@ public class ObserverContext {
 		ObserverState newstate=new ObserverState();
 		newstate.pos=pos;
 		newstate.heading=heading;
-		BoundingBox bb=new BoundingBox(pos.x,pos.y,pos.x,pos.y);
-		bb=bb.expand(Project.approx_scale(pos.y, 13, 20));
+		BoundingBox bb=new BoundingBox(pos.getX(),pos.getY(),pos.getX(),pos.getY());
+		bb=bb.expand(Project.approx_scale(pos.getY(), 13, 20));
 		newstate.spaces=lookup.areas.get_areas(bb);
 		long now = SystemClock.uptimeMillis();
 		for(AirspaceArea area : newstate.spaces)

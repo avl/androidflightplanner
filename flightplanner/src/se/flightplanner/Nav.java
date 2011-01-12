@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
 
+import se.flightplanner.BackgroundMapDownloader.BackgroundMapDownloadOwner;
+
 //import se.flightplanner.map3d.ElevationStore;
 //import se.flightplanner.map3d.TextureStore;
 import android.app.Activity;
@@ -28,6 +30,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -35,7 +38,7 @@ import android.view.MenuItem;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-public class Nav extends Activity implements LocationListener {
+public class Nav extends Activity implements LocationListener,BackgroundMapDownloadOwner {
     /** Called when the activity is first created. */
 	MovingMap map;
 	TripData tripdata;
@@ -48,9 +51,11 @@ public class Nav extends Activity implements LocationListener {
 	final static int MENU_LOGIN=0;
 	final static int SETUP_INFO=1;
 	final static int SETTINGS_DIALOG=2;
-	final static int MENU_DOWNLOAD_AIRSPACE=3;
+	final static int MENU_DOWNLOAD_TERRAIN=3;
 	final static int MENU_FINISH=4;
+	final static int MENU_SETTINGS=5;
 	private LocationManager locman;
+	BackgroundMapDownloader terraindownloader;
 	
 	static class NavData
 	{
@@ -102,7 +107,8 @@ public class Nav extends Activity implements LocationListener {
     }
 	public boolean onCreateOptionsMenu(Menu menu) {
 	    menu.add(0, MENU_LOGIN, 0, "Load Trip");
-	    menu.add(0, MENU_DOWNLOAD_AIRSPACE, 0, "Download Map");
+	    menu.add(0, MENU_DOWNLOAD_TERRAIN, 0, "Download Terrain Map");
+	    menu.add(0, MENU_SETTINGS, 0, "Settings");
 	    menu.add(0, MENU_FINISH, 0, "Exit");
 	    return true;
 	}
@@ -131,31 +137,43 @@ public class Nav extends Activity implements LocationListener {
 			pedit.putString("user", user);
 			pedit.putString("password", password);
 			pedit.commit();
-					
 			
-	    	//final CharSequence[] trips= {"Red", "Green", "Blue"};
-	    	if (user==null || password==null || user.equals("") || password.equals(""))
-	    	{
-	    		RookieHelper.showmsg(this,"Choose Login, and enter user/password first!");
-		    	return;
-	    	}
-	    	String[] ttrips;
-			try {
-				ttrips = TripData.get_trips(
-						user,password);
-			} catch (Throwable e) {				
-				RookieHelper.showmsg(this,"Couldn't connect to server:"+e.toString());
+			String then=data.getStringExtra("se.flightplanner.thenopen");
+			if (then!=null && then.equals("loadterrain"))
+			{
+				loadTerrain();
 				return;
-		    	
 			}
-	    	final String[] trips=ttrips;
-	    		
-	    	if (trips.length==0)
-	    	{	    		
-	    		RookieHelper.showmsg(this,"You have no trips! Go to www.flightplanner.se and create some!");
-	    	}
-	    	else
-	    	{
+			else if (then!=null && then.equals("loadtrip"))
+			{
+		    	//final CharSequence[] trips= {"Red", "Green", "Blue"};
+		    	loadTrip();
+		    	return;
+			}
+		}
+	}
+
+
+	private void loadTrip() {
+		final String user=getPreferences(MODE_PRIVATE).getString("user","user");
+		final String password=getPreferences(MODE_PRIVATE).getString("password","password");
+		String[] ttrips=null;
+		try {
+			ttrips = TripData.get_trips(
+					user,password);
+		} catch (Throwable e) {				
+			RookieHelper.showmsg(this,"Couldn't connect to server:"+e.toString());		    	
+		}
+		if (ttrips!=null)
+		{
+			final String[] trips=ttrips;
+				
+			if (trips.length==0)
+			{	    		
+				RookieHelper.showmsg(this,"You have no trips! Go to www.flightplanner.se and create some!");
+			}
+			else
+			{
 		        final Nav nav=this;
 		    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		    	builder.setTitle("Choose Trip");
@@ -202,7 +220,7 @@ public class Nav extends Activity implements LocationListener {
 		    	});
 		    	AlertDialog diag=builder.create();
 		    	diag.show();
-	    	}
+			}
 		}
 	}
 	@Override 
@@ -218,33 +236,79 @@ public class Nav extends Activity implements LocationListener {
 	    	locman.removeUpdates(this);
 	    	finish();
 	    	break;
-	    case MENU_LOGIN:
-
+	    case MENU_SETTINGS:
+	    {
 	    	Intent intent = new Intent(this, SetupInfo.class);
 	    	intent.putExtra("se.flightplanner.user", getPreferences(MODE_PRIVATE).getString("user","user")); 
-	    	intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password","password")); 	    	
-	    	startActivityForResult(intent,SETUP_INFO);
+	    	intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password","password"));
+	    	intent.putExtra("se.flightplanner.thenopen", "nothing");
+	    	startActivityForResult(intent,SETUP_INFO);	    	
+	    	break;
+	    }
+	    case MENU_LOGIN:
+	    {
+	    	if (!haveUserAndPass())
+	    	{
+		    	Intent intent = new Intent(this, SetupInfo.class);
+		    	intent.putExtra("se.flightplanner.user", getPreferences(MODE_PRIVATE).getString("user","user")); 
+		    	intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password","password"));
+		    	intent.putExtra("se.flightplanner.thenopen", "loadtrip");
+		    	startActivityForResult(intent,SETUP_INFO);
+	    	}
+	    	else
+	    	{
+		    	loadTrip();
+	
+	    	}
+	    	
 	    	//showDialog(SETTINGS_DIALOG);
 	    	return true;
-	    case MENU_DOWNLOAD_AIRSPACE:
-	    	try {
-	    		///RookieHelper.showmsg(this,"Airspace data for Sweden will now be downloaded. This can take several minutes, and your phone may become unresponsive. Turn on internet access, click ok, and have patience!");
-				airspace=Airspace.download();
-				airspace.serialize_to_file(this,"airspace.bin");
-				
-				Log.i("fplan","Building BSP-trees");
-				lookup=new AirspaceLookup(airspace);
-		    	//areaTree=new AirspaceAreaTree(airspace.getSpaces());
-		    	//sigPointTree=new AirspaceSigPointsTree(airspace.getPoints());
-				Log.i("fplan","BSP-trees finished");
-		        map.update_airspace(airspace,lookup);
-		        
-			} catch (Exception e) {
-				RookieHelper.showmsg(this,e.toString());
-			}
-	    	return true;
 	    }
+    case MENU_DOWNLOAD_TERRAIN:
+    	try {
+    		if (terraindownloader!=null)
+    		{
+    			RookieHelper.showmsg(this,"Already in progress!");
+    		}
+    		else
+    		{
+    			if (!haveUserAndPass())
+    			{
+	    	    	Intent intent = new Intent(this, SetupInfo.class);
+	    	    	intent.putExtra("se.flightplanner.user", getPreferences(MODE_PRIVATE).getString("user","user")); 
+	    	    	intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password","password"));
+	    	    	intent.putExtra("se.flightplanner.thenopen", "loadterrain");
+	    	    	startActivityForResult(intent,SETUP_INFO);
+    			}
+    			else	    			
+    				loadTerrain();
+    		}    				        
+		} catch (Exception e) {
+			RookieHelper.showmsg(this,e.toString());
+		}
+    	return true;
+    }
 	    return false;
+	}
+
+
+	private boolean haveUserAndPass() {
+		String user=getPreferences(MODE_PRIVATE).getString("user","user");
+		String pass=getPreferences(MODE_PRIVATE).getString("password","password");
+		if (user==null || user.length()==0)
+			return false;
+		if (pass==null || pass.length()==0)
+			return false;
+		return true;
+	}
+
+
+	private void loadTerrain() {
+		String user=getPreferences(MODE_PRIVATE).getString("user","user");
+		String pass=getPreferences(MODE_PRIVATE).getString("password","password");
+		map.enableTerrainMap(false);
+		terraindownloader=new BackgroundMapDownloader(this,user,pass);
+		terraindownloader.execute();
 	}
 	/*
 	protected Dialog onCreateDialog(int id)
@@ -300,21 +364,23 @@ public class Nav extends Activity implements LocationListener {
 	    	try
 	    	{
 	    		airspace=Airspace.deserialize_from_file(this,"airspace.bin");
+		        lookup=new AirspaceLookup(airspace);
 	    	}
 	    	catch (Throwable e)
 	    	{
 	    		RookieHelper.showmsg(this, "You have no airspace data. Select Menu->Download Map!");
 	    		//RookieHelper.showmsg(this, e.toString());
 	    	}
-	        lookup=new AirspaceLookup(airspace);
 
         }
-    	
-        map=new MovingMap(this);
+		DisplayMetrics metrics = new DisplayMetrics();
+		getWindowManager().getDefaultDisplay().getMetrics(metrics);
+
+        map=new MovingMap(this,metrics);
         map.update_airspace(airspace,lookup);
         map.update_tripdata(tripdata);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
-		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,5, this);
+		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,0, this);
         
 		setContentView(map);
 		map.gps_update(null);
@@ -340,6 +406,23 @@ public class Nav extends Activity implements LocationListener {
 	public void onStatusChanged(String provider, int status, Bundle extras) {
 		if (status!=LocationProvider.AVAILABLE)
 			map.gps_disabled();
+	}
+
+
+	@Override
+	public void onProgress(String prog) {
+		map.set_download_status(prog);
+	}
+
+
+	@Override
+	public void onFinish(Airspace airspace,AirspaceLookup lookup) {
+		terraindownloader=null;		
+		this.airspace=airspace;
+		this.lookup=lookup;
+		map.set_download_status("");
+        map.update_airspace(airspace,lookup);
+		map.enableTerrainMap(true);
 	}
     
 

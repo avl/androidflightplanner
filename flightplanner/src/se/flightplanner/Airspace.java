@@ -6,6 +6,9 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -26,6 +29,7 @@ import se.flightplanner.vector.BoundingBox;
 
 import android.app.Activity;
 import android.content.Context;
+import android.os.Environment;
 import android.util.Log;
 
 public class Airspace implements Serializable{
@@ -202,9 +206,14 @@ public class Airspace implements Serializable{
 	}
 
 	private static final long serialVersionUID = 4162260268270562095L;
-	void serialize_to_file(Context context,String filename) throws Exception
+	void serialize_to_file(String filename) throws Exception
 	{
-		OutputStream ofstream=new BufferedOutputStream(context.openFileOutput(filename,Context.MODE_PRIVATE));
+		File extpath = Environment.getExternalStorageDirectory();
+		File path = new File(extpath,
+				"/Android/data/se.flightplanner/files/"+filename);
+		OutputStream ofstream=new BufferedOutputStream(
+				new FileOutputStream(path)
+				);
 		try
 		{
 			DataOutputStream os=new DataOutputStream(ofstream);
@@ -220,7 +229,13 @@ public class Airspace implements Serializable{
 	
 	static Airspace deserialize_from_file(Context context,String filename) throws Exception
 	{
-		InputStream ofstream=new BufferedInputStream(context.openFileInput(filename));
+		File extpath = Environment.getExternalStorageDirectory();
+		File path = new File(extpath,
+				"/Android/data/se.flightplanner/files/"+filename);
+		InputStream ofstream=new BufferedInputStream(
+				new FileInputStream(path)
+				);
+
 		Airspace data=null;
 		try
 		{

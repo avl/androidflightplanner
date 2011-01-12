@@ -61,8 +61,8 @@ public class ElevationStore implements ElevationStoreIf {
 		short[] data;
 		public Elev get(iMerc m)
 		{
-			int ix=(int)(dim*(long)(m.x-m1.x)/(m2.x-m1.x));
-			int iy=(int)(dim*(long)(m.y-m1.y)/(m2.y-m1.y));
+			int ix=(int)(dim*(long)(m.getX()-m1.getX())/(m2.getX()-m1.getX()));
+			int iy=(int)(dim*(long)(m.getY()-m1.getY())/(m2.getY()-m1.getY()));
 			if (ix>=dim || iy>=dim || ix<0 || iy<0)
 				return null;
 			return new Elev(data[2*(iy*dim+ix)+0],data[2*(iy*dim+ix)+1]);			
@@ -77,7 +77,7 @@ public class ElevationStore implements ElevationStoreIf {
 			ElevTile e=new ElevTile();
 			e.zoomlevel=pzoomlevel;
 			iMerc m1=iMerc.deserialize(data);
-			iMerc m2=new iMerc(m1.x+dim,m1.y+dim);
+			iMerc m2=new iMerc(m1.getX()+dim,m1.getY()+dim);
 			e.m1=Project.imerc2imerc(m1, e.zoomlevel, 13);
 			e.m2=Project.imerc2imerc(m2, e.zoomlevel, 13);
 			e.data=new short[2*dim*dim];
@@ -108,7 +108,7 @@ public class ElevationStore implements ElevationStoreIf {
 			
 			
 			//Log.i("fplan","Deserialized tile at "+e.m1+" maxelev:"+maxelev+" zoomlevel: "+e.zoomlevel);
-			e.box=new BoundingBox(e.m1.x,e.m1.y,e.m2.x,e.m2.y);
+			e.box=new BoundingBox(e.m1.getX(),e.m1.getY(),e.m2.getX(),e.m2.getY());
 			return e;
 		}		
 		public void serialize(DataOutputStream strm,int zoomlevel) throws IOException {
@@ -214,7 +214,7 @@ public class ElevationStore implements ElevationStoreIf {
 	{
 		if (curlevel<0)
 			curlevel=0;
-		BoundingBox box=new BoundingBox(pos.x,pos.y,pos.x+1,pos.y+1);
+		BoundingBox box=new BoundingBox(pos.getX(),pos.getY(),pos.getX()+1,pos.getY()+1);
 		for(;curlevel>=0;--curlevel)
 		{
 			Level l=levels.get(curlevel);
@@ -222,8 +222,8 @@ public class ElevationStore implements ElevationStoreIf {
 			for(Item i:l.tree.overlapping(box))
 			{
 				ElevTile tile=(ElevTile)i.payload();
-				if (tile.m1.x>pos.x || tile.m1.y>pos.y ||
-				    tile.m2.x<=pos.x || tile.m2.y<=pos.y)
+				if (tile.m1.getX()>pos.getX() || tile.m1.getY()>pos.getY() ||
+				    tile.m2.getX()<=pos.getX() || tile.m2.getY()<=pos.getY())
 					continue; //doesn't contain the asked for merc.
 				return tile;
 			}

@@ -39,15 +39,15 @@ public class PointDrawer {
 						+ base1);
 				for (int i = 0; i < 5; ++i)
 					vertices.add(vstore.alloc());
-				vertices.get(0).deploy(ipos.x - base1, ipos.y - base1,
+				vertices.get(0).deploy(ipos.getX() - base1, ipos.getY() - base1,
 						(byte) 0, "obstacle " + sig.name, 0, 0);
-				vertices.get(1).deploy(ipos.x + base1, ipos.y - base1,
+				vertices.get(1).deploy(ipos.getX() + base1, ipos.getY() - base1,
 						(byte) 0, "obstacle " + sig.name, 0, 0);
-				vertices.get(2).deploy(ipos.x + base1, ipos.y + base1,
+				vertices.get(2).deploy(ipos.getX() + base1, ipos.getY() + base1,
 						(byte) 0, "obstacle " + sig.name, 0, 0);
-				vertices.get(3).deploy(ipos.x - base1, ipos.y + base1,
+				vertices.get(3).deploy(ipos.getX() - base1, ipos.getY() + base1,
 						(byte) 0, "obstacle " + sig.name, 0, 0);
-				vertices.get(4).deploy(ipos.x, ipos.y, (byte) 0,
+				vertices.get(4).deploy(ipos.getX(), ipos.getY(), (byte) 0,
 						"obstacle " + sig.name, 0, 0);
 				for (int i = 0; i < 4; ++i)
 					addTri(4, (i + 1) % 4, i, tristore);
@@ -64,24 +64,24 @@ public class PointDrawer {
 			}
 			if (sig.kind == "airport") {
 				alt = (float) sigpoint.alt + 1000;
-				int base2 = (int) Project.approx_scale(ipos.y, 13, 0.25);
+				int base2 = (int) Project.approx_scale(ipos.getY(), 13, 0.25);
 				for (int i = 0; i < 8; ++i)
 					vertices.add(vstore.alloc());
-				vertices.get(0).deploy(ipos.x - base2, ipos.y - base2,
+				vertices.get(0).deploy(ipos.getX() - base2, ipos.getY() - base2,
 						(byte) 0, "obstacle " + sig.name, 0, 0);
-				vertices.get(1).deploy(ipos.x + base2, ipos.y - base2,
+				vertices.get(1).deploy(ipos.getX() + base2, ipos.getY() - base2,
 						(byte) 0, "obstacle " + sig.name, 0, 0);
-				vertices.get(2).deploy(ipos.x + base2, ipos.y + base2,
+				vertices.get(2).deploy(ipos.getX() + base2, ipos.getY() + base2,
 						(byte) 0, "obstacle " + sig.name, 0, 0);
-				vertices.get(3).deploy(ipos.x - base2, ipos.y + base2,
+				vertices.get(3).deploy(ipos.getX() - base2, ipos.getY() + base2,
 						(byte) 0, "obstacle " + sig.name, 0, 0);
-				vertices.get(4).deploy(ipos.x - base2, ipos.y - base2,
+				vertices.get(4).deploy(ipos.getX() - base2, ipos.getY() - base2,
 						(byte) 0, "obstacle " + sig.name, 0, 0);
-				vertices.get(5).deploy(ipos.x + base2, ipos.y - base2,
+				vertices.get(5).deploy(ipos.getX() + base2, ipos.getY() - base2,
 						(byte) 0, "obstacle " + sig.name, 0, 0);
-				vertices.get(6).deploy(ipos.x + base2, ipos.y + base2,
+				vertices.get(6).deploy(ipos.getX() + base2, ipos.getY() + base2,
 						(byte) 0, "obstacle " + sig.name, 0, 0);
-				vertices.get(7).deploy(ipos.x - base2, ipos.y + base2,
+				vertices.get(7).deploy(ipos.getX() - base2, ipos.getY() + base2,
 						(byte) 0, "obstacle " + sig.name, 0, 0);
 				byte[] intense2 = new byte[] { (byte) 128, (byte) 192,
 						(byte) 255, (byte) 192, (byte) 255 };
@@ -152,14 +152,14 @@ public class PointDrawer {
 
 	void update(iMerc pos,VertexStore3D vstore,TriangleStore tristore)
 	{
-		BoundingBox bb=new BoundingBox(pos.x,pos.y,pos.x,pos.y);
-		bb=bb.expand(Project.approx_scale(pos.y, 13, 30));
+		BoundingBox bb=new BoundingBox(pos.getX(),pos.getY(),pos.getX(),pos.getY());
+		bb=bb.expand(Project.approx_scale(pos.getY(), 13, 30));
 		for(DrawnPoint existing : points.values())
 			existing.used=false;
 		
 		ArrayList<SigPoint> nowsigs=allObst.findall(bb);
-		bb=new BoundingBox(pos.x,pos.y,pos.x,pos.y);
-		bb=bb.expand(Project.approx_scale(pos.y, 13, 60));
+		bb=new BoundingBox(pos.getX(),pos.getY(),pos.getX(),pos.getY());
+		bb=bb.expand(Project.approx_scale(pos.getY(), 13, 60));
 		nowsigs.addAll(allAirfields.findall(bb));
 		int freevert=vstore.getFreeVertices();
 		int freetri=tristore.getFreeTriangles();

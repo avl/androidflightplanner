@@ -26,10 +26,21 @@
         android:id="@+id/editpass"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"/>    
- <Button
+ <TextView android:id="@+id/label" 
+              android:layout_width="fill_parent" 
+              android:layout_height="wrap_content" 
+              android:text="Map Detail Level" />                
+ <Spinner 
+        android:id="@+id/spinner"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:prompt="@string/detail_prompt"
+    />
+        
+<Button
         android:id="@+id/button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Login" 
+        android:text="@string/ok" 
         />
-</LinearLayout>
+ </LinearLayout>

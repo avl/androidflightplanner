@@ -67,7 +67,7 @@ public class AirspaceDrawer {
 				for(int i=0;i<2;++i)
 				{
 					Vertex v=vstore.alloc();					
-					v.deploy(pos.x,pos.y,(byte)0,"Airspace vertex23 "+source.name+" "+pos+" up/dn:"+i,0,0);
+					v.deploy(pos.getX(),pos.getY(),(byte)0,"Airspace vertex23 "+source.name+" "+pos+" up/dn:"+i,0,0);
 					c.updn[i]=v;
 				}
 				vertices.put(pos,c);

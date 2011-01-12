@@ -5,45 +5,125 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
+import se.flightplanner.MapCache.Key;
 import se.flightplanner.Project.iMerc;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Rect;
 import android.os.SystemClock;
+import android.util.Log;
 
 public class GetMapBitmap {
-	Blob blob;
-	public class Payload
+	MapCache mapcache;
+	public GetMapBitmap(MapCache mapcache)
 	{
-		public long lastuse;
-		Bitmap b;
+		this.mapcache=mapcache;
 	}
-	HashMap<iMerc,Payload> map;
-	public GetMapBitmap(Blob blob_)
+	static public class BitmapRes
 	{
-		blob=blob_;
+		public Bitmap b;
+		public Rect rect;
 	}
-	Bitmap getBitmap(iMerc m) throws IOException
+	BitmapRes getBitmap(iMerc m, int zoomlevel,int cachesize)
 	{
-		long now=SystemClock.uptimeMillis();
-		Payload l=map.get(m);
+		return collectUsableBitmap(m,zoomlevel,cachesize);
+	}
+	/**
+	 * Doesn't load anything from disk.
+	 */
+	BitmapRes collectUsableBitmap(iMerc m, int desiredzoomlevel,int cachesize)
+	{
+		for(int zoomlevel=desiredzoomlevel;zoomlevel>=0;--zoomlevel)
+		{
+			iMerc curm=Project.imerc2imerc(m,desiredzoomlevel,zoomlevel);
+			curm=new iMerc(curm.getX() & (~255),curm.getY() & (~255));
+			boolean should_be_there=false;
+			if (zoomlevel==desiredzoomlevel || desiredzoomlevel>10 && zoomlevel==10)
+				should_be_there=true;
+			Bitmap b=getBitmapImpl(curm,zoomlevel,cachesize,should_be_there);
+			if (b!=null)
+			{
+				iMerc gotten=Project.imerc2imerc(curm,zoomlevel,desiredzoomlevel);
+				int zoomgap=(desiredzoomlevel-zoomlevel);
+				//int gapfactor=1<<zoomgap;
+				int gottensize=256<<zoomgap;
+				int usablesize=256>>zoomgap;
+				int dx=(int)(((long)256*(long)(m.getX()-gotten.getX()))/gottensize);
+				int dy=(int)(((long)256*(long)(m.getY()-gotten.getY()))/gottensize);
+				BitmapRes res=new BitmapRes();
+				res.b=b;
+				res.rect=new Rect(dx,dy,dx+usablesize,dy+usablesize);
+				return res;
+			}
+		}
+		for(int zoomlevel=desiredzoomlevel+1;zoomlevel<=10;++zoomlevel)
+		{
+			int zoomgap=(zoomlevel-desiredzoomlevel);
+			int gapfactor=1<<zoomgap;
+			if (gapfactor>4)
+				return null;
+			iMerc basecurm=Project.imerc2imerc(m,desiredzoomlevel,zoomlevel);
+			iMerc curm=new iMerc(basecurm);
+			Bitmap out=null;
+			Canvas canvas=null;
+			for(int j=0;j<gapfactor;++j)
+			{
+				for (int i=0;i<gapfactor;++i)
+				{
+					curm=new iMerc(basecurm.getX()+i*256,basecurm.getY()+j*256);
+					Bitmap b=getBitmapImpl(curm,zoomlevel,cachesize,false);
+					if (b!=null)
+					{
+						if (out==null)
+						{
+							out = Bitmap.createBitmap(256,256,b.getConfig());
+							canvas = new Canvas(out);
+						}
+						
+						Rect src=new Rect(0,0,256,256);
+						Rect dst=new Rect();
+						dst.left=(i*256)/gapfactor;
+						dst.right=dst.left+256/gapfactor;
+						dst.top=(j*256)/gapfactor;
+						dst.bottom=dst.top+256/gapfactor;						
+						canvas.drawBitmap(b,src,dst,null);			
+						mapcache.eject(new Key(curm,zoomlevel));
+					}
+					
+				}
+			}
+			if (out!=null)
+			{
+				mapcache.inject(m, desiredzoomlevel, out,true);
+				BitmapRes res=new BitmapRes();
+				res.b=out;
+				res.rect=new Rect(0,0,256,256);
+				return res;				
+			}
+		}
+		return null;
+	}
+	
+	Bitmap getBitmapImpl(iMerc m, int zoomlevel,int cachesize,boolean backgroundload)
+	{
+		MapCache.Payload l = mapcache.query(m, zoomlevel,backgroundload);
 		if (l!=null)
 		{
+			long now=SystemClock.uptimeMillis();
 			l.lastuse=now;
 			return l.b;
 		}
-		ArrayList<iMerc> deletelist=new ArrayList<iMerc>();
-		for(Entry<iMerc, Payload> e:map.entrySet())
-		{
-			if (now-e.getValue().lastuse>30000)				
-			deletelist.add(e.getKey());
-		}
-		for(iMerc d:deletelist)
-			map.remove(d);
-		Payload p=new Payload();
-		p.lastuse=now;
-		p.b=blob.get_bitmap(m);
-		map.put(m,p);
-		return p.b;
+		return null;
 	}
+	/*
+	ArrayList<Blob> blobs;
+	void loadBitmap(iMerc m,int zoomlevel,int cachesize) throws IOException
+	{		
+		mapcache.garbageCollect(cachesize);
+		Bitmap bmap=blobs.get(zoomlevel).get_bitmap(m);
+		mapcache.inject(m,zoomlevel,bmap,false);
+	}
+	*/
 	
 	
 }

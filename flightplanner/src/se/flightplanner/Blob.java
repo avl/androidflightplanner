@@ -10,6 +10,7 @@ import java.io.RandomAccessFile;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.util.Log;
 
 import se.flightplanner.Project.iMerc;
 
@@ -28,12 +29,12 @@ public class Blob {
 	};
 	TileNumber get_tile_number(iMerc m)
 	{
-		if (!(m.x>=0 && m.y>=0)) throw new RuntimeException("Bad merc");		
-		if (m.x%tilesize!=0 || m.y%tilesize!=0)
+		if (!(m.getX()>=0 && m.getY()>=0)) return null;		
+		if (m.getX()%tilesize!=0 || m.getY()%tilesize!=0)
 			throw new RuntimeException("Invalid tilesize");
 		TileNumber t=new TileNumber();
-		t.x=(m.x-x1)/tilesize;
-		t.y=(m.y-y1)/tilesize;
+		t.x=(m.getX()-x1)/tilesize;
+		t.y=(m.getY()-y1)/tilesize;
 		return t;
 	}
 	private RandomAccessFile raf;
@@ -50,8 +51,10 @@ public class Blob {
 
         TileNumber t1=get_tile_number(new iMerc(x1,y1));
         TileNumber t2=get_tile_number(new iMerc(x2,y2));
-        sx=t2.x-t1.x;
-        sy=t2.y-t1.y;
+        if (t1==null || t2==null)
+        	throw new RuntimeException("Corrupt inconsistent map data");
+        sx=t2.x-t1.x+1;
+        sy=t2.y-t1.y+1;
         if (!(sx>0 && sy>0))
         	throw new RuntimeException("Bad sx- and sy-variables");
 	}
@@ -62,9 +65,14 @@ public class Blob {
 	private int seekright(iMerc coords) throws IOException
 	{
 	    TileNumber t=get_tile_number(coords);
+	    if (t==null)
+	    	return -1;
 	    if (t.x<0 || t.x>=sx || t.y<0 || t.y>=sy)
+	    {
+	    	Log.i("fplan","Sought tile is outside of map");
 	        return -1;
-	    long pos=20+4*((long)t.x+(long)t.y*(long)sx);
+	    }
+	    long pos=20+4*((long)t.x+(long)t.y*(long)(sx));
 	    raf.seek(pos);
 	    long datapos=raf.readInt();
 	    if (datapos<0)
@@ -73,7 +81,10 @@ public class Blob {
 	    	throw new RuntimeException("Bad size"); 
 	    raf.seek(datapos);
 	    if (datapos<=0)
+	    {
+	    	Log.i("fplan","Corrupt blob");
 	    	return -1;
+	    }
 	    int imagesize=raf.readInt();
 	    if (imagesize<0)
 	    	throw new RuntimeException("Unexpected imagesize");
@@ -92,15 +103,20 @@ public class Blob {
     }
 	Bitmap get_bitmap(iMerc coords) throws IOException
 	{
+		/*
     	int imagesize=seekright(coords);
     	if (imagesize==-1)
     		return null;
-		
+		Log.i("fplan","Ready to read out bitmap, size "+imagesize);
+		*/
 		BitmapFactory.Options opts = new BitmapFactory.Options();
 		opts.inScaled = false;								
-		Bitmap bm=BitmapFactory.decodeFileDescriptor(raf.getFD(),null,opts);
-
-		return null;
+		byte[] data=get_tile(coords);
+		if (data==null)
+			return null;
+		Bitmap bm=BitmapFactory.decodeByteArray(data,0,data.length);		
+		Log.i("fplan","Bitmap:"+bm);
+		return bm;
 	}
     void close() throws IOException
     {

@@ -129,8 +129,8 @@ public class TextureStore {
 		int zoomgap=13-zoomlevel;
 		int boxsize=256<<zoomgap;
 		int boxmask=boxsize-1;
-		int x=pos.x&(~boxmask);
-		int y=pos.y&(~boxmask);
+		int x=pos.getX()&(~boxmask);
+		int y=pos.getY()&(~boxmask);
 		TerrainTexture t=store.get(new iMerc(x,y));
 		return t;
 	}

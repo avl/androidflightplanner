@@ -69,8 +69,8 @@ public class Project {
 	}
 	static public class iMerc
 	{
-		public int x;
-		public int y;
+		private int x;
+		private int y;
 		public iMerc(Vector v)
 		{
 			x=(int)v.x;
@@ -128,6 +128,12 @@ public class Project {
 		public iMerc copy() {
 			return new iMerc(x,y);
 		}
+		public int getX() {
+			return x;
+		}
+		public int getY() {
+			return y;
+		}
 	}
 
 	static public Merc latlon2merc(double lat,double lon,int zoomlevel)
@@ -182,8 +188,8 @@ public class Project {
 	}
 	static public LatLon imerc2latlon(iMerc merc,int zoomlevel)
 	{
-		double x=merc.x;
-		double y=merc.y;
+		double x=merc.getX();
+		double y=merc.getY();
 		double factor=Math.pow(2.0,zoomlevel);
 	    return new LatLon(
 	    		unmerc((128*factor-y)/128.0/factor*merc(85.05113)),
@@ -206,7 +212,7 @@ public class Project {
 	static public float approx_ft_pixels(iMerc coords,int zoomlevel)
 	{
 	    double factor=Math.pow(2.0,zoomlevel);
-	    double lat=unmerc((128*factor-coords.y)/128.0/factor*merc(85.05113));
+	    double lat=unmerc((128*factor-coords.getY())/128.0/factor*merc(85.05113));
 	    double latrad=lat/(180.0/Math.PI);
 	    double scale_diff=Math.cos(latrad);
 	    
@@ -258,9 +264,9 @@ public class Project {
 		int delta=trgzoom-srczoom;
 		if (delta==0) return p;
 		if (delta>0)
-			return new iMerc(p.x<<delta,p.y<<delta);
+			return new iMerc(p.getX()<<delta,p.getY()<<delta);
 		else
-			return new iMerc(p.x>>(-delta),p.y>>(-delta));
+			return new iMerc(p.getX()>>(-delta),p.getY()>>(-delta));
 	}
 
 }

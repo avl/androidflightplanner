@@ -10,4 +10,5 @@
 * Live descent info would be nice ("descend 370fpm to reach waypoint")
 * R-områden som går GND - UNL ritas fel ("under" marken)!
 * Borde ha skala på displayen.
+* Refactorera MovingMap. Klassen är för stor!!!
 

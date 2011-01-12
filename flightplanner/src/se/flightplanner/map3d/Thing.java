@@ -144,12 +144,12 @@ public class Thing implements ThingIf {
 	 */
 	public int getSide(Vertex v) {
 		int side=-1;
-		if (!(v.getx()>=pos.x && v.getx()<=pos.x+size && v.gety()>=pos.y && v.gety()<=pos.y+size))
+		if (!(v.getx()>=pos.getX() && v.getx()<=pos.getX()+size && v.gety()>=pos.getY() && v.gety()<=pos.getY()+size))
 			return -1;
-		if (v.getx()==pos.x) side=3;
-		if (v.getx()==pos.x+size) side=1;
-		if (v.gety()==pos.y) side=2;
-		if (v.gety()==pos.y+size) side=0;
+		if (v.getx()==pos.getX()) side=3;
+		if (v.getx()==pos.getX()+size) side=1;
+		if (v.gety()==pos.getY()) side=2;
+		if (v.gety()==pos.getY()+size) side=0;
 		assert (side>=0 && side<4) || (side==-1);
 		return side;
 	}
@@ -165,23 +165,23 @@ public class Thing implements ThingIf {
 	 */
 	public float getDistance(iMerc obs,int observerHeight) {
 		iMerc pos1=pos;
-		iMerc pos2=new iMerc(pos1.x+size,pos1.y+size);
+		iMerc pos2=new iMerc(pos1.getX()+size,pos1.getY()+size);
 		int x=0;
 		int y=0;
 		
-		if(obs.x<pos1.x)
-			x=pos1.x;
-		else if (obs.x>=pos2.x) 
-			x=pos2.x;
+		if(obs.getX()<pos1.getX())
+			x=pos1.getX();
+		else if (obs.getX()>=pos2.getX()) 
+			x=pos2.getX();
 		else 
-			x=obs.x;
+			x=obs.getX();
 		
-		if(obs.y<pos1.y)
-			y=pos1.y;
-		else if (obs.y>=pos2.y) 
-			y=pos2.y;
+		if(obs.getY()<pos1.getY())
+			y=pos1.getY();
+		else if (obs.getY()>=pos2.getY()) 
+			y=pos2.getY();
 		else 
-			y=obs.y;
+			y=obs.getY();
 		int z;
 		if (observerHeight<elev.loElev)
 			z=elev.loElev;
@@ -189,8 +189,8 @@ public class Thing implements ThingIf {
 			z=elev.hiElev;
 		else
 			z=observerHeight;
-		float a=(obs.x-x);
-		float b=(obs.y-y);
+		float a=(obs.getX()-x);
+		float b=(obs.getY()-y);
 		float c=feet2merc(obs,observerHeight-z);
 		float dist=(float)Math.sqrt((a*a+b*b+c*c));
 		
@@ -205,8 +205,8 @@ public class Thing implements ThingIf {
 	{
 		StringBuilder b=new StringBuilder();
 		b.append("Thing(");
-		b.append(""+pos.x);
-		b.append(","+pos.y);		
+		b.append(""+pos.getX());
+		b.append(","+pos.getY());		
 		b.append(",zoom="+zoomlevel);
 		b.append(")");
 		return b.toString();
@@ -220,9 +220,9 @@ public class Thing implements ThingIf {
 			return; //Already subsumed
 		children=new ArrayList<ThingIf>();
 		need_retriangulation=true;
-		for(int cury=pos.y;cury<pos.y+size;cury+=size/2)
+		for(int cury=pos.getY();cury<pos.getY()+size;cury+=size/2)
 		{
-			for(int curx=pos.x;curx<pos.x+size;curx+=size/2)
+			for(int curx=pos.getX();curx<pos.getX()+size;curx+=size/2)
 			{
 				Thing child=new Thing(new iMerc(curx,cury),this,zoomlevel+1,vstore,tstore,estore,stitcher);
 				if (edges!=null)
@@ -403,14 +403,16 @@ public class Thing implements ThingIf {
 		base_vertices=new ArrayList<Vertex>();
 		for(int i=0;i<4;++i)
 		{
-			iMerc p=new iMerc(pos);
+			int px=pos.getX();
+			int py=pos.getY();
 			switch(i)
 			{
 			case 0: break;
-			case 1: p.x+=size; break;
-			case 2: p.y+=size; break;
-			case 3: p.y+=size; p.x+=size; break;
+			case 1: px+=size; break;
+			case 2: py+=size; break;
+			case 3: py+=size; px+=size; break;
 			}
+			iMerc p=new iMerc(px,py);
 			Vertex v=vstore.obtain(p,(byte)zoomlevel,"Base vertex "+i+" of thing "+this);
 			//System.out.println("Added base "+v);
 			base_vertices.add(v);
@@ -467,8 +469,8 @@ public class Thing implements ThingIf {
 	}
 	public short calcElevImpl(iMerc t, int elev0, int elev1, int elev2,
 			int elev3) {
-		int dx=t.x-pos.x;
-		int dy=t.y-pos.y;
+		int dx=t.getX()-pos.getX();
+		int dy=t.getY()-pos.getY();
 		if (dx<0 || dy<0 || dx>size || dy>size)
 			throw new RuntimeException("Bad coordinate to interpolateElev");
 		float fdx=(dx)/(float)size;
@@ -595,10 +597,9 @@ public class Thing implements ThingIf {
 				
 				if (center_vertex==null)
 				{
-					iMerc centerpos=pos.copy();
+					//iMerc centerpos=pos.copy();
 					//System.out.println("Creating center vertex for Thing "+this+" which is at "+pos);
-					centerpos.x+=size/2;
-					centerpos.y+=size/2;			
+					iMerc centerpos=new iMerc(pos.getX()+size/2,pos.getY()+size/2);
 					//System.out.println("Creating center vertex for Thing "+this+" at "+centerpos);
 					center_vertex=vstore.obtain(centerpos, (byte)zoomlevel,"Center vertex for "+this);
 					/// not needed - contrib elev is now done *after* triangulation center_vertex.contribElev((short)(elev.hiElev),(short)100);
@@ -779,7 +780,7 @@ public class Thing implements ThingIf {
 	}
 
 	public String getPosStr() {
-		return ""+pos.x+","+pos.y+","+zoomlevel;
+		return ""+pos.getX()+","+pos.getY()+","+zoomlevel;
 	}
 	
 	/*

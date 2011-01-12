@@ -80,8 +80,8 @@ public class TerrainVertexStore {
 		used.put(p, shiny);
 		
 		int texture_shift=(13-texture_zoomlevel);
-		int tx=p.x>>(texture_shift);
-		int ty=p.y>>(texture_shift);
+		int tx=p.getX()>>(texture_shift);
+		int ty=p.getY()>>(texture_shift);
 		tx&=511;				
 		ty&=511;
 		if (tx>256)
@@ -91,13 +91,13 @@ public class TerrainVertexStore {
 		float u=tx/256.0f;
 		float v=ty/256.0f;				
 		
-		shiny.deploy(p.x,p.y,zoomlevel,what,u,v);
+		shiny.deploy(p.getX(),p.getY(),zoomlevel,what,u,v);
 		//System.out.println("Obtained new "+shiny);
 		return shiny;
 	}
 	public Vertex obtaindbg(iMerc iMerc, byte b) {
 		Vertex dbg=new Vertex((short)-1);
-		dbg.deploy(iMerc.x,iMerc.y,b,"debug",0,0);
+		dbg.deploy(iMerc.getX(),iMerc.getY(),b,"debug",0,0);
 		return dbg;
 	}		
 	public TerrainVertexStore(int capacity,int texture_zoomlevel,VertexStore3D vs3d)

@@ -169,16 +169,17 @@ public class TripState {
 		Vector futureend=mypos.plus(heading.mul(nmfuture));
 		Line future=new Line(mypos,futureend);
 		ArrayList<Vector> points=new ArrayList<Vector>();
-		for(AirspaceArea area:lookup.areas.get_areas(future.boundingBox()))
-		{
-			for(Line line:area.poly.getLines())
+		if (lookup!=null)
+			for(AirspaceArea area:lookup.areas.get_areas(future.boundingBox()))
 			{
-				Vector point=Line.intersect(future, line);
-				//Log.i("fplan","Area "+area.name+" isect "+point);
-				if (point!=null)
-					points.add(point);
+				for(Line line:area.poly.getLines())
+				{
+					Vector point=Line.intersect(future, line);
+					//Log.i("fplan","Area "+area.name+" isect "+point);
+					if (point!=null)
+						points.add(point);
+				}
 			}
-		}
 		Collections.sort(points,new Comparator<Vector>() {
 			public int compare(Vector object1, Vector object2) {
 				double dista=object1.minus(mypos).taxinorm();
@@ -484,26 +485,27 @@ public class TripState {
 	}
 	private void get_airspace_details(double abit,
 			Vector just_a_bit_in,ArrayList<String> details,ArrayList<String> extradetails) {
-		for(AirspaceArea inarea:lookup.areas.get_areas(BoundingBox.aroundpoint(just_a_bit_in, abit)))
-		{
-			
-			InsideResult r=inarea.poly.inside(just_a_bit_in);
-			//double cd=r.closest.minus(point).length();
-			if (r.isinside) //our polygons are clockwise, because the Y-axis points down - this inverts the meaning of inside and outside
-			{ //If _INSIDE_ polygon
-				String det=inarea.floor+"-"+inarea.ceiling+": "+inarea.name;
-				details.add(det);
-				extradetails.add(det);
-				for(String fre : inarea.freqs)
-				{
-					if (fre.length()>0)
+		if (lookup!=null)
+			for(AirspaceArea inarea:lookup.areas.get_areas(BoundingBox.aroundpoint(just_a_bit_in, abit)))
+			{
+				
+				InsideResult r=inarea.poly.inside(just_a_bit_in);
+				//double cd=r.closest.minus(point).length();
+				if (r.isinside) //our polygons are clockwise, because the Y-axis points down - this inverts the meaning of inside and outside
+				{ //If _INSIDE_ polygon
+					String det=inarea.floor+"-"+inarea.ceiling+": "+inarea.name;
+					details.add(det);
+					extradetails.add(det);
+					for(String fre : inarea.freqs)
 					{
-						//Log.i("fplan","Adding airspace detail "+fre);
-						extradetails.add(fre);
+						if (fre.length()>0)
+						{
+							//Log.i("fplan","Adding airspace detail "+fre);
+							extradetails.add(fre);
+						}
 					}
 				}
 			}
-		}
 		if (details.size()==0)
 		{
 			details.add("0 ft-FL 095: Uncontrolled Airspace");
