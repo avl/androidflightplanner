@@ -2,28 +2,22 @@ package se.flightplanner;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
 import se.flightplanner.BackgroundMapLoader.UpdatableUI;
-import se.flightplanner.GetMapBitmap.BitmapRes;
+import se.flightplanner.MapDrawer.DrawResult;
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
-import se.flightplanner.Project.iMerc;
-import se.flightplanner.TripData.Waypoint;
-import se.flightplanner.TripState.WarningEvent;
-import se.flightplanner.vector.BoundingBox;
+import se.flightplanner.Timeout.DoSomething;
 import se.flightplanner.vector.Vector;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
@@ -46,37 +40,33 @@ public class MovingMap extends View implements UpdatableUI {
 	private TripState tripstate;
 	private AirspaceLookup lookup;
 	private Location lastpos;
-	private int background;
-	private int foreground;
 	private int zoomlevel;
-	private Paint textpaint;
-	private Paint bigtextpaint;
-	private Paint linepaint;
-	private Paint thinlinepaint;
-	private Paint trippaint;
-	private Paint seltrippaint;
-	private Paint arrowpaint;
-	private Paint backgroundpaint;
 	private long last_real_position;
+	private MapDrawer drawer;
 	private int lastcachesize; //bitmap cache
 	private String download_status;
-	BearingSpeedCalc bearingspeed;
+	private BearingSpeedCalc bearingspeed;
 	//private CountDownTimer timer;
 	//private TimeZone utctz;
 	private MapCache mapcache;
 	private BackgroundMapLoader loader;
 	private GetMapBitmap bitmaps;
 	private ArrayList<Blob> blobs;
+	private float x_dpmm;
+	private float y_dpmm;
 	
-	interface Clickable
+	public interface Clickable
 	{
 		Rect getRect();
 		void onClick();
 	}
-	ArrayList<Clickable> clickables;
+	private ArrayList<Clickable> clickables;
 	
 	private Handler lostSignalTimer;
 	private Runnable curLostSignalRunnable;
+	private Timeout drag_timeout;
+	
+	
 	@Override
 	public boolean onTouchEvent(MotionEvent ev)
 	{		
@@ -117,10 +107,7 @@ public class MovingMap extends View implements UpdatableUI {
 				sideways(+1);
 			else
 			{
-				if (extrainfo)
-					hideextrainfo();
-				else
-					showextrainfo();
+				cycleextrainfo();
 			}
 		}
 		else
@@ -132,7 +119,9 @@ public class MovingMap extends View implements UpdatableUI {
 			invalidate();
 		}
 	}
-	private Transform getTransform() {
+	Transform getTransform() {
+		int xsize=getRight()-getLeft();
+		int ysize=getBottom()-getTop();
 		if (lastpos!=null)
 		{
 			Merc mypos;
@@ -151,36 +140,58 @@ public class MovingMap extends View implements UpdatableUI {
 					hdg=lastpos.getBearing();
 				}				
 			}
-			return new Transform(mypos,getArrow(),(float)hdg,zoomlevel);
+			return new Transform(mypos,drawer.getArrow(xsize,ysize,drag_center13!=null),(float)hdg,zoomlevel);
 		}
 		else
 		{
-			return new Transform(new Merc(128<<zoomlevel,128<<zoomlevel),getArrow(),0,zoomlevel);			
+			return new Transform(new Merc(128<<zoomlevel,128<<zoomlevel),drawer.getArrow(xsize,ysize,drag_center13!=null),0,zoomlevel);			
 		}
 	}
 	private boolean extrainfo;
-	private void hideextrainfo() {
-		extrainfo=false;		
-		invalidate();
+	private int extrainfolineoffset;
+	private void cycleextrainfo() {
+		InformationItem we=tripstate.getCurrentWarning();
+		if (we!=null)
+		{
+			String[] details;
+			int maxlines=drawer.getNumInfoLines(getBottom()-getTop());
+			if (extrainfo)
+				details=we.getExtraDetails();
+			else
+				details=we.getDetails();
+	
+			Log.i("fplan","Cycling!");
+			int lines=details.length;
+			if (lines-extrainfolineoffset<=maxlines)
+			{ //the set previously visible included the last ones, so let's move on.
+				extrainfo=!extrainfo;
+				extrainfolineoffset=0;
+				if (extrainfo)
+					details=we.getExtraDetails();
+				else
+					details=we.getDetails();
+			}
+			else
+			{
+				extrainfolineoffset+=maxlines;
+			}
+			invalidate();
+		}
 	}
-	private void showextrainfo() {
-		extrainfo=true;
-		invalidate();
-		
-	}
-	float x_dpmm;
-	float y_dpmm;
 	public MovingMap(Context context,DisplayMetrics metrics)
 	{
 		super(context);
+		tripstate=new TripState(null,null);
+		drag_timeout=new Timeout();
 		clickables=new ArrayList<MovingMap.Clickable>();
 		float dot_per_mm_y=metrics.ydpi/25.4f;
 		y_dpmm=dot_per_mm_y;
 		float dot_per_mm_x=metrics.xdpi/25.4f;
 		x_dpmm=dot_per_mm_x;
+		drawer=new MapDrawer(x_dpmm,y_dpmm);
 		
 		float bigtextsize=dot_per_mm_y*2.7f; //6.5 mm text size
-		float textsize=dot_per_mm_y*2.0f; //6.5 mm text size
+		float textsize=dot_per_mm_y*1.75f; //6.5 mm text size
 		 
 		last_real_position=0;
 		loader=null;
@@ -189,62 +200,8 @@ public class MovingMap extends View implements UpdatableUI {
 		bearingspeed=new BearingSpeedCalc();
 		//utctz = TimeZone.getTimeZone("UTC");		 
 		zoomlevel=9;
-		background=Color.BLACK;
-		foreground=Color.WHITE;
 		lostSignalTimer=new Handler();
 
-		bigtextpaint = new Paint();
-		bigtextpaint.setAntiAlias(true);
-		bigtextpaint.setStrokeWidth(5);
-		bigtextpaint.setColor(foreground);
-		bigtextpaint.setStrokeCap(Paint.Cap.ROUND);
-		bigtextpaint.setTextSize(bigtextsize);
-		bigtextpaint.setTypeface(Typeface.create(Typeface.SANS_SERIF,
-                                           Typeface.NORMAL));
-		textpaint = new Paint();
-		textpaint.setAntiAlias(true);
-		textpaint.setStrokeWidth(5);
-		textpaint.setColor(foreground);
-		textpaint.setStrokeCap(Paint.Cap.ROUND);
-		textpaint.setTextSize(textsize);
-		textpaint.setTypeface(Typeface.create(Typeface.SANS_SERIF,
-                                           Typeface.NORMAL));
-		linepaint = new Paint();
-		linepaint.setAntiAlias(true);
-		linepaint.setStrokeWidth(5);
-		linepaint.setColor(Color.RED);
-		linepaint.setStrokeCap(Paint.Cap.ROUND);
-
-		thinlinepaint = new Paint();
-		thinlinepaint.setAntiAlias(true);
-		thinlinepaint.setStrokeWidth(2);
-		thinlinepaint.setStyle(Style.STROKE);
-		thinlinepaint.setColor(Color.RED);
-		thinlinepaint.setStrokeCap(Paint.Cap.ROUND);
-
-		trippaint = new Paint();
-		trippaint.setAntiAlias(true);
-		trippaint.setStrokeWidth(5);
-		trippaint.setColor(Color.YELLOW);
-		trippaint.setStrokeCap(Paint.Cap.ROUND);
-
-		seltrippaint = new Paint();
-		seltrippaint.setAntiAlias(true);
-		seltrippaint.setStrokeWidth(5);
-		seltrippaint.setColor(Color.WHITE);
-		seltrippaint.setStrokeCap(Paint.Cap.ROUND);
-
-		backgroundpaint = new Paint();
-		backgroundpaint.setStyle(Style.FILL);
-		backgroundpaint.setARGB(0xa0,0,0,0);
-
-
-		arrowpaint = new Paint();
-		arrowpaint.setAntiAlias(true);
-		arrowpaint.setStyle(Style.FILL);
-		arrowpaint.setStrokeWidth(5);
-		arrowpaint.setColor(Color.WHITE);
-		arrowpaint.setStrokeCap(Paint.Cap.ROUND);
 		//textpaint.set
 		lastpos=null;
 		tripdata=null;
@@ -262,7 +219,7 @@ public class MovingMap extends View implements UpdatableUI {
 		invalidate();
 	}
 	protected void onDraw(Canvas canvas) {
-        canvas.drawColor(background);
+        canvas.drawColor(Color.BLACK);
 		if (tripdata==null)
 		{
 			//canvas.drawText("No trip loaded.", this.getLeft(), this.getTop()+textpaint.getTextSize(), textpaint);
@@ -270,10 +227,45 @@ public class MovingMap extends View implements UpdatableUI {
 		}
 		if (lastpos!=null)
 		{
-			canvas.translate(this.getLeft(),this.getTop());
-			draw_actual_map(canvas,
+			//canvas.translate(this.getLeft(),this.getTop());
+			if (mapcache!=null)
+				mapcache.forgetqueries();
+			Rect screenExtent=new Rect(
+					getLeft(),getTop(),
+					getRight(),getBottom());
+			DrawResult res=drawer.draw_actual_map(this, canvas,
 					this.getRight()-this.getLeft(),
-					this.getBottom()-this.getTop());
+					this.getBottom()-this.getTop(),					
+					extrainfo,extrainfolineoffset,
+					drag_center13!=null, //isDragging
+					tripdata,
+					tripstate,
+					lookup,
+					lastpos,
+					zoomlevel,
+					last_real_position, //timestamp
+					bitmaps,
+					clickables,
+					getTransform(),
+					download_status,
+					screenExtent
+					);
+			lastcachesize=res.lastcachesize;
+			if (mapcache!=null && mapcache.haveUnsatisfiedQueries())
+			{
+				if (loader==null)
+				{
+					loader=new BackgroundMapLoader(blobs, mapcache, this,lastcachesize);
+					loader.run();
+					Log.i("fplan.bitmap","Start a background task again");
+				}
+				else
+				{
+					//loader.cancel(true);
+					//Log.i("fplan.bitmap","Cancel running background task, need a new.");
+				}
+			}
+			
 
 		}
         /*
@@ -292,88 +284,7 @@ public class MovingMap extends View implements UpdatableUI {
 		//canvas.drawText("TRIP", 10, 100, textpaint);
 	}
 	
-	class Transform
-	{
-		public Transform(
-				Merc mypos,
-				Vector arrow,
-				float hdg,
-				int zoomlevel)
-		{
-			this.mypos=mypos;
-			this.hsizex=arrow.x;
-			this.hsizey=arrow.y;
-			this.hdg=(float)hdg;
-			this.hdgrad=(float)(hdg*(Math.PI/180.0));
-			this.zoomlevel=zoomlevel;
-		}
-		public double hsizex; //x position of observer in screen coordinates
-		public double hsizey; //y position of observer in screen coordinates
-		Merc mypos; //Position of user
-		public float hdgrad; //heading of user, in radians
-		public float hdg;
-		int zoomlevel;
-		/// Convert from merc to screen coordinates with 
-		/// north up on map
-		public Merc getPos()
-		{
-			return mypos;
-		}
-		public float getHdg()
-		{
-			return hdg;
-		}
-		public float getHdgRad()
-		{
-			return hdgrad;
-		}
-		public Vector merc2northscreen(Merc m)
-		{
-			return new Vector(m.x-mypos.x+hsizex,m.y-mypos.y+hsizey);
-		}
-		/// Convert from screen coordinates with 
-		/// north up on map to merc.
-		public Merc northscreen2merc(Vector n)
-		{
-			/*
-			s.x=m.x-mypos.x+hsizex
-			s.y=-m.y+mypos.y+hsizey
-			m.x=s.x+mypos.x-hsizex
-			m.y=mypos.y+hsizey-s.y
-			*/
-			return new Merc(n.getx()+mypos.x-hsizex,n.gety()+mypos.y-hsizey);
-		}
-		private Vector northscreen2screen(Vector n)
-		{
-			Vector c=new Vector(n.getx()-hsizex,n.gety()-hsizey);
-			Vector r=c.unrot(hdgrad);
-			return new Vector(r.getx()+hsizex,r.gety()+hsizey);
-		}
-		private Vector screen2northscreen(Vector s)
-		{
-			Vector c=new Vector(s.getx()-hsizex,s.gety()-hsizey);
-			Vector r=c.rot(hdgrad);
-			return new Vector(r.getx()+hsizex,r.gety()+hsizey);
-		}
-		public Merc screen2merc(Vector s)
-		{
-			return northscreen2merc(screen2northscreen(s));
-		}
-		public Vector merc2screen(Merc m)
-		{
-			return northscreen2screen(merc2northscreen(m));
-		}
-	}
-	private Vector getArrow()
-	{
-		int xsize=this.getRight()-this.getLeft();
-		int ysize=this.getBottom()-this.getTop();
-		Vector v=new Vector(xsize/2,ysize/2);
-		if (drag_center13==null)
-			v.y+=ysize/4;
-		return v;		
-	}
-	private boolean tileOnScreen(float cx,float cy,Transform tf)
+	boolean tileOnScreen(float cx,float cy,Transform tf)
 	{
 		float maxdiag=363;
 		if (cx+maxdiag<getLeft()) return false;
@@ -418,473 +329,14 @@ public class MovingMap extends View implements UpdatableUI {
 		return true;
 		
 	}
-	private void grow(Rect r,int howmuch)
+	void grow(Rect r,int howmuch)
 	{
 		r.left-=howmuch;
 		r.right+=howmuch;
 		r.top-=howmuch;
 		r.bottom+=howmuch;
 	}
-	private void draw_actual_map(Canvas canvas, int sizex, int sizey) {
-		if (zoomlevel>13) throw new RuntimeException("zoomlevel must be <=13");
-		
-		clickables.clear();
-		//int zoomgap=13-zoomlevel;
-		//Merc mypos=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),zoomlevel);
-		
-
-			//Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),13);
-		Transform tf = getTransform();
-		Merc mypos13=Project.merc2merc(tf.getPos(),zoomlevel,13);
-				
-		Vector arrow=getArrow();
-		Merc screen_center=tf.screen2merc(new Vector(sizex/2,sizey/2));
-		Merc screen_center13=Project.merc2merc(
-				screen_center,
-				zoomlevel,
-				13);		
-		
-		double fivenm13=Project.approx_scale(screen_center13.y,13,10);
-		double diagonal13;		
-		{
-			int zoomgap13=13-zoomlevel;
-			diagonal13=((1<<zoomgap13)*(Math.sqrt(arrow.x*arrow.x+arrow.y*arrow.y)+50))+1;
-		}
-		BoundingBox bb13=new BoundingBox(
-				screen_center13.x,screen_center13.y,
-				screen_center13.x,screen_center13.y).expand(diagonal13);
-
-		BoundingBox smbb13=new BoundingBox(mypos13.x,mypos13.y,
-				mypos13.x,mypos13.y).expand(fivenm13);
-				
-		//bb13=new BoundingBox(-1e20,-1e20,1e20,1e20);		
-		/*ShapeDrawable mDrawable = new ShapeDrawable(new OvalShape());
-		mDrawable.getPaint().setColor(0xff74AC23);
-		mDrawable.setBounds(x, y, x + width, y + height);
-		mDrawable.draw(canvas);*/
-		if (bitmaps!=null)
-		{
-			iMerc centertile=new iMerc(
-					(int)screen_center.x&(~255),
-					(int)screen_center.y&(~255));
-			int diagonal=(int) Math.sqrt((sizex/2)*(sizex/2)+(sizey*sizey*3)/5);
-			int minus=(diagonal+255)/256;
-			int tot=2*minus+1;
-			iMerc topleft=new iMerc(centertile.getX() - (256*minus),centertile.getY()-256*minus);
-			int cachesize=tot*tot;
-			mapcache.forgetqueries();
-			//Vector v=tf.merc2screen(
-			//		new Merc(topleft.x,topleft.y));
-			float hdg=(float)(tf.hdgrad*(180.0/Math.PI));
-			
-			//float pivotx=(this.getLeft()+this.getRight())/2;
-			//float pivoty=this.getTop()-(sizey/2+sizey/4);
-			for(int j=0;j<tot;++j)
-			{
-				
-				for(int i=0;i<tot;++i)
-				{
-					iMerc cur=new iMerc(topleft.getX()+256*i,topleft.getY()+256*j);
-					if (cur.getX()<0 || cur.getY()<0)
-						continue;
-					Vector v=tf.merc2screen(
-							new Merc(cur.getX(),cur.getY()));
-					if (!tileOnScreen((float)v.x,(float)v.y,tf))
-						continue;
-					BitmapRes b=null;
-					//Log.i("fplan","Bitmap for "+cur);
-					b = bitmaps.getBitmap(cur,zoomlevel,cachesize);
-					if (b!=null && b.b!=null)
-					{
-						//float px=(float)(v.x+i*256);
-						//float py=(float)(v.y+j*256);
-						
-						//Log.i("fplan","Drawing bitmap at "+v.x+","+v.y);
-						canvas.save();
-						RectF trg=new RectF((float)v.x,(float)v.y,(float)v.x+256,(float)v.y+256);
-						Rect src=b.rect;
-						canvas.rotate(-hdg,(float)v.x,(float)v.y);
-						canvas.drawBitmap(b.b, src,trg, null);						
-						canvas.restore();
-					}
-				}
-			}
-			if (mapcache.haveUnsatisfiedQueries())
-			{
-				if (loader==null)
-				{
-					loader=new BackgroundMapLoader(blobs, mapcache, this,cachesize);
-					loader.run();
-					Log.i("fplan.bitmap","Start a background task again");
-				}
-				else
-				{
-					//loader.cancel(true);
-					//Log.i("fplan.bitmap","Cancel running background task, need a new.");
-				}
-			}
-			lastcachesize=cachesize;
-			
-		}
-		
-		
-		//sigPointTree.verify();
-		if (zoomlevel>=8 && lookup!=null)
-		{
-			for(AirspaceArea as:lookup.areas.get_areas(bb13))
-			{/*
-				boolean all_left=true;
-				boolean all_right=true;
-				boolean all_above=true;
-				boolean all_below=true;
-				int l=as.points*/
-				ArrayList<Vector> vs=new ArrayList<Vector>();
-				for(LatLon latlon : as.points)
-				{
-					Merc m=Project.latlon2merc(latlon,zoomlevel);
-					Vector v=tf.merc2screen(m);
-					vs.add(v);
-				}
-				for(int i=0;i<vs.size();++i)
-				{
-					Vector a=vs.get(i);
-					Vector b=vs.get((i+1)%vs.size());
-					canvas.drawLine((float)a.getx(),(float)a.gety(),(float)b.getx(),(float)b.gety(),linepaint);
-				}
-			}
-		}
-		if (zoomlevel>=9 && lookup!=null)
-		{
-			for(SigPoint sp : lookup.allOthers.findall(bb13))
-			{
-				//Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
-				Merc m=Project.latlon2merc(sp.latlon,zoomlevel);
-				//new Merc(sp.pos.x/(1<<zoomgap),
-				//		sp.pos.y/(1<<zoomgap));
-				Vector p=tf.merc2screen(m);
-				//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
-				//textpaint.setARGB(0, 255,255,255);
-				textpaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
-				linepaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
-				renderText(canvas, p, sp.name);
-			}
-	
-			for(SigPoint sp : lookup.allObst.findall(smbb13))
-			{
-				/*
-				double x=sp.pos.x/(1<<zoomgap);
-				double y=sp.pos.y/(1<<zoomgap);
-				//Log.i("fplan",String.format("sigp: %s: %f %f",sp.name,sp.pos.x,sp.pos.y));
-				double px=rot_x(x-center.x,y-center.y)+ox;
-				double py=rot_y(x-center.x,y-center.y)+oy;
-				*/
-				//Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
-				Merc m=Project.latlon2merc(sp.latlon,zoomlevel);
-				Vector p=tf.merc2screen(m);
-				
-				//Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
-				//textpaint.setARGB(0, 255,255,255);
-				textpaint.setARGB(0xff, 0xff, 0xa0, 0xff);
-				linepaint.setARGB(0xff, 0xff, 0xa0, 0xff);
-				renderText(canvas, p, String.format("%.0fft",sp.alt));
-				//canvas.drawText(String.format("%.0fft",sp.alt), (float)(p.x), (float)(p.y), textpaint);			
-				//canvas.drawPoint((float)p.x,(float)p.y,linepaint);
-			}
-		}
-		if (zoomlevel>=9 && lookup!=null)
-		{
-			for(SigPoint sp : lookup.allAirfields.findall(bb13))
-			{
-				//Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
-				Merc m=Project.latlon2merc(sp.latlon,zoomlevel);
-				Vector p=tf.merc2screen(m);
-				String text;
-				if (zoomlevel>=9)
-					text=sp.name;
-				else
-					text=sp.name;
-				//Log.i("fplan",String.format("airf: %s: %f %f",sp.name,p.x,p.y));
-				
-				textpaint.setColor(Color.GREEN);
-				linepaint.setColor(Color.GREEN);
-				renderText(canvas, p, text);
-			}
-		}
-		
-		if (tripdata!=null && tripdata.waypoints.size()>=2)
-		{
-			float[] lines=new float[4*(tripdata.waypoints.size()-1)];
-			int curwp=-1;
-			if (tripstate!=null)
-				curwp=tripstate.get_target();
-			for(int i=0;i<tripdata.waypoints.size()-1;++i)
-			{
-				//String part=tripdata.waypoints.get(i+1).legpart;
-				if (i==0)
-				{
-					Waypoint wp1=tripdata.waypoints.get(i);
-					Merc m1=Project.latlon2merc(wp1.latlon,zoomlevel);
-					Vector p1=tf.merc2screen(m1);
-					lines[4*i]=(float) p1.x;
-					lines[4*i+1]=(float) p1.y;
-				}
-				else
-				{
-					lines[4*i]=lines[4*i-2];
-					lines[4*i+1]=lines[4*i-1];
-				}				
-				Waypoint wp2=tripdata.waypoints.get(i+1);
-				Merc m2=Project.latlon2merc(wp2.latlon,zoomlevel);
-				Vector p2=tf.merc2screen(m2);
-				lines[4*i+2]=(float) p2.x;
-				lines[4*i+3]=(float) p2.y;
-		
-			}
-			for(int i=0;i<tripdata.waypoints.size()-1;++i)
-			{
-				Paint p;
-				if (i==curwp-1) p=trippaint;
-				else p=trippaint;
-				canvas.drawLine(
-						lines[4*i+0],
-						lines[4*i+1],
-						lines[4*i+2],
-						lines[4*i+3],						
-						p);	
-			}
-			textpaint.setColor(Color.WHITE);
-			for(Waypoint wp : tripdata.waypoints)
-			{
-				if (wp.lastsub==0)
-					continue; //Only draw actual waypoints, not climb- or descent-events. 
-				Merc m=Project.latlon2merc(wp.latlon,zoomlevel);
-				Vector p=tf.merc2screen(m);
-				//double px=rot_x(m.x-center.x,m.y-center.y)+ox;
-				//double py=rot_y(m.x-center.x,m.y-center.y)+oy;
-				textpaint.setColor(Color.WHITE);
-				linepaint.setColor(Color.WHITE);
-				renderText(canvas, p, wp.name);
-			}
-		}
-		boolean havefix=lastpos.getTime()>3600*24*10*1000 && SystemClock.uptimeMillis()-last_real_position<5000;
-		
-		if (!havefix)
-		{
-			linepaint.setStrokeWidth(15);
-			linepaint.setARGB(190,255,200,128);
-			canvas.drawLine(getLeft(),getTop(),getRight(),getBottom(),linepaint);
-			canvas.drawLine(getLeft(),getBottom(),getRight(),getTop(),linepaint);
-			linepaint.setStrokeWidth(5);
-			linepaint.setColor(Color.RED);			
-		}
-		
-		if (tripstate!=null)
-		{
-			WarningEvent we=tripstate.getCurrentWarning();
-			if (we!=null)
-			{
-				
-				Merc me=Project.merc2merc(new Merc(we.getPoint()),13,zoomlevel);
-				if (me!=null)
-				{
-					//float px=(float)rot_x(p.getx()-center.x,p.gety()-center.y)+ox;
-					//float py=(float)rot_y(p.getx()-center.x,p.gety()-center.y)+oy;
-					Vector p=tf.merc2screen(me);
-					thinlinepaint.setColor(Color.BLUE);
-					canvas.drawCircle((float)p.x,(float)p.y,10.0f,thinlinepaint);
-				}
-				
-				float tsy=bigtextpaint.getTextSize()+2;
-				float y=this.getBottom();//
-				float rx=this.getRight();
-				bigtextpaint.setColor(Color.WHITE);
-				int when=we.getWhen();
-				String whenstr;
-				//Log.i("fplan","When: "+when);
-				whenstr=fmttime(when);
-				
-/*				
-#error: Move position into base class of WarningEvent
-#Then move calculation of distance also to baseclass.
-#don't store time and distance, just store position.
-#Let moving map calculate time, based on distance (or even based on position?)
-*/			
-				
-				String[] details;
-				if (extrainfo)
-					details=we.getExtraDetails();
-				else
-					details=we.getDetails();
-				int lines=1+details.length;
-				int y1=(int)(y-tsy*(lines-1))-2;
-				
-				RectF r=new RectF(0, getBottom()-tsy*lines-4, getRight(), getBottom());
-				canvas.drawRect(r, backgroundpaint);
-				addTextIfFits(canvas, "1222.2nm", r, String.format("%.1fnm",we.getDistance()), y1, bigtextpaint);
-				//canvas.drawText(String.format("%.1fnm",we.getDistance()), 2,y1,bigtextpaint);
-				addTextIfFits(canvas, "T:22:22", r, whenstr, y1, bigtextpaint);
-				//canvas.drawText(String.format("T:%s",whenstr), 70,y1,bigtextpaint);
-				addTextIfFits(canvas, null, r, we.getTitle(), y1, bigtextpaint);
-				//canvas.drawText(we.getTitle(), 140,y1,bigtextpaint);
-				for(int i=0;i<lines-1;++i)
-				{
-					canvas.drawText(details[i], 2,y1+tsy+i*tsy,bigtextpaint);					
-				}
-				//canvas.drawText(String.format("%03.0f°",lastpos.getBearing()), 50, y, bigtextpaint);
-				//canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),150,y,textpaint);
-				
-			}
-		}
-		
-		if (drag_center13==null)
-		{
-			arrowpaint.setColor(Color.BLACK);
-			Path path=new Path();
-			path.moveTo((int)arrow.x-10,(int)arrow.y+2);
-			path.lineTo((int)arrow.x+10,(int)arrow.y+2);
-			path.lineTo((int)arrow.x,(int)arrow.y-15);
-			path.close();
-			canvas.drawPath(path,arrowpaint);
-			canvas.drawRect((int)arrow.x-2,(int)0,(int)arrow.x+2,(int)arrow.y,arrowpaint);
-			arrowpaint.setColor(Color.WHITE);
-			path=new Path();
-			path.moveTo((int)arrow.x-7,(int)arrow.y);
-			path.lineTo((int)arrow.x+7,(int)arrow.y);
-			path.lineTo((int)arrow.x,(int)arrow.y-12);
-			path.close();
-			canvas.drawPath(path,arrowpaint);
-			canvas.drawRect((int)arrow.x-1,(int)0,(int)arrow.x+1,(int)arrow.y,arrowpaint);
-		}
-		
-		else
-		{
-			if (lastpos!=null)
-			{
-				Merc pos=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),zoomlevel);
-				Merc dest;
-				if (lastpos!=null && lastpos.hasBearing())
-				{
-					float hdg=lastpos.getBearing();
-					Vector d=new Vector(0,-50);
-					Vector d2=d.rot(hdg/(180.0f/Math.PI));					
-					dest=new Merc(pos.x+d2.x,pos.y+d2.y);
-				}
-				else
-				{
-					dest=pos;
-				}
-				Vector screenpos=tf.merc2screen(pos);
-				Vector screenpos2=tf.merc2screen(dest);
-				arrowpaint.setColor(Color.BLACK);
-				arrowpaint.setStrokeWidth(4);
-				canvas.drawCircle((float)screenpos.x, (float)screenpos.y, 9, arrowpaint);
-				canvas.drawLine((float)screenpos.x,(float)screenpos.y,(float)screenpos2.x,(float)screenpos2.y,arrowpaint);
-				arrowpaint.setColor(Color.WHITE);
-				arrowpaint.setStrokeWidth(2);
-				canvas.drawCircle((float)screenpos.x, (float)screenpos.y, 7, arrowpaint);
-				canvas.drawLine((float)screenpos.x,(float)screenpos.y,(float)screenpos2.x,(float)screenpos2.y,arrowpaint);
-
-			}
-			
-		}
-		
-		linepaint.setColor(Color.RED);
-		float y=bigtextpaint.getTextSize();
-		bigtextpaint.setColor(Color.WHITE);
-		RectF r=new RectF(0, 0, getRight(), y+2);
-		canvas.drawRect(r, backgroundpaint);
-		addTextIfFits(canvas,"222°.",r,String.format("%03.0f°",lastpos.getBearing()),y,bigtextpaint);
-		addTextIfFits(canvas,"222kt",r,String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),y,bigtextpaint);
-		
-		//canvas.drawText(String.format("%03.0f°",lastpos.getBearing()), 40, y, bigtextpaint);
-		//canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),100,y,bigtextpaint);
-		int td=tripstate.get_time_to_destination();
-		//canvas.drawText(fmttime(td),150,y,bigtextpaint);
-		addTextIfFits(canvas,"122:22",r,fmttime(td),y,bigtextpaint);
-		if (havefix) //if significantly after 1970-0-01
-		{
-			Date d=new Date(lastpos.getTime());
-			SimpleDateFormat formatter = new SimpleDateFormat("hhmmss");
-			//canvas.drawText("FIX:"+formatter.format(d)+"Z",220,y,bigtextpaint);
-			addTextIfFits(canvas,"FIX:222222Z",r,"FIX:"+formatter.format(d)+"Z",y,bigtextpaint);
-		}
-		else
-		{
-			//canvas.drawText("NOFIX",220,y,bigtextpaint);
-			addTextIfFits(canvas,"FIX:222222Z",r,"NOFIX",y,bigtextpaint);
-		}
-		///canvas.drawText(String.format("Z%d",zoomlevel), 0,y,bigtextpaint);
-		addTextIfFits(canvas,"Z13",r,String.format("Z%d",zoomlevel),y,bigtextpaint);
-		
-		if (this.drag_center13!=null)
-		{
-			float h=bigtextpaint.getTextSize();
-			y+=h;
-			final Rect tr1=new Rect();
-			thinlinepaint.setColor(Color.WHITE);
-
-			String text="Center";
-			bigtextpaint.getTextBounds(text, 0, text.length(),tr1);
-			tr1.bottom=(int)(tr1.top+h);
-			tr1.offsetTo((int)(getRight()-tr1.width()-h), (int)y);
-			grow(tr1,(int)(0.4f*h));
-			canvas.drawRect(tr1, backgroundpaint);
-			canvas.drawRect(tr1, thinlinepaint);
-								
-			canvas.drawText(text,tr1.left+0.4f*h,tr1.bottom-0.4f*h,bigtextpaint);
-			clickables.add(new Clickable()
-				{
-					@Override
-					public Rect getRect() {
-						return tr1;
-					}
-					@Override
-					public void onClick() {
-						doCenterDragging();
-					}				
-				});
-			int edge=tr1.left;
-			
-			text="Set North Up";
-			final Rect tr2=new Rect();
-			bigtextpaint.getTextBounds(text, 0, text.length(),tr2);
-			tr2.bottom=(int)(tr2.top+h);
-			tr2.offsetTo((int)(h), (int)y);
-			grow(tr2,(int)(0.4f*h));
-			if (tr2.right<edge)
-			{
-				canvas.drawRect(tr2, backgroundpaint);
-				canvas.drawRect(tr2, thinlinepaint);
-									
-				canvas.drawText(text,tr2.left+0.4f*h,tr2.bottom-0.4f*h,bigtextpaint);			
-				clickables.add(new Clickable()
-				{
-					@Override
-					public Rect getRect() {
-						return tr2;
-					}
-					@Override
-					public void onClick() {
-						onNorthUp();
-					}				
-				});
-			}
-
-		}
-		else
-		{
-			if (download_status!=null && !download_status.equals(""))
-			{
-				float y2=(y+bigtextpaint.getTextSize()*1.1f);
-				canvas.drawRect(0, y+2, getRight(), y2, backgroundpaint);
-				canvas.drawText("Download:"+download_status,getLeft()+3,y2,bigtextpaint);			
-			}
-		}
-		
-		
-		
-	}
-	private void addTextIfFits(Canvas canvas,String sizetext, RectF r, String realtext,float y,
+	void addTextIfFits(Canvas canvas,String sizetext, RectF r, String realtext,float y,
 			Paint tp) {
 		if (sizetext==null)
 		{
@@ -907,25 +359,7 @@ public class MovingMap extends View implements UpdatableUI {
 		}
 
 	}
-	private void renderText(Canvas canvas, Vector p, String text) {
-		Rect rect=new Rect();					
-		textpaint.getTextBounds(text, 0, text.length(),rect);
-		int adj=(rect.bottom-rect.top)/3;
-		rect.left+=p.x-1+7;
-		rect.right+=p.x+1+7;
-		rect.top+=p.y-2+adj;
-		rect.bottom+=p.y+3+adj;
-		canvas.drawRect(rect, backgroundpaint);
-		canvas.drawText(text, (float)(p.x+7), (float)(p.y+adj), textpaint);
-		linepaint.setStrokeWidth(10);
-		int c=linepaint.getColor();
-		linepaint.setColor(Color.BLACK);
-		canvas.drawPoint((float)p.x,(float)p.y,linepaint);
-		linepaint.setColor(c);
-		linepaint.setStrokeWidth(5);
-		canvas.drawPoint((float)p.x,(float)p.y,linepaint);
-	}
-	private String fmttime(int when) {
+	String fmttime(int when) {
 		if (when==0 || when>3600*24*10)
 			return "--:--";
 		return String.format("%d:%02d",when/60,when%60);
@@ -954,8 +388,7 @@ public class MovingMap extends View implements UpdatableUI {
 		
 		lastpos=bearingspeed.calcBearingSpeed(loc);
 		last_real_position=SystemClock.uptimeMillis();
-		if (tripstate!=null)
-			tripstate.update_target(lastpos);
+		tripstate.update_target(lastpos);
 		invalidate();
 		if (curLostSignalRunnable!=null)
 			lostSignalTimer.removeCallbacks(curLostSignalRunnable);
@@ -1001,12 +434,12 @@ public class MovingMap extends View implements UpdatableUI {
 	public void sideways(int i) {
 		if (tripstate!=null)
 		{
-			/*
+			
 			if (i==-1)
 				tripstate.left();
-			if (i==1)
+			else if (i==1)
 				tripstate.right();
-			*/
+			
 			lastpos.setBearing((lastpos.getBearing()+i*5)%360);
 			invalidate();
 		}
@@ -1075,13 +508,13 @@ public class MovingMap extends View implements UpdatableUI {
 	}
 	
 	
-	enum GuiState
+	private enum GuiState
 	{
 		IDLE, //Normal
 		MAYBE_DRAG, //about to start dragging
 		DRAGGING
 	}
-	GuiState state=GuiState.IDLE;
+	private GuiState state=GuiState.IDLE;
 	public void onTouchAbort()
 	{ 
 		//this is called when zoomlevel is changed, which can happen
@@ -1114,11 +547,17 @@ public class MovingMap extends View implements UpdatableUI {
 			break;
 		}
 	}
-	float dragstartx,dragstarty;	
-	Merc drag_center13;
-	Merc drag_base13;
-	float drag_heading;
-	
+	private float dragstartx,dragstarty;	
+	private Merc drag_center13;
+	private Merc drag_base13;
+	private float drag_heading;
+	public class DragTimeout implements DoSomething
+	{
+		@Override
+		public void run() {
+			doCenterDragging();
+		}	
+	}
 	public void onTouchFingerDown(Transform tf,float x, float y) {
 		switch(state)
 		{
@@ -1149,6 +588,7 @@ public class MovingMap extends View implements UpdatableUI {
 				drag_base13=Project.merc2merc(t, zoomlevel, 13);
 				drag_heading=tf.getHdg();
 				state=GuiState.DRAGGING;
+				resetDragTimeout();
 			}
 		}
 			break;
@@ -1159,10 +599,14 @@ public class MovingMap extends View implements UpdatableUI {
 			float deltax=(float)(Math.cos(hdgrad)*deltax1-Math.sin(hdgrad)*deltay1);
 			float deltay=(float)(Math.sin(hdgrad)*deltax1+Math.cos(hdgrad)*deltay1);
 			drag_center13=new Merc(drag_base13.x-deltax,drag_base13.y-deltay);
+			resetDragTimeout();
 			invalidate();
 			break;
 		}
 		
+	}
+	private void resetDragTimeout() {
+		drag_timeout.timeout(new DragTimeout(), 30000);
 	}
 	
 }

@@ -28,19 +28,19 @@ public class TripState {
 	 */
 	private int target_wp;  
 	private int current_warning_idx;
-	private WarningEvent current_warning_obj;
-	ArrayList<WarningEvent> wp_warnings;
+	private InformationItem current_warning_obj;
+	ArrayList<InformationItem> wp_warnings;
 	static final double corridor_width=2.0; //nominal width of corridor of flight
 	static final double lookahead_length=25.0; //how far ahead to look for zones etc.
 	TripState(TripData trip,AirspaceLookup plookup)
 	{
 		lookup=plookup;
-		wp_warnings=new ArrayList<WarningEvent>();
+		wp_warnings=new ArrayList<InformationItem>();
 		tripdata=trip;
 		current_warning_idx=-1;
 		current_warning_obj=null;
 		target_wp=0;
-		warnings=new ArrayList<WarningEvent>();
+		warnings=new ArrayList<InformationItem>();
 		/*
 		for(int i=0;i<tripdata.waypoints.size();++i)
 		{
@@ -53,7 +53,7 @@ public class TripState {
 			BoundingBox bb=line.boundingBox().expand(nm);
 		}*/
 	}
-	ArrayList<WarningEvent> warnings;
+	ArrayList<InformationItem> warnings;
 	public int get_time_to_destination() {
 		return time_to_destination;
 	}
@@ -70,80 +70,6 @@ public class TripState {
 	private double distance_to_destination;
 	private double expected_gs;
 	private double actual_gs;
-	
-	static public class WarningEvent
-	{
-		private String title;
-		private Vector point;
-		private String[] details;
-		private String[] extra;
-		private double distance;
-		private String kind;
-		private int when;
-		public WarningEvent(String kind,
-				String title,String[] details,String[] extra,
-				Vector point,Vector pos_now,double speed)
-		{
-			this.kind=kind;
-			this.title=title;
-			this.details=details;
-			this.extra=extra;
-			setPoint(point,pos_now,speed);
-		}
-		public String getKind()
-		{
-			return kind;
-		}
-		public WarningEvent(String kind,
-				String title,String[] details,String[] extra,Vector point)
-		{
-			this.kind=kind;
-			this.title=title;
-			this.details=details;
-			this.extra=extra;
-			this.point=point;
-		}
-		void update(double distance,int when)
-		{
-			this.distance=distance;
-			this.when=when;
-		}
-		public void updatemypos(Vector mypos, double actualGs) {
-			double onenm=Project.approx_scale(point.gety(),13,1.0);
-			this.distance=point.minus(mypos).length()/onenm;
-			if (actualGs>1e-3)
-				this.when=(int)(3600.0*distance/actualGs);
-			else
-				this.when=3600*9999;			
-		}
-		private void setPoint(Vector point,Vector pos_now,double speed)
-		{
-			this.point=point;
-			updatemypos(pos_now,speed);
-		}
-		public String getTitle()
-		{
-			return title;
-		}
-		public String[] getDetails()
-		{
-			return details;
-		}
-		public String[] getExtraDetails()
-		{
-			return extra;
-		}
-		public Vector getPoint() {
-			return point;
-		}
-		public double getDistance() {
-			return distance;
-		}
-		public int getWhen() {
-			return when;
-		}
-	}
-	
 	
 	/**
 	 * Determines the most plausible current target.
@@ -190,7 +116,7 @@ public class TripState {
 			}			
 		});
 		
-		warnings=new ArrayList<WarningEvent>();
+		warnings=new ArrayList<InformationItem>();
 
 		
 		Vector prevpoint=null;
@@ -224,7 +150,7 @@ public class TripState {
 						just_a_bit_in,details,extradetails);
 				
 				warnings.add(
-					new WarningEvent("fixed","New Airspace",
+					new InformationItem("fixed","New Airspace",
 							details.toArray(new String[details.size()]),
 							extradetails.toArray(new String[extradetails.size()]),
 							point,mypos,speed
@@ -299,11 +225,17 @@ public class TripState {
 					
 					final String title=ttitle;
 
-					final String[] details=new String[]{
-							whatdesc
+					final String[] details;
+					if (whatdesc.equals(""))
+					{
+						details=new String[]{};
+					}
+					else
+					{
+						details=new String[]{whatdesc};
 					};
 					
-					wp_warnings.add(new WarningEvent("trip",
+					wp_warnings.add(new InformationItem("trip",
 							title,details,details,m1
 							));
 					
@@ -388,7 +320,7 @@ public class TripState {
 				int timesec=(int)accum_time;
 				if (i>=wp_warnings.size())
 					continue;
-				WarningEvent we=wp_warnings.get(i);
+				InformationItem we=wp_warnings.get(i);
 				we.update(distance,timesec);
 				warnings.add(we);
 			}
@@ -407,7 +339,7 @@ public class TripState {
 			get_airspace_details(abit,
 					mypos,details,extradetails);			
 			//Log.i("fplan","Actual GS for Current Position: "+actual_gs);
-			WarningEvent cp=new WarningEvent("curpos","Current Position",
+			InformationItem cp=new InformationItem("curpos","Current Position",
 					details.toArray(new String[details.size()]),
 					extradetails.toArray(new String[extradetails.size()]),
 					mypos,
@@ -419,9 +351,9 @@ public class TripState {
 		
 		if (warnings!=null)
 		{
-			Collections.sort(warnings,new Comparator<WarningEvent>()
+			Collections.sort(warnings,new Comparator<InformationItem>()
 					{
-						public int compare(WarningEvent arg0, WarningEvent arg1) {
+						public int compare(InformationItem arg0, InformationItem arg1) {
 							double dist0=arg0.getDistance();
 							double dist1=arg1.getDistance();
 							if (dist0<dist1) return -1;
@@ -457,7 +389,7 @@ public class TripState {
 	
 	}
 
-	ArrayList<WarningEvent> warnings_seen;
+	ArrayList<InformationItem> warnings_seen;
 	private void autoselect_warnings() {
 		if (current_warning_idx>=warnings.size())
 			current_warning_idx=warnings.size()-1;
@@ -475,7 +407,7 @@ public class TripState {
 		get_airspace_details(1.0,
 				point,details,extradetails);			
 		//Log.i("fplan","Actual GS for Current Position: "+actual_gs);
-		WarningEvent cp=new WarningEvent("fixed","Show Airspace",
+		InformationItem cp=new InformationItem("fixed","Airspace",
 				details.toArray(new String[details.size()]),
 				extradetails.toArray(new String[extradetails.size()]),
 				point,
@@ -518,11 +450,17 @@ public class TripState {
 		return target_wp;
 	}
 	
-	public WarningEvent getCurrentWarning()
+	public InformationItem getCurrentWarning()
 	{
 		return current_warning_obj;
 	}
 
+	public boolean hasLeft()
+	{
+		if (warnings.size()<=1) return false;
+		if (current_warning_idx>0) return true;
+		return false;
+	}
 	public void left() {
 		current_warning_idx-=1;
 		if (current_warning_idx<=-1)
@@ -532,7 +470,12 @@ public class TripState {
 		else
 			current_warning_obj=null;
 	}
-
+	public boolean hasRight()
+	{
+		if (warnings.size()<=1) return false;
+		if (current_warning_idx<warnings.size()-1) return true;
+		return false;
+	}
 	public void right() {
 		current_warning_idx+=1;
 		if (current_warning_idx>=warnings.size())

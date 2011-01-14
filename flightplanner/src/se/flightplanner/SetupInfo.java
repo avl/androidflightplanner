@@ -14,7 +14,7 @@ import android.widget.Spinner;
 
 public class SetupInfo extends Activity {
 
-	String detail;
+	int detail;
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -26,12 +26,15 @@ public class SetupInfo extends Activity {
         edtxt.setText(getIntent().getExtras().getString("se.flightplanner.user"));
         final EditText edpwd = (EditText) findViewById(R.id.editpass);
         edpwd.setText(getIntent().getExtras().getString("se.flightplanner.password"));
+        detail=getIntent().getExtras().getInt("se.flightplanner.mapdetail",0);
+        final SetupInfo outer_this=this;
         
         button.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
             	Intent ret=new Intent(Intent.ACTION_DEFAULT);
             	ret.putExtra("se.flightplanner.login",edtxt.getText().toString());
             	ret.putExtra("se.flightplanner.password",edpwd.getText().toString());
+            	ret.putExtra("se.flightplanner.mapdetail",outer_this.detail);
             	ret.putExtra("se.flightplanner.thenopen", getIntent().getExtras().getString("se.flightplanner.thenopen"));
             	setup.setResult(RESULT_OK,ret);
             	setup.finish();
@@ -43,14 +46,13 @@ public class SetupInfo extends Activity {
                 this, R.array.detail_array, android.R.layout.simple_spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
-        final SetupInfo outer_this=this;
         AdapterView.OnItemSelectedListener i=new AdapterView.OnItemSelectedListener()
         {
 
 			@Override
 			public void onItemSelected(AdapterView<?> parent, View arg1,
 					int pos, long id) {
-				outer_this.detail=parent.getItemAtPosition(pos).toString();
+				outer_this.detail=pos;
 			}
 
 			@Override
@@ -59,6 +61,7 @@ public class SetupInfo extends Activity {
         	
         };
         spinner.setOnItemSelectedListener(i);
+        spinner.setSelection(detail);
         
     }
 

@@ -131,11 +131,13 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		{
 			final String user=data.getStringExtra("se.flightplanner.login");
 			final String password=data.getStringExtra("se.flightplanner.password");
-
+			final int mapdetail=data.getIntExtra("se.flightplanner.mapdetail", 0);
+			//RookieHelper.showmsg(this,"mapdetail now:"+mapdetail);
 			SharedPreferences prefs=getPreferences(MODE_PRIVATE);
 			SharedPreferences.Editor pedit=prefs.edit();			
 			pedit.putString("user", user);
 			pedit.putString("password", password);
+			pedit.putInt("mapdetail", mapdetail);
 			pedit.commit();
 			
 			String then=data.getStringExtra("se.flightplanner.thenopen");
@@ -238,9 +240,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    	break;
 	    case MENU_SETTINGS:
 	    {
-	    	Intent intent = new Intent(this, SetupInfo.class);
-	    	intent.putExtra("se.flightplanner.user", getPreferences(MODE_PRIVATE).getString("user","user")); 
-	    	intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password","password"));
+	    	Intent intent = getSettingsIntent();
 	    	intent.putExtra("se.flightplanner.thenopen", "nothing");
 	    	startActivityForResult(intent,SETUP_INFO);	    	
 	    	break;
@@ -249,9 +249,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    {
 	    	if (!haveUserAndPass())
 	    	{
-		    	Intent intent = new Intent(this, SetupInfo.class);
-		    	intent.putExtra("se.flightplanner.user", getPreferences(MODE_PRIVATE).getString("user","user")); 
-		    	intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password","password"));
+		    	Intent intent = getSettingsIntent();
 		    	intent.putExtra("se.flightplanner.thenopen", "loadtrip");
 		    	startActivityForResult(intent,SETUP_INFO);
 	    	}
@@ -274,9 +272,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     		{
     			if (!haveUserAndPass())
     			{
-	    	    	Intent intent = new Intent(this, SetupInfo.class);
-	    	    	intent.putExtra("se.flightplanner.user", getPreferences(MODE_PRIVATE).getString("user","user")); 
-	    	    	intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password","password"));
+			    	Intent intent = getSettingsIntent();
 	    	    	intent.putExtra("se.flightplanner.thenopen", "loadterrain");
 	    	    	startActivityForResult(intent,SETUP_INFO);
     			}
@@ -289,6 +285,17 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     	return true;
     }
 	    return false;
+	}
+
+
+	private Intent getSettingsIntent() {
+		Intent intent = new Intent(this, SetupInfo.class);
+		intent.putExtra("se.flightplanner.user", getPreferences(MODE_PRIVATE).getString("user","user")); 
+		intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password","password"));
+		int mapd=getPreferences(MODE_PRIVATE).getInt("mapdetail", 0);
+		intent.putExtra("se.flightplanner.mapdetail", mapd);
+		//RookieHelper.showmsg(this,"Got mapd"+mapd);
+		return intent;
 	}
 
 
