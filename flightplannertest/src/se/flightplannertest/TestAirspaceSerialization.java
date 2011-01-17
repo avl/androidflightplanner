@@ -101,7 +101,7 @@ public class TestAirspaceSerialization {
 		area.serialize(os);
 		ByteArrayInputStream bai=new ByteArrayInputStream(bao.toByteArray());
 		DataInputStream is=new DataInputStream(bai);
-		AirspaceArea area2=AirspaceArea.deserialize(is);
+		AirspaceArea area2=AirspaceArea.deserialize(is,0);
 		
 		Assert.assertEquals(area.floor,area2.floor);
 		Assert.assertEquals(area.ceiling,area2.ceiling);

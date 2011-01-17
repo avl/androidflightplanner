@@ -77,8 +77,16 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    return data;
 	}
 	
-	
+	private boolean debugdrive;
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
+		if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER)
+		{
+			if (DataDownloader.debugMode())
+			{
+				debugdrive=!debugdrive;
+				map.enableDriving(debugdrive);
+			}
+		}
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
        	 	map.zoom(1);
     		return true;
@@ -96,11 +104,11 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     		return true;
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-       	 	map.sideways(-1);
+       	 	map.onSideKey(-1);
     		return true;
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-        	map.sideways(+1);
+        	map.onSideKey(+1);
     		return true;
         }
          return false;

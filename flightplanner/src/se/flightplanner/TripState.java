@@ -1,23 +1,25 @@
 package se.flightplanner;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 
-import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
 import se.flightplanner.TripData.Waypoint;
-import se.flightplanner.vector.BoundingBox;
 import se.flightplanner.vector.Line;
 import se.flightplanner.vector.Vector;
-import se.flightplanner.vector.Polygon.InsideResult;
 import android.location.Location;
-import android.text.format.Time;
 import android.util.Log;
 
-public class TripState {
+public class TripState implements InformationPanel {
 
+	static private class WaypointInfo
+	{
+		public String title;
+		public String[] details;
+		public float distance;
+		public long when;
+	}
+	private String[] extradummy;
 	private TripData tripdata;
 	private AirspaceLookup lookup;
 	/**
@@ -27,48 +29,35 @@ public class TripState {
 	 * always be 0.
 	 */
 	private int target_wp;  
-	private int current_warning_idx;
-	private InformationItem current_warning_obj;
-	ArrayList<InformationItem> wp_warnings;
-	static final double corridor_width=2.0; //nominal width of corridor of flight
-	static final double lookahead_length=25.0; //how far ahead to look for zones etc.
+	/**
+	 * The current waypoint selected by the user.
+	 */
+	private int current_waypoint_idx;
+	/**
+	 * One for each waypoint.
+	 */
+	private ArrayList<WaypointInfo> waypointEvents;
+	static private final double corridor_width=2.0; //nominal width of corridor of flight
 	TripState(TripData trip,AirspaceLookup plookup)
 	{
 		lookup=plookup;
-		wp_warnings=new ArrayList<InformationItem>();
+		waypointEvents=new ArrayList<WaypointInfo>();
 		tripdata=trip;
-		current_warning_idx=-1;
-		current_warning_obj=null;
+		current_waypoint_idx=0;
 		target_wp=0;
-		warnings=new ArrayList<InformationItem>();
-		/*
-		for(int i=0;i<tripdata.waypoints.size();++i)
-		{
-			Merc m1=Project.latlon2merc(tripdata.waypoints.get(i).latlon,13);
-			Merc m2=Project.latlon2merc(tripdata.waypoints.get((i+1)%tripdata.waypoints.size()).latlon,13);
-			Vector mv1=new Vector(m1.x,m1.y);
-			Vector mv2=new Vector(m2.x,m2.y);
-			double nm=Project.approx_scale((mv1.gety()+mv2.gety())*0.5,13,1.5*corridor_width);
-			Line line=new Line(mv1,mv2);
-			BoundingBox bb=line.boundingBox().expand(nm);
-		}*/
+		extradummy=new String[]{};
 	}
-	ArrayList<InformationItem> warnings;
 	public int get_time_to_destination() {
 		return time_to_destination;
 	}
 	public double get_distance_to_destination() {
 		return distance_to_destination;
 	}
-	public double get_expected_gs() {
-		return expected_gs;
-	}
 	public double get_actual_gs() {
 		return actual_gs;
 	}
 	private int time_to_destination;
 	private double distance_to_destination;
-	private double expected_gs;
 	private double actual_gs;
 	
 	/**
@@ -80,164 +69,27 @@ public class TripState {
 	 */
 	public void update_target(Location mylocation)
 	{		
-		expected_gs=0.0;
 		actual_gs=0.0;
 		time_to_destination=0;
 		distance_to_destination=0.0;
 		Vector heading=Project.heading2vector(mylocation.getBearing());
-		//Log.i("fplan","Heading: "+heading);
+
 		final Vector mypos=Project.latlon2mercvec(mylocation.getLatitude(),mylocation.getLongitude(),13);					
 		double nm=Project.approx_scale(mypos.gety(),13,corridor_width);
 		double onenm=Project.approx_scale(mypos.gety(),13,1.0);
-		double nmfuture=onenm*lookahead_length;
-		double abit=0.01*onenm;
-		
-		Vector futureend=mypos.plus(heading.mul(nmfuture));
-		Line future=new Line(mypos,futureend);
-		ArrayList<Vector> points=new ArrayList<Vector>();
-		if (lookup!=null)
-			for(AirspaceArea area:lookup.areas.get_areas(future.boundingBox()))
-			{
-				for(Line line:area.poly.getLines())
-				{
-					Vector point=Line.intersect(future, line);
-					//Log.i("fplan","Area "+area.name+" isect "+point);
-					if (point!=null)
-						points.add(point);
-				}
-			}
-		Collections.sort(points,new Comparator<Vector>() {
-			public int compare(Vector object1, Vector object2) {
-				double dista=object1.minus(mypos).taxinorm();
-				double distb=object2.minus(mypos).taxinorm();
-				if (dista<distb) return -1;
-				if (dista>distb) return +1;
-				return 0;
-			}			
-		});
-		
-		warnings=new ArrayList<InformationItem>();
 
-		
-		Vector prevpoint=null;
-		for(Vector point : points)
-		{
-			if (prevpoint!=null)
-			{
-				if (prevpoint.minus(point).taxinorm()<abit)
-					continue;
-			}
-			prevpoint=point;
-			//Log.i("fplan","Considering area "+area.name+" point "+point);
-			if (point!=null)
-			{
-				
-				double distnm=point.minus(mypos).length()/onenm;
-				double speed=mylocation.getSpeed()*3.6/1.852;
-				int when;
-				if (speed<1.0)
-				{
-					when=0;
-				}
-				else
-				{
-					when=(int)((3600.0*distnm)/speed);//time in seconds						
-				}
-				Vector just_a_bit_in=point.plus(heading.mul(2.0*abit));
-				ArrayList<String> details = new ArrayList<String>();
-				ArrayList<String> extradetails = new ArrayList<String>();
-				get_airspace_details(abit,
-						just_a_bit_in,details,extradetails);
-				
-				warnings.add(
-					new InformationItem("fixed","New Airspace",
-							details.toArray(new String[details.size()]),
-							extradetails.toArray(new String[extradetails.size()]),
-							point,mypos,speed
-							));
-				
-			}
-		}
 		
 		if (tripdata!=null)
 		{
-			if (wp_warnings.size()!=tripdata.waypoints.size())
+			if (waypointEvents.size()!=tripdata.waypoints.size())
 			{
-				wp_warnings.clear();
-				
+				waypointEvents.clear();
 				for(int i=0;i<tripdata.waypoints.size();++i)
 				{
-					Waypoint wp=tripdata.waypoints.get(i);
-					String whatdesc="";
-					String ttitle="Unknown";
-					LatLon latlon=tripdata.waypoints.get(i).latlon;
-					Vector m1=Project.latlon2mercvec(latlon,13);
-					Waypoint nextwp=null;
-					if (i+1<tripdata.waypoints.size()) nextwp=tripdata.waypoints.get(i+1);
-					/*Waypoint prevwp=tripdata.waypoints.get(0);
-					if (i>0) prevwp=tripdata.waypoints.get(i-1);
-					*/
-					
-					if (i==0)
-					{
-						ttitle="Depart for "+wp.name;
-					}
-					else
-					if (i==tripdata.waypoints.size()-1)
-					{
-						ttitle="Arrive "+wp.name;
-					}
-					else
-					if (wp.lastsub!=0)
-					{
-						ttitle=wp.name;
-					}
-					else
-					{
-						ttitle="Enroute "+wp.name;					
-					}
-					
-					if (nextwp==null)
-					{
-						whatdesc="";
-					}
-					else
-					{
-						if (nextwp.what.equals("climb"))
-						{
-							whatdesc=String.format("Begin climb from %.0f ft to %.0f ft",nextwp.startalt,nextwp.endalt);
-						}
-						else
-						if (nextwp.what.equals("descent"))
-						{
-							whatdesc=String.format("Begin descent from %.0f ft to %.0f ft",nextwp.startalt,nextwp.endalt);
-						}
-						else
-						{
-							if (wp.what.equals("cruise"))
-								whatdesc=String.format("Level flight %.0f ft",nextwp.endalt);
-							else
-								whatdesc=String.format("Level-out at %.0f ft",nextwp.endalt);
-						}
-					}
-					
-				
-					
-					final String title=ttitle;
-
-					final String[] details;
-					if (whatdesc.equals(""))
-					{
-						details=new String[]{};
-					}
-					else
-					{
-						details=new String[]{whatdesc};
-					};
-					
-					wp_warnings.add(new InformationItem("trip",
-							title,details,details,m1
-							));
+					WaypointInfo info=new WaypointInfo();
+					info.title=getTitleImpl(i);
+					info.details=getDetailsImpl(i);
+					waypointEvents.add(info);
 					
 				}
 			}
@@ -269,20 +121,34 @@ public class TripState {
 					best_points_i=i+1;
 				}
 			}
-			target_wp=best_points_i;
+			if (target_wp!=best_points_i)
+			{
+				//Update target_wp
+				int old_target=target_wp;
+				if (old_target>=0 && old_target<waypointEvents.size())
+				{
+					Waypoint old_wp=tripdata.waypoints.get(old_target);
+					WaypointInfo we=waypointEvents.get(old_target);
+					Log.i("fplan.skip","Skip"+Project.latlon2mercvec(old_wp.latlon,13).minus(mypos).length()+
+							" limit:"+corridor_width*onenm);
+					if (Project.latlon2mercvec(old_wp.latlon,13).minus(mypos).length()<
+							corridor_width*onenm)
+					{
+						we.when=new Date().getTime();					
+					}
+					else
+					{
+						we.when=0;
+					}
+				}
+				if (current_waypoint_idx<=target_wp)
+					current_waypoint_idx=best_points_i;
+				target_wp=best_points_i;
+			}
 			//Log.i("fplan","New best target_wp: "+target_wp+" waypoints: "+tripdata.waypoints.size());
 			double accum_time=0;
 			double accum_distance=0;
-			if (tripdata.waypoints.size()>0)
-			{
-				Waypoint cur;
-				if (target_wp+1<tripdata.waypoints.size())
-					cur=tripdata.waypoints.get(target_wp+1);
-				else
-					cur=tripdata.waypoints.get(tripdata.waypoints.size()-1);
-				expected_gs=cur.gs;
-				actual_gs=mylocation.getSpeed()*3.6/1.852;
-			}
+			actual_gs=mylocation.getSpeed()*3.6/1.852;
 			/*
 			Waypoint prevwp=null;
 			if (tripdata.waypoints.size()>=1)
@@ -291,6 +157,12 @@ public class TripState {
 				if (target_wp>0 && target_wp<=tripdata.waypoints.size())					
 					prevwp=tripdata.waypoints.get(target_wp-1);
 			}*/
+			for(int i=0;i<target_wp;++i)
+			{
+				if (i>=tripdata.waypoints.size()) break;
+				WaypointInfo we=waypointEvents.get(i);
+				we.distance=-1;
+			}
 			for(int i=target_wp;i<tripdata.waypoints.size();++i)
 			{
 				final Waypoint wp=tripdata.waypoints.get(i);
@@ -318,172 +190,177 @@ public class TripState {
 				accum_time+=ttimesec;								
 				//Log.i("fplan","accum_time:"+accum_time);
 				int timesec=(int)accum_time;
-				if (i>=wp_warnings.size())
+				if (i>=waypointEvents.size())
 					continue;
-				InformationItem we=wp_warnings.get(i);
-				we.update(distance,timesec);
-				warnings.add(we);
+				WaypointInfo we=waypointEvents.get(i);
+				we.distance=(float)distance;
+				we.when=timesec;
 			}
 			time_to_destination=(int) accum_time;
 			distance_to_destination=accum_distance;
 		}
 		else
 		{
-			target_wp=-1;
+			waypointEvents=null;
+			target_wp=0;
 		}
 
-		if (warnings!=null)
-		{
-			ArrayList<String> details = new ArrayList<String>(); 
-			ArrayList<String> extradetails = new ArrayList<String>(); 
-			get_airspace_details(abit,
-					mypos,details,extradetails);			
-			//Log.i("fplan","Actual GS for Current Position: "+actual_gs);
-			InformationItem cp=new InformationItem("curpos","Current Position",
-					details.toArray(new String[details.size()]),
-					extradetails.toArray(new String[extradetails.size()]),
-					mypos,
-					mypos,actual_gs);
-			warnings.add(cp);
-			if (current_warning_obj!=null && current_warning_obj.getKind().equals("curpos"))
-				current_warning_obj=cp;
-		}
-		
-		if (warnings!=null)
-		{
-			Collections.sort(warnings,new Comparator<InformationItem>()
-					{
-						public int compare(InformationItem arg0, InformationItem arg1) {
-							double dist0=arg0.getDistance();
-							double dist1=arg1.getDistance();
-							if (dist0<dist1) return -1;
-							if (dist0>dist1) return 1;
-							return 0;
-						}
-				
-					});
-			if (current_warning_obj!=null)
-			{
-				double curr_warn_dist=current_warning_obj.getDistance();
-				//Log.i("fplan","Curr_warn_dist:"+curr_warn_dist);
-				for(int i=0;i<warnings.size();++i)
-				{
-					double dist=warnings.get(i).getDistance();
-					//Log.i("fplan","Warning "+i+" has dist: "+dist);
-					if (dist>=curr_warn_dist-1e-3)
-					{
-						if (dist>curr_warn_dist+0.5 && i!=0)						
-							current_warning_idx=i-1;
-						else
-							current_warning_idx=i;
-						break;
-					}
-				}
-			}
-		}
-		if (current_warning_obj!=null && !current_warning_obj.getKind().equals("trip"))
-		{
-			current_warning_obj.updatemypos(mypos, actual_gs);
-		}
-		autoselect_warnings();
-	
 	}
 
-	ArrayList<InformationItem> warnings_seen;
-	private void autoselect_warnings() {
-		if (current_warning_idx>=warnings.size())
-			current_warning_idx=warnings.size()-1;
-		if (current_warning_idx<0)
-			current_warning_idx=0;
-				
-		//Log.i("fplan","Autoselect warnings:"+current_warning_idx);
-	}
-
-	void showInfo(LatLon about,LatLon mypos)
-	{
-		ArrayList<String> details = new ArrayList<String>(); 
-		ArrayList<String> extradetails = new ArrayList<String>();
-		Vector point=Project.latlon2mercvec(about,13);
-		get_airspace_details(1.0,
-				point,details,extradetails);			
-		//Log.i("fplan","Actual GS for Current Position: "+actual_gs);
-		InformationItem cp=new InformationItem("fixed","Airspace",
-				details.toArray(new String[details.size()]),
-				extradetails.toArray(new String[extradetails.size()]),
-				point,
-				Project.latlon2mercvec(mypos,13),actual_gs);
-		current_warning_obj=cp;
-		current_warning_idx=0;
-	}
-	private void get_airspace_details(double abit,
-			Vector just_a_bit_in,ArrayList<String> details,ArrayList<String> extradetails) {
-		if (lookup!=null)
-			for(AirspaceArea inarea:lookup.areas.get_areas(BoundingBox.aroundpoint(just_a_bit_in, abit)))
-			{
-				
-				InsideResult r=inarea.poly.inside(just_a_bit_in);
-				//double cd=r.closest.minus(point).length();
-				if (r.isinside) //our polygons are clockwise, because the Y-axis points down - this inverts the meaning of inside and outside
-				{ //If _INSIDE_ polygon
-					String det=inarea.floor+"-"+inarea.ceiling+": "+inarea.name;
-					details.add(det);
-					extradetails.add(det);
-					for(String fre : inarea.freqs)
-					{
-						if (fre.length()>0)
-						{
-							//Log.i("fplan","Adding airspace detail "+fre);
-							extradetails.add(fre);
-						}
-					}
-				}
-			}
-		if (details.size()==0)
-		{
-			details.add("0 ft-FL 095: Uncontrolled Airspace");
-			extradetails.add("0 ft-FL 095: Uncontrolled Airspace");
-		}
-		
-	}
 
 	public int get_target() {
 		return target_wp;
 	}
 	
-	public InformationItem getCurrentWarning()
+	public boolean hasAnyWaypoints()
 	{
-		return current_warning_obj;
+		if (tripdata==null || waypointEvents==null) return false;
+		if (waypointEvents.size()==0) return false;
+		return true;
 	}
-
 	public boolean hasLeft()
 	{
-		if (warnings.size()<=1) return false;
-		if (current_warning_idx>0) return true;
+		if (waypointEvents==null || waypointEvents.size()<=1) return false;
+		if (current_waypoint_idx>0) return true;
 		return false;
 	}
 	public void left() {
-		current_warning_idx-=1;
-		if (current_warning_idx<=-1)
-			current_warning_idx=-1;
-		if (current_warning_idx>=0)
-			current_warning_obj=warnings.get(current_warning_idx);
-		else
-			current_warning_obj=null;
+		current_waypoint_idx-=1;
+		if (current_waypoint_idx<0)
+			current_waypoint_idx=0;
 	}
 	public boolean hasRight()
 	{
-		if (warnings.size()<=1) return false;
-		if (current_warning_idx<warnings.size()-1) return true;
+		if (waypointEvents==null || waypointEvents.size()<=1) return false;
+		if (current_waypoint_idx<waypointEvents.size()-1) return true;
 		return false;
 	}
 	public void right() {
-		current_warning_idx+=1;
-		if (current_warning_idx>=warnings.size())
-			current_warning_idx=warnings.size()-1;
-		if (current_warning_idx>=0)
-			current_warning_obj=warnings.get(current_warning_idx);
+		if (waypointEvents==null || waypointEvents.size()<=1) return;
+		current_waypoint_idx+=1;
+		if (current_waypoint_idx>=waypointEvents.size())
+			current_waypoint_idx=waypointEvents.size()-1;
+	}
+	
+	public String getTitleImpl(int i) {
+		if (tripdata==null || i>=tripdata.waypoints.size())
+			return "Unknown";
+		Waypoint wp=tripdata.waypoints.get(i);
+		String ttitle="Unknown";
+		if (i==0)
+		{
+			ttitle="Depart from "+wp.name;
+		}
 		else
-			current_warning_obj=null;
+		if (i==tripdata.waypoints.size()-1)
+		{
+			ttitle="Arrive "+wp.name;
+		}
+		else
+		if (wp.lastsub!=0)
+		{
+			ttitle=wp.name;
+		}
+		else
+		{
+			ttitle="Enroute "+wp.name;					
+		}		
+		return ttitle;
+	}
+	
+	public String[] getDetailsImpl(int i) {		
+		if (tripdata==null || i>=tripdata.waypoints.size())
+			return new String[]{};
+		
+		Waypoint nextwp=null;
+		Waypoint wp=tripdata.waypoints.get(i);
+		if (i+1<tripdata.waypoints.size()) nextwp=tripdata.waypoints.get(i+1);		
+		String whatdesc;
+		if (nextwp==null)
+		{
+			whatdesc="";
+		}
+		else
+		{
+			if (nextwp.what.equals("climb"))
+			{
+				whatdesc=String.format("Begin climb from %.0f ft to %.0f ft",nextwp.startalt,nextwp.endalt);
+			}
+			else
+			if (nextwp.what.equals("descent"))
+			{
+				whatdesc=String.format("Begin descent from %.0f ft to %.0f ft",nextwp.startalt,nextwp.endalt);
+			}
+			else
+			{
+				if (wp.what.equals("cruise"))
+					whatdesc=String.format("Level flight %.0f ft",nextwp.endalt);
+				else
+					whatdesc=String.format("Level-out at %.0f ft",nextwp.endalt);
+			}
+		}
+		
+		
+		final String[] details;
+		if (whatdesc.equals(""))
+		{
+			details=new String[]{};
+		}
+		else
+		{
+			details=new String[]{whatdesc};
+		};
+		return details;
+	}
+	@Override
+	public String[] getExtraDetails() {
+
+		return extradummy;
+	}
+	@Override
+	public Vector getPoint() {
+		int i=current_waypoint_idx;
+		if (tripdata==null || i>=tripdata.waypoints.size())
+			return null;;
+		Waypoint wp=tripdata.waypoints.get(i);
+		return Project.latlon2mercvec(wp.latlon, 13);
+	}
+	@Override
+	public double getDistance() {
+		int i=current_waypoint_idx;
+		if (tripdata==null || i>=waypointEvents.size())
+			return 0;
+		return waypointEvents.get(i).distance;
+	}
+	@Override
+	public long getWhen() {
+		int i=current_waypoint_idx;
+		if (tripdata==null || i>=waypointEvents.size())
+			return 0;
+		return waypointEvents.get(i).when;
+	}
+	@Override
+	public String getTitle() {
+		int i=current_waypoint_idx;
+		if (tripdata==null || i>=waypointEvents.size())
+			return "Unknown";
+		if (i==target_wp)
+			return "*"+waypointEvents.get(i).title;
+		return waypointEvents.get(i).title;
+	}
+	@Override
+	public String[] getDetails() {
+		int i=current_waypoint_idx;
+		if (tripdata==null || i>=waypointEvents.size())
+			return extradummy;
+		return waypointEvents.get(i).details;
+	}
+	@Override
+	public void updatemypos(Vector latlon2mercvec, double d) {
+		//Not needed, since TripState is updated through other means
+		//(it has to be, since it needs to be updated regardless of
+		//wether it is being shown as an InformationPanel or not)
+		
 	}
 	
 		

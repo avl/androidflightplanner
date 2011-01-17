@@ -2,7 +2,40 @@ package se.flightplanner;
 
 import java.util.ArrayList;
 
+import se.flightplanner.vector.BoundingBox;
+import se.flightplanner.vector.Vector;
+import se.flightplanner.vector.Polygon.InsideResult;
+
 public class AirspaceLookup {
+	public void get_airspace_details(double abit,
+		Vector just_a_bit_in,ArrayList<String> details,ArrayList<String> extradetails) {
+		for(AirspaceArea inarea:areas.get_areas(BoundingBox.aroundpoint(just_a_bit_in, abit)))
+		{
+			
+			InsideResult r=inarea.poly.inside(just_a_bit_in);
+			//double cd=r.closest.minus(point).length();
+			if (r.isinside) //our polygons are clockwise, because the Y-axis points down - this inverts the meaning of inside and outside
+			{ //If _INSIDE_ polygon
+				String det=inarea.floor+"-"+inarea.ceiling+": "+inarea.name;
+				details.add(det);
+				extradetails.add(det);
+				for(String fre : inarea.freqs)
+				{
+					if (fre.length()>0)
+					{
+						//Log.i("fplan","Adding airspace detail "+fre);
+						extradetails.add(fre);
+					}
+				}
+			}
+		}
+		if (details.size()==0)
+		{
+			details.add("0 ft-FL 095: Uncontrolled Airspace");
+			extradetails.add("0 ft-FL 095: Uncontrolled Airspace");
+		}
+		
+	}
 
 	public AirspaceLookup(Airspace airspace) {
 		

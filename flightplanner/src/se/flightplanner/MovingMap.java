@@ -4,22 +4,21 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
 import se.flightplanner.BackgroundMapLoader.UpdatableUI;
+import se.flightplanner.GuiSituation.GuiClientInterface;
 import se.flightplanner.MapDrawer.DrawResult;
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
-import se.flightplanner.Timeout.DoSomething;
 import se.flightplanner.vector.Vector;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
 import android.graphics.Rect;
-import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.Paint.Style;
 import android.graphics.drawable.ShapeDrawable;
@@ -35,19 +34,16 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
-public class MovingMap extends View implements UpdatableUI {
+public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 	private TripData tripdata;
 	private TripState tripstate;
 	private AirspaceLookup lookup;
 	private Location lastpos;
-	private int zoomlevel;
 	private long last_real_position;
 	private MapDrawer drawer;
 	private int lastcachesize; //bitmap cache
 	private String download_status;
 	private BearingSpeedCalc bearingspeed;
-	//private CountDownTimer timer;
-	//private TimeZone utctz;
 	private MapCache mapcache;
 	private BackgroundMapLoader loader;
 	private GetMapBitmap bitmaps;
@@ -55,155 +51,33 @@ public class MovingMap extends View implements UpdatableUI {
 	private float x_dpmm;
 	private float y_dpmm;
 	
-	public interface Clickable
+	public void doInvalidate()
 	{
-		Rect getRect();
-		void onClick();
-	}
-	private ArrayList<Clickable> clickables;
-	
-	private Handler lostSignalTimer;
-	private Runnable curLostSignalRunnable;
-	private Timeout drag_timeout;
-	
-	
-	@Override
-	public boolean onTouchEvent(MotionEvent ev)
-	{		
-		float x=ev.getX();
-		Transform tf = getTransform();
-		float y=ev.getY();
-		if (ev.getAction()==MotionEvent.ACTION_DOWN ||
-			ev.getAction()==MotionEvent.ACTION_MOVE)	
-			onTouchFingerDown(tf,x,y);	
-		else
-		if (ev.getAction()==MotionEvent.ACTION_UP)
-			onTouchFingerUp(tf,x,y);
-		return true;
-	}			
-	void onClassicalClick(float x,float y)
-	{
-		float b=getBottom();
-		float r=getRight();
-		float w=getRight()-getLeft();
-		float h=getBottom()-getTop();
-		Rect fat_finger=new Rect((int)x,(int)y,(int)x,(int)y);
-		grow(fat_finger,(int)(w*0.075f));
-		for(Clickable click : clickables)
-		{			
-			if (Rect.intersects(fat_finger,click.getRect()))
-			{
-				click.onClick();
-				return;
-			}
-		}
-		
-		if (y>b-0.2*h)
-		{
-			if (x<0.33*w)
-				sideways(-1);
-			else
-			if (x>r-0.33*w)
-				sideways(+1);
-			else
-			{
-				cycleextrainfo();
-			}
-		}
-		else
-		{
-			Transform tf = getTransform();
-			Merc m=tf.screen2merc(new Vector(x,y));
-			LatLon point=Project.merc2latlon(m,zoomlevel);
-			tripstate.showInfo(point,new LatLon(lastpos.getLatitude(),lastpos.getLongitude()));
-			invalidate();
-		}
-	}
-	Transform getTransform() {
-		int xsize=getRight()-getLeft();
-		int ysize=getBottom()-getTop();
-		if (lastpos!=null)
-		{
-			Merc mypos;
-			float hdg=0;
-			if (drag_center13!=null)
-			{
-				Merc drag_center=Project.merc2merc(drag_center13,13,zoomlevel);
-				mypos=new Merc(drag_center.x,drag_center.y);
-				hdg=drag_heading;
-			}
-			else
-			{
-				mypos=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),zoomlevel);
-				if (lastpos!=null && lastpos.hasBearing())
-				{
-					hdg=lastpos.getBearing();
-				}				
-			}
-			return new Transform(mypos,drawer.getArrow(xsize,ysize,drag_center13!=null),(float)hdg,zoomlevel);
-		}
-		else
-		{
-			return new Transform(new Merc(128<<zoomlevel,128<<zoomlevel),drawer.getArrow(xsize,ysize,drag_center13!=null),0,zoomlevel);			
-		}
-	}
-	private boolean extrainfo;
-	private int extrainfolineoffset;
-	private void cycleextrainfo() {
-		InformationItem we=tripstate.getCurrentWarning();
-		if (we!=null)
-		{
-			String[] details;
-			int maxlines=drawer.getNumInfoLines(getBottom()-getTop());
-			if (extrainfo)
-				details=we.getExtraDetails();
-			else
-				details=we.getDetails();
-	
-			Log.i("fplan","Cycling!");
-			int lines=details.length;
-			if (lines-extrainfolineoffset<=maxlines)
-			{ //the set previously visible included the last ones, so let's move on.
-				extrainfo=!extrainfo;
-				extrainfolineoffset=0;
-				if (extrainfo)
-					details=we.getExtraDetails();
-				else
-					details=we.getDetails();
-			}
-			else
-			{
-				extrainfolineoffset+=maxlines;
-			}
-			invalidate();
-		}
+		invalidate();
 	}
 	public MovingMap(Context context,DisplayMetrics metrics)
 	{
 		super(context);
-		tripstate=new TripState(null,null);
-		drag_timeout=new Timeout();
-		clickables=new ArrayList<MovingMap.Clickable>();
+		bearingspeed=new BearingSpeedCalc();
+		lastpos=bearingspeed.calcBearingSpeed(null);
 		float dot_per_mm_y=metrics.ydpi/25.4f;
 		y_dpmm=dot_per_mm_y;
 		float dot_per_mm_x=metrics.xdpi/25.4f;
 		x_dpmm=dot_per_mm_x;
-		drawer=new MapDrawer(x_dpmm,y_dpmm);
 		
-		float bigtextsize=dot_per_mm_y*2.7f; //6.5 mm text size
-		float textsize=dot_per_mm_y*1.75f; //6.5 mm text size
+		tripstate=new TripState(null,null);
+		
+		//float bigtextsize=dot_per_mm_y*2.7f; //6.5 mm text size
+		//float textsize=dot_per_mm_y*1.75f; //6.5 mm text size
 		 
 		last_real_position=0;
 		loader=null;
 
 		enableTerrainMap(true);
-		bearingspeed=new BearingSpeedCalc();
 		//utctz = TimeZone.getTimeZone("UTC");		 
-		zoomlevel=9;
 		lostSignalTimer=new Handler();
 
 		//textpaint.set
-		lastpos=null;
 		tripdata=null;
 		
 
@@ -219,6 +93,21 @@ public class MovingMap extends View implements UpdatableUI {
 		invalidate();
 	}
 	protected void onDraw(Canvas canvas) {
+		
+		if (gui==null || drawer==null)
+		{
+			if (getLeft()!=0)
+				throw new RuntimeException("This app doesn't work in a subwindow 1");
+			if (getTop()!=0)
+				throw new RuntimeException("This app doesn't work in a subwindow 2");
+			drawer=new MapDrawer(x_dpmm,y_dpmm);
+			if (getBottom()<50 || getRight()<50)
+				throw new RuntimeException("The screen is way too small");
+
+			gui=new GuiSituation(this,drawer.getNumInfoLines(getBottom()-getTop()),lastpos,
+					getRight()-getLeft(),getBottom()-getTop());
+			
+		}
         canvas.drawColor(Color.BLACK);
 		if (tripdata==null)
 		{
@@ -233,22 +122,20 @@ public class MovingMap extends View implements UpdatableUI {
 			Rect screenExtent=new Rect(
 					getLeft(),getTop(),
 					getRight(),getBottom());
-			DrawResult res=drawer.draw_actual_map(this, canvas,
-					this.getRight()-this.getLeft(),
-					this.getBottom()-this.getTop(),					
-					extrainfo,extrainfolineoffset,
-					drag_center13!=null, //isDragging
-					tripdata,
-					tripstate,
+			if (currentInfo!=null)
+				currentInfo.updatemypos(Project.latlon2mercvec(
+						new LatLon(lastpos.getLatitude(),lastpos.getLongitude()), 13)
+							, lastpos.getSpeed() * 3.6 / 1.852);
+			
+			DrawResult res=drawer.draw_actual_map(tripdata, tripstate,
 					lookup,
-					lastpos,
-					zoomlevel,
-					last_real_position, //timestamp
-					bitmaps,
-					clickables,
-					getTransform(),
+					canvas,					
+					screenExtent,lastpos,
+					bitmaps, //isDragging
+					gui,
+					last_real_position,
 					download_status,
-					screenExtent
+					currentInfo
 					);
 			lastcachesize=res.lastcachesize;
 			if (mapcache!=null && mapcache.haveUnsatisfiedQueries())
@@ -284,109 +171,13 @@ public class MovingMap extends View implements UpdatableUI {
 		//canvas.drawText("TRIP", 10, 100, textpaint);
 	}
 	
-	boolean tileOnScreen(float cx,float cy,Transform tf)
-	{
-		float maxdiag=363;
-		if (cx+maxdiag<getLeft()) return false;
-		if (cx-maxdiag>getRight()) return false;
-		if (cy+maxdiag<getTop()) return false;
-		if (cy-maxdiag>getBottom()) return false;
-
-		Vector base=new Vector(cx,cy);
-		Vector v=new Vector();
-		int sidex=0;
-		int sidey=0;
-		for(int j=0;j<2;++j)
-		{
-			for(int i=0;i<2;++i)
-			{
-				v.x=256*i;
-				v.y=256*j;
-				Vector r=v.rot(tf.hdgrad);
-				r.x+=base.x;
-				r.y+=base.y;
-				int cursidex=0;
-				int cursidey=0;
-				if (v.x<getLeft()) cursidex=-1;
-				if (v.x>getRight()) cursidex=1;
-				if (v.y<getTop()) cursidey=-1;
-				if (v.y>getBottom()) cursidey=1;
-				if (cursidex==0 && cursidey==0)
-					return true;
-				if (i==0 && j==0)
-				{
-					sidex=cursidex;
-					sidey=cursidey;
-				}
-				if (cursidex==0 || cursidex!=sidex)
-					sidex=0;
-				if (cursidey==0 || cursidey!=sidey)
-					sidey=0;
-			}
-		}
-		if (sidex!=0 || sidey!=0)
-			return false;
-		return true;
-		
-	}
-	void grow(Rect r,int howmuch)
-	{
-		r.left-=howmuch;
-		r.right+=howmuch;
-		r.top-=howmuch;
-		r.bottom+=howmuch;
-	}
-	void addTextIfFits(Canvas canvas,String sizetext, RectF r, String realtext,float y,
-			Paint tp) {
-		if (sizetext==null)
-		{
-			canvas.drawText(realtext, r.left, y, tp);
-			r.left=r.right+1;			
-		}
-		else
-		{			
-			Rect rect=new Rect();					
-			tp.getTextBounds(sizetext, 0, sizetext.length(),rect);
-			if (r.left+(rect.right-rect.left)<r.right)
-			{
-				canvas.drawText(realtext, r.left, y, tp);
-				r.left+=(rect.right-rect.left)+1.0f*x_dpmm;
-			}
-			else
-			{
-				r.left=r.right+1; //definitely out of space now!
-			}
-		}
-
-	}
-	String fmttime(int when) {
-		if (when==0 || when>3600*24*10)
-			return "--:--";
-		return String.format("%d:%02d",when/60,when%60);
-	}
-
-/*	private double rot_x(double x,double y) {
-		double rad=0;
-		if (lastpos!=null && lastpos.hasBearing())
-		{
-			rad=(-Math.PI/180.0)*lastpos.getBearing();
-		}
-		return Math.cos(rad)*x - Math.sin(rad)*y;
-	}
-	private double rot_y(double x,double y) {
-		double rad=0;
-		if (lastpos!=null && lastpos.hasBearing())
-		{
-			rad=(-Math.PI/180.0)*lastpos.getBearing();
-		}
-		return Math.sin(rad)*x + Math.cos(rad)*y;
-	}*/
-	
 	public void gps_update(Location loc)
 	{
 		 
 		
 		lastpos=bearingspeed.calcBearingSpeed(loc);
+		if (gui!=null)
+			gui.updatePos(lastpos);
 		last_real_position=SystemClock.uptimeMillis();
 		tripstate.update_target(lastpos);
 		invalidate();
@@ -410,19 +201,16 @@ public class MovingMap extends View implements UpdatableUI {
 
 	public void zoom(int zd) {
 		
-		onTouchAbort();
-		state=GuiState.IDLE;
-		
-		zoomlevel+=zd;
-		if (zoomlevel<4)
-			zoomlevel=4;
+		if (debugRunnner)
+		{
+			debugSpeed+=zd*1;
+		}
 		else
-		if (zoomlevel>13)
-			zoomlevel=13;		
-		invalidate();		
+		{
+			if (gui!=null) gui.changeZoom(zd);
+		}
+		
 	}
-
-	
 	public void update_airspace(Airspace pairspace, AirspaceLookup plookup) {
 		lookup=plookup;
 		tripstate=new TripState(tripdata,lookup);
@@ -431,19 +219,48 @@ public class MovingMap extends View implements UpdatableUI {
 		invalidate();
 	}
 
+	public void onSideKey(int i) {
+			
+		if (debugRunnner)
+		{
+			debugHdgRad+=i*(10.0f*Math.PI/180.0f);
+		}
+		else
+		{				
+			sideways(i);
+		}
+		
+	}
 	public void sideways(int i) {
 		if (tripstate!=null)
 		{
-			
 			if (i==-1)
-				tripstate.left();
+			{
+				if (currentInfo==null || !currentInfo.hasLeft())
+				{
+					currentInfo=null;
+				}
+				else
+				{						
+					currentInfo.left();
+				}
+			}
 			else if (i==1)
-				tripstate.right();
-			
-			lastpos.setBearing((lastpos.getBearing()+i*5)%360);
-			invalidate();
+			{
+				if (currentInfo==null)
+				{
+					currentInfo=tripstate;
+				}
+				else
+				{
+					if (currentInfo.hasRight())
+						tripstate.right();
+				}
+			}
 		}
 		
+		///lastpos.setBearing((lastpos.getBearing()+i*5)%360);
+		invalidate();
 	}
 	@Override
 	public void updateUI(boolean done) {
@@ -508,105 +325,87 @@ public class MovingMap extends View implements UpdatableUI {
 	}
 	
 	
-	private enum GuiState
-	{
-		IDLE, //Normal
-		MAYBE_DRAG, //about to start dragging
-		DRAGGING
+	@Override
+	public boolean onTouchEvent(MotionEvent ev)
+	{		
+		if (gui!=null)
+			return gui.handleOnTouch(ev,x_dpmm,y_dpmm);
+		else
+			return true;
 	}
-	private GuiState state=GuiState.IDLE;
-	public void onTouchAbort()
-	{ 
-		//this is called when zoomlevel is changed, which can happen
-		//while dragging, in principle.
-		state=GuiState.IDLE;
-	}
-	public void onNorthUp()
-	{
-		drag_heading=0;
-		invalidate();
-	}
-	public void doCenterDragging()
-	{
-		state=GuiState.IDLE;
-		drag_center13=null;
-		drag_base13=null;
-		invalidate();
-	}
-	public void onTouchFingerUp(Transform tf,float x, float y) {
-		switch(state)
-		{
-		case IDLE:
-			break;
-		case MAYBE_DRAG:
-			onClassicalClick(x, y);
-			state=GuiState.IDLE;
-			break;
-		case DRAGGING:
-			state=GuiState.IDLE;
-			break;
-		}
-	}
-	private float dragstartx,dragstarty;	
-	private Merc drag_center13;
-	private Merc drag_base13;
-	private float drag_heading;
-	public class DragTimeout implements DoSomething
-	{
-		@Override
-		public void run() {
-			doCenterDragging();
-		}	
-	}
-	public void onTouchFingerDown(Transform tf,float x, float y) {
-		switch(state)
-		{
-		case IDLE:
-			dragstartx=x;
-			dragstarty=y;
-			state=GuiState.MAYBE_DRAG;
-			break;
-		case MAYBE_DRAG:
-		{
-			float dist=(dragstartx-x)*(dragstartx-x)+(dragstarty-y)*(dragstarty-y);
-			float thresh=4.0f*x_dpmm;
-			if (dist>thresh*thresh)
-			{
-				dragstartx=x;
-				dragstarty=y;
-				float h=0.25f*(getBottom()-getTop());
-				float hdgrad=tf.getHdgRad();
-				Merc t=new Merc(tf.getPos().x,tf.getPos().y);
-				
-				if (drag_center13==null)
-				{
-					float deltax=(float)(Math.sin(hdgrad)*h);
-					float deltay=-(float)(Math.cos(hdgrad)*h);
-					t.x+=deltax;
-					t.y+=deltay;
-				}
-				drag_base13=Project.merc2merc(t, zoomlevel, 13);
-				drag_heading=tf.getHdg();
-				state=GuiState.DRAGGING;
-				resetDragTimeout();
-			}
-		}
-			break;
-		case DRAGGING:
-			float deltax1=(x-dragstartx)*(1<<(13-zoomlevel));
-			float deltay1=(y-dragstarty)*(1<<(13-zoomlevel));
-			float hdgrad=tf.getHdgRad();
-			float deltax=(float)(Math.cos(hdgrad)*deltax1-Math.sin(hdgrad)*deltay1);
-			float deltay=(float)(Math.sin(hdgrad)*deltax1+Math.cos(hdgrad)*deltay1);
-			drag_center13=new Merc(drag_base13.x-deltax,drag_base13.y-deltay);
-			resetDragTimeout();
-			invalidate();
-			break;
-		}
+	private Handler lostSignalTimer;
+	private Runnable curLostSignalRunnable;
+	
+	private GuiSituation gui;
+	InformationPanel currentInfo;
+	public void showInfo(LatLon about) {
+		// TODO Auto-generated method stub
+		ArrayList<String> details = new ArrayList<String>(); 
+		ArrayList<String> extradetails = new ArrayList<String>();
+		Vector point=Project.latlon2mercvec(about,13);
+		lookup.get_airspace_details(1.0,
+				point,details,extradetails);			
+		//Log.i("fplan","Actual GS for Current Position: "+actual_gs);
+		currentInfo=new AirspacePointInfo("fixed","Airspace",
+				details.toArray(new String[details.size()]),
+				extradetails.toArray(new String[extradetails.size()]),
+				point,true);
 		
 	}
-	private void resetDragTimeout() {
-		drag_timeout.timeout(new DragTimeout(), 30000);
+
+	public InformationPanel getCurrentWarning() {
+		return currentInfo;
+	}
+	
+	private Handler debugTimer;
+	private Runnable debugRunnable;
+	private boolean debugRunnner;
+	private Merc debugMerc;
+	private float debugSpeed;
+	private float debugHdgRad;
+	public void enableDriving(boolean debugdrive) 
+	{
+		if (debugdrive)
+		{
+			debugRunnner=true;
+			if (debugMerc==null)
+			{
+				debugMerc=Project.latlon2merc(new LatLon(
+						lastpos.getLatitude(),lastpos.getLongitude()), 13);
+			}
+			final MovingMap outer=this;
+			if (debugTimer==null)
+			{
+				debugTimer=new Handler();
+			}			
+			debugRunnable=new Runnable() {			
+				@Override	
+				public void run() {
+					if (outer.debugRunnable==null)
+						return; //stop
+					debugMerc=new
+						Merc(debugMerc.x+debugSpeed*Math.cos(debugHdgRad+Math.PI/2.0),
+								debugMerc.y+debugSpeed*Math.sin(debugHdgRad+Math.PI/2.0));
+					LatLon l=Project.merc2latlon(debugMerc, 13);
+					Location loc=new Location("gps");
+					//, "alt": 30, "lon": 
+					loc.setLatitude(l.lat);
+					loc.setLongitude(l.lon);
+					loc.removeBearing();
+					loc.removeSpeed();
+					Date d = new Date();
+					loc.setTime(d.getTime());
+					outer.gps_update(loc);					
+					debugTimer.postDelayed(debugRunnable, 1000);
+				}
+			};
+			debugTimer.postDelayed(debugRunnable, 1000);		
+		}
+		else
+		{
+			debugRunnner=false;
+			debugRunnable=null;
+		}
 	}
 	
 }
