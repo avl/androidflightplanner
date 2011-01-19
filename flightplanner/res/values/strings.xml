@@ -7,4 +7,6 @@
 <item>High Detail [100MB download]</item>
 </string-array>
 <string name="ok">Ok</string>
+<string name="upload">Upload</string>
+<string name="exit">Exit</string>
 </resources>

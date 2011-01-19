@@ -11,7 +11,8 @@ public class BitBuf {
 	int capacity;
 	int size;
 	public BitBuf copy() {
-		BitBuf ret=new BitBuf(capacity);
+		BitBuf ret=new BitBuf();
+		ret.bits=new int[(capacity+31)/32];
 		if (ret.bits.length!=bits.length)
 			throw new RuntimeException("Internal error in BitBuf");
 		System.arraycopy(bits,0,ret.bits,0,bits.length);
@@ -21,11 +22,21 @@ public class BitBuf {
 		ret.size=size;
 		return ret;
 	}
-	public BitBuf(int len)	
+	private void assure(int newcap) {
+		if (capacity>newcap)
+			return;
+		newcap*=3;
+		newcap>>=1;
+		int[] temp=new int[(newcap+31)/32];
+		System.arraycopy(bits,0,temp,0,bits.length);
+		bits=temp;
+		capacity=newcap;		
+	}
+	public BitBuf()	
 	{
-		
-		bits=new int[(len+31)/32];
-		capacity=len;
+		int startcap=10;
+		bits=new int[(startcap+31)/32];
+		capacity=startcap;
 		idx=off=0;
 	}
 	public void reset()
@@ -55,7 +66,7 @@ public class BitBuf {
 	}
 	public boolean readbit() {
 		int bitlen=idx*32+off;
-		if (bitlen+1>size)
+		if (bitlen>=size)
 			throw new RuntimeException("Out of bits");
 		
 		boolean b=
@@ -72,8 +83,7 @@ public class BitBuf {
 	
 	public boolean write(BitSeq seq) {
 		int bitlen=idx*32+off;
-		if (bitlen+seq.size()>capacity)
-			return false;
+		assure(bitlen+seq.size());
 		int s=seq.size();
 		for(int i=0;i<s;++i)
 		{
@@ -87,10 +97,24 @@ public class BitBuf {
 				idx+=1;
 			}
 		}
+		//System.out.println("In write: "+idx+" off: "+off);
 		int newsize=32*idx+off;
 		if (newsize>size)
 			size=newsize;
 		return true;
+	}
+	public int size() {
+		return size;
+	}
+	
+	public void rewind2size(int size) {
+		if (size<0) throw new RuntimeException("Bad size");
+		idx=size/32;
+		off=size%32;
+	}
+	public int offset() {
+		int newsize=32*idx+off;
+		return newsize;
 	}
 
 }

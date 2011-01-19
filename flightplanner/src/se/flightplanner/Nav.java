@@ -51,9 +51,12 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	final static int MENU_LOGIN=0;
 	final static int SETUP_INFO=1;
 	final static int SETTINGS_DIALOG=2;
+	final static int VIEW_RECORDINGS=3;
+	
 	final static int MENU_DOWNLOAD_TERRAIN=3;
 	final static int MENU_FINISH=4;
 	final static int MENU_SETTINGS=5;
+	final static int MENU_VIEW_RECORDINGS=6;
 	private LocationManager locman;
 	BackgroundMapDownloader terraindownloader;
 	
@@ -115,8 +118,9 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     }
 	public boolean onCreateOptionsMenu(Menu menu) {
 	    menu.add(0, MENU_LOGIN, 0, "Load Trip");
-	    menu.add(0, MENU_DOWNLOAD_TERRAIN, 0, "Download Terrain Map");
+	    menu.add(0, MENU_DOWNLOAD_TERRAIN, 0, "Download Map");
 	    menu.add(0, MENU_SETTINGS, 0, "Settings");
+	    menu.add(0, MENU_VIEW_RECORDINGS, 0, "Recorded Trips");
 	    menu.add(0, MENU_FINISH, 0, "Exit");
 	    return true;
 	}
@@ -251,6 +255,12 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    	Intent intent = getSettingsIntent();
 	    	intent.putExtra("se.flightplanner.thenopen", "nothing");
 	    	startActivityForResult(intent,SETUP_INFO);	    	
+	    	break;
+	    }
+	    case MENU_VIEW_RECORDINGS:
+	    {
+			Intent intent = new Intent(this, ViewRecordings.class);
+	    	startActivityForResult(intent,VIEW_RECORDINGS);	 	
 	    	break;
 	    }
 	    case MENU_LOGIN:

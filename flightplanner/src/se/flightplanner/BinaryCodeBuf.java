@@ -8,13 +8,21 @@ public class BinaryCodeBuf {
 	private BitSeq seq3;
 	private BitSeq seq4;
 	private BitSeq seq5;
+	int size()
+	{
+		return bitbuf.size();
+	}
+	void rewind2size(int size)
+	{
+		bitbuf.rewind2size(size);
+	}
 	public static BinaryCodeBuf backdecode(BinaryCodeBuf buf)
 	{
 		return new BinaryCodeBuf(buf.bitbuf);
 	}
-	public BinaryCodeBuf(int len)
+	public BinaryCodeBuf()
 	{
-		bitbuf=new BitBuf(len);
+		bitbuf=new BitBuf();
 		seq1=new BitSeq();
 		seq2=new BitSeq();
 		seq3=new BitSeq();
@@ -31,13 +39,15 @@ public class BinaryCodeBuf {
 		seq4=new BitSeq();
 		seq5=new BitSeq();
 	}
-	public void gammacode(long x)
+	/**
+	 * Returns true if successful, otherwise false.
+	 */
+	public boolean gammacode(long x)
 	{
 		if (x==0)
 		{
 			seq1.setsingle(false);
-			bitbuf.write(seq1);
-			return;
+			return bitbuf.write(seq1);
 		}
 		seq1.setsingle(true);		
 		if (x<0)
@@ -54,12 +64,14 @@ public class BinaryCodeBuf {
 		int bitsbits=BitSeq.countbits(bits);
 		seq3.unarycode(bitsbits);
 		seq4.binarycode(bits,bitsbits);
-		seq5.binarycode(x,bits);	
+		seq5.binarycode(x,bits);
+		int needed=seq1.size()+seq2.size()+seq3.size()+seq4.size()+seq5.size();
 		bitbuf.write(seq1);
 		bitbuf.write(seq2);
 		bitbuf.write(seq3);
 		bitbuf.write(seq4);
 		bitbuf.write(seq5);
+		return true;
 	}
 	public long gammadecode()
 	{
@@ -79,6 +91,9 @@ public class BinaryCodeBuf {
 		if (negative)
 			x=-x;
 		return x;
+	}
+	public int offset() {
+		return bitbuf.offset();
 	}
 	
 }
