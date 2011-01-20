@@ -1,6 +1,18 @@
 package se.flightplanner;
 
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.TimeZone;
+
+import android.os.Environment;
 
 import se.flightplanner.Project.Merc;
 import se.flightplanner.Project.iMerc;
@@ -30,6 +42,7 @@ public class FlightPathLogger {
 			else
 			{
 				chunk=new Chunk(merc17,gps_timestamp_ms);
+				chunk.setStartPlace(findPlace(merc17,lookup));
 				activated=true;
 				chunks.add(chunk);
 				active=true;
@@ -40,13 +53,20 @@ public class FlightPathLogger {
 		{
 			if (active)
 			{
+				if (chunks.size()>0)
+				{
+					Chunk chunk=chunks.get(chunks.size()-1);
+					chunk.setEndPlace(findPlace(chunk.last17,lookup));
+					chunk.saveToDisk();
+				}
 				deactivated=false;
 				active=false;
 			}
 		}
 		if (activated)
 		{
-			String place=findPlace(merc17,lookup);			
+			
+			
 		}
 		else
 		{
@@ -133,6 +153,7 @@ public class FlightPathLogger {
 		private int lastturn;
 		private long laststamp;
 		private int laststampdelta;
+		private boolean finished;
 
 		private BinaryCodeBuf binbuf;
 		public Chunk(iMerc start17,long stamp)
@@ -146,6 +167,61 @@ public class FlightPathLogger {
 			this.lastrate=50;
 			this.laststamp=startstamp;
 			this.laststampdelta=1000;
+			this.finished=false;
+		}
+		final static private SimpleDateFormat dateformat = new SimpleDateFormat("yyyyMMdd.kkmm");
+		static
+		{
+			dateformat.setTimeZone(TimeZone.getTimeZone("GMT"));
+		}
+		public void saveToDisk() throws IOException {
+			Date d=new Date(startstamp);
+			String filename=dateformat.format(d);
+			File extpath = Environment.getExternalStorageDirectory();
+			File tripdirpath = new File(extpath,
+				"/Android/data/se.flightplanner/files/triplog/");
+			if (!tripdirpath.exists())
+			{
+				tripdirpath.mkdirs();
+			}
+			File path= new File(tripdirpath,filename);
+			try
+			{
+				OutputStream ofstream=new BufferedOutputStream(
+						new FileOutputStream(path)
+						);
+				DataOutputStream data=new DataOutputStream(ofstream);
+				data.writeInt(0xfafafa01); //magic
+				data.writeInt(1); //version
+				
+				data.writeUTF(start_place);
+				data.writeUTF(end_place);
+				start17.serialize(data);
+				data.writeLong(startstamp);
+				last17.serialize(data);
+				data.writeInt(lasthdg);
+				data.writeInt(lastrate);
+				data.writeInt(lastturn);
+				data.writeLong(laststamp);
+				data.writeInt(laststampdelta);
+				data.writeInt(finished ? 1 : 0);
+				binbuf.serialize(data);
+				
+				
+			} catch (IOException e)
+			{
+				path.delete();
+				throw e;
+			}					
+		}
+		public void finish(String endPlace) {
+			end_place=endPlace;
+			finished=true;
+			
+		}
+		public void setStartPlace(String place) {
+			start_place=place;
+			
 		}
 		public void rewind()
 		{

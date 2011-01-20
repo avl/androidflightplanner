@@ -10,19 +10,113 @@
               android:text="Recorded Trips" />                
  <ListView android:id="@+id/listlabel" 
               android:layout_width="fill_parent" 
-              android:layout_height="fill_parent" 
+              android:layout_height="150dp" 
                />             
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content" >
+<TextView android:id="@+id/label" 
+              android:layout_width="fill_parent" 
+              android:layout_height="wrap_content" 
+              android:text="Start: " />                
+<TextView android:id="@+id/label" 
+              android:layout_width="fill_parent" 
+              android:layout_height="wrap_content" 
+              android:text="110120" />                
+<TextView android:id="@+id/label" 
+              android:layout_width="fill_parent" 
+              android:layout_height="wrap_content" 
+              android:text=", Time "
+              android:paddingRight="12dp"
+               />                
+<TextView android:id="@+id/label" 
+              android:layout_width="fill_parent" 
+              android:layout_height="wrap_content" 
+              android:text="10:15 Z" />                
+</LinearLayout>
+ 
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content" >
+    
+<TextView android:id="@+id/label" 
+              android:layout_width="fill_parent" 
+              android:layout_height="wrap_content" 
+              android:text="End:" />                
+<TextView android:id="@+id/starttime" 
+              android:layout_width="fill_parent" 
+              android:layout_height="wrap_content" 
+              android:paddingRight="12dp"
+              android:text="11:30 Z" />                
+<TextView android:id="@+id/label" 
+              android:layout_width="fill_parent" 
+              android:layout_height="wrap_content" 
+              android:text="Dur:" />                
+<TextView android:id="@+id/label" 
+              android:layout_width="fill_parent" 
+              android:layout_height="wrap_content" 
+              android:paddingRight="12dp"
+              android:text="1h15m" />                
+<TextView android:id="@+id/label" 
+              android:layout_width="fill_parent" 
+              android:layout_height="wrap_content" 
+              android:text="Dist:" />                
+<TextView android:id="@+id/label" 
+              android:layout_width="fill_parent" 
+              android:layout_height="wrap_content" 
+              android:text="78NM" />                
+
+</LinearLayout>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content" >
+    
+<TextView android:id="@+id/label" 
+              android:layout_width="fill_parent" 
+              android:layout_height="wrap_content" 
+              android:text="Depart:" />                
+<TextView android:id="@+id/dep" 
+              android:layout_width="fill_parent" 
+              android:layout_height="wrap_content" 
+              android:text="Stockholm/Arlanda)" />                
+</LinearLayout> 
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content" >
+    
+<TextView android:id="@+id/label" 
+              android:layout_width="fill_parent" 
+              android:layout_height="wrap_content" 
+              android:text="Dest:" />                
+<TextView android:id="@+id/dest" 
+              android:layout_width="fill_parent" 
+              android:layout_height="wrap_content" 
+              android:text="Stockholm/Västerås)" />                
+</LinearLayout> 
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content" >
         
 <Button
         android:id="@+id/upload"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:paddingRight="8dp"
         android:text="@string/upload" 
         />
 <Button
         android:id="@+id/exit"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:paddingRight="8dp"
         android:text="@string/exit" 
         />
  </LinearLayout>
+ </LinearLayout>
+ 

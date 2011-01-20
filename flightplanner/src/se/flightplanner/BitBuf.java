@@ -1,5 +1,7 @@
 package se.flightplanner;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 
@@ -109,12 +111,20 @@ public class BitBuf {
 	
 	public void rewind2size(int size) {
 		if (size<0) throw new RuntimeException("Bad size");
+		this.size=size;
 		idx=size/32;
 		off=size%32;
 	}
 	public int offset() {
 		int newsize=32*idx+off;
 		return newsize;
+	}
+	public void serialize(DataOutputStream data) throws IOException {
+		data.writeInt(size);
+		for(int i=0;i<size;++i)
+		{
+			data.writeInt(this.bits[i]);
+		}
 	}
 
 }

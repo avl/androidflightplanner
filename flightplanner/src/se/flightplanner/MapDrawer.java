@@ -486,7 +486,6 @@ public class MapDrawer {
 				else
 				{
 					Date d=new Date(when);
-					SimpleDateFormat t=new SimpleDateFormat();
 					whenstr="Passed "+formatter.format(d)+"Z";
 				}			
 				whentempl="Passed 222222Z";				

@@ -1,5 +1,7 @@
 package se.flightplanner;
 
+import java.io.DataOutputStream;
+
 public class BinaryCodeBuf {
 
 	private BitBuf bitbuf;
@@ -94,6 +96,9 @@ public class BinaryCodeBuf {
 	}
 	public int offset() {
 		return bitbuf.offset();
+	}
+	public void serialize(DataOutputStream data) {
+		bitbuf.serialize(data);
 	}
 	
 }
