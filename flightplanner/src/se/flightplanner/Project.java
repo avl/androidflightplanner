@@ -233,6 +233,16 @@ public class Project {
 	    double scale_diff=Math.cos(latrad);
 	    return 256*factor*((double)(length_in_nautical_miles)/(360*60.0))/scale_diff;
 	}
+	static public double approx_nm(float merc_coords_y,int zoomlevel,int merc_length)
+	{	    
+	    float factor=(float)(Math.pow(2.0,(zoomlevel)));
+	    float lat=(float)unmerc((128*factor-merc_coords_y)/128.0/factor*merc(85.05113));
+	    float latrad=(float)(lat/(180.0/Math.PI));
+	    float scale_diff=(float)Math.cos(latrad);
+	    //merc_length=256*factor*((double)(length_in_nautical_miles)/(360*60.0))/scale_diff;
+	    float length_in_nautical_miles=merc_length*scale_diff*360.0f*60.0f/(256.0f*factor);
+	    return length_in_nautical_miles;
+	}
 	public static double vector2heading(double dx, double dy) {
 		double tt=90-(Math.atan2(-dy,dx)*180.0/Math.PI);
 		if (tt<0) tt+=360.0;

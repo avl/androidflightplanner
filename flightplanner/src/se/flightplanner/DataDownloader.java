@@ -3,8 +3,11 @@ package se.flightplanner;
 import java.io.InputStream;
 
 import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -13,8 +16,11 @@ import java.util.zip.InflaterInputStream;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.FileEntity;
+import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
@@ -136,6 +142,43 @@ public class DataDownloader {
 			throw new RuntimeException("Error:"+obj.getString("error"));
 		}
 		return obj;
+	}
+	public static InputStream httpUpload(String path,
+			String user,String pass,
+			ArrayList<NameValuePair> nvps,File filepath) throws ClientProtocolException, IOException
+	{
+		FileEntity is=new FileEntity(filepath, "binary/octet-stream");
+		DefaultHttpClient cli=new DefaultHttpClient();
+		nvps.add(new BasicNameValuePair("user",user));
+		nvps.add(new BasicNameValuePair("pass",user));
+		boolean first=true;
+		
+		StringBuilder b=new StringBuilder(path);
+		
+		for(NameValuePair vp:nvps)
+		{
+			if (first)
+				b.append("?");
+			else
+				b.append("&");
+			first=false;
+			b.append(URLEncoder.encode(vp.getName(), "UTF-8"));
+			b.append("=");
+			b.append(URLEncoder.encode(vp.getValue(), "UTF-8"));
+		}
+		String url=get_addr()+b.toString();
+		HttpPost post=new HttpPost(url);
+
+	    post.setEntity(is);
+
+		HttpResponse res = cli.execute(post);
+		HttpEntity ent=res.getEntity();
+		if (ent==null)
+		{
+			throw new RuntimeException("No request body");
+		}
+		InputStream ret=ent.getContent();
+		return ret;		
 	}
 
 	private static HttpPost httpConnect(String path, String user, String pass,

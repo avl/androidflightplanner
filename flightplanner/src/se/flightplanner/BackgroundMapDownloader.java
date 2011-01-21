@@ -1,7 +1,10 @@
 package se.flightplanner;
 
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
@@ -26,11 +29,13 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 	BackgroundMapDownloadOwner owner;
 	String user;
 	String pass;
-	public BackgroundMapDownloader(BackgroundMapDownloadOwner owner,String user,String pass)
+	int mapdetail;
+	public BackgroundMapDownloader(BackgroundMapDownloadOwner owner,String user,String pass, int mapdetail)
 	{
 		this.owner=owner;
 		this.user=user;
 		this.pass=pass;
+		this.mapdetail=mapdetail;
 	}
 	
 	@SuppressWarnings("serial")
@@ -38,6 +43,14 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 		public String what;
 
 		public BackgroundException(String what) {
+			this.what = what;
+		}
+	}
+	@SuppressWarnings("serial")
+	static public class FatalBackgroundException extends Exception {
+		public String what;
+
+		public FatalBackgroundException(String what) {
 			this.what = what;
 		}
 	}
@@ -81,6 +94,7 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 		Airspace airspace;
 		AirspaceLookup lookup;
 		String terrain;
+		public String error;
 	}
 	private DownloadedAirspaceData downloadAirspace()
 	{
@@ -111,62 +125,43 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 			waitAvailable();
 			res=downloadAirspace();
 		} catch (InterruptedException e2) {
-			publishProgress("Cancelled");
-			return null;
+			DownloadedAirspaceData  ret=new DownloadedAirspaceData();
+			ret.error="Cancelled";
+			return ret;
 		}
-
-		boolean alreadyerased=false;
+		int failcount=0;
 		for (;;) {
 			try {
 
-				waitAvailable();
-				
-				alreadyerased=true; //TODO: Remove
-				
-				if(!alreadyerased)
-				{
-					try
-					{
-						for(int i=0;i<=10;++i)
-						{
-							File extpath = Environment.getExternalStorageDirectory();
-							File path = new File(extpath,
-									"/Android/data/se.flightplanner/files/level" + i);
-							if (path.exists())
-							{
-								
-								if (!path.delete())
-								{
-									publishProgress("Could not delete "+path);
-									return null;
-								}
-							}
-						}
-					}
-					catch(Throwable e)
-					{
-						publishProgress("Problem deleting existing files"+e);
-						return null;
-					}
-					alreadyerased=true;
-				}
+				waitAvailable();				
 				
 				if (Thread.currentThread().isInterrupted())
 					return null;
 				long totprog = 0;
-				for (int level = 0; level <= 10; ++level) {
+				for (int level = 0; level <= MapDetailLevels.getMaxLevelFromDetail(mapdetail); ++level) {
 					Log.i("fplan.download","About to download level "+level);
 					totprog = downloadLevel(totprog, level);
 				}
 				return res;
 			} catch (InterruptedException e) {
 				return null;
+			} catch (FatalBackgroundException e) {
+				DownloadedAirspaceData  ret=new DownloadedAirspaceData();
+				ret.error=e.what;
+				return ret;
 			} catch (BackgroundException e) {
-				publishProgress("Problem:"+e.what);
+				publishProgress(e.what);
 				try {
 					Thread.sleep(5000);
 				} catch (InterruptedException e1) {
 					return null;
+				}
+				++failcount;
+				if (failcount>25)
+				{
+					DownloadedAirspaceData  ret=new DownloadedAirspaceData();
+					ret.error="Too many failures";
+					return ret;					
 				}
 			}
 
@@ -174,25 +169,35 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 	}
 
 	private long downloadLevel(long totprog, int level)
-			throws InterruptedException, BackgroundException {
+			throws InterruptedException, BackgroundException, FatalBackgroundException {
 		long startversion = -1;
 		for (;;) {
 			File extpath = Environment.getExternalStorageDirectory();
+			File metapath = new File(extpath,
+			"/Android/data/se.flightplanner/files/meta.dat");
+	
+			if (!metapath.exists())
+			{
+				Log.i("fplan.download","Metadata missing, deleting all present map tile files");
+				deleteStoredFiles();
+			}
+
+			
 			File dirpath = new File(extpath,"/Android/data/se.flightplanner/files/");
 			if (!dirpath.exists())
 				dirpath.mkdirs();
+			if (!dirpath.exists())
+				throw new RuntimeException("Couldn't create directory:"+dirpath);
+
 			File path = new File(extpath,
 					"/Android/data/se.flightplanner/files/level" + level);
+			
+			
 			long filelength = 0;
 			if (path.exists())
 				filelength = path.length();
-			if (!dirpath.exists())
-				throw new RuntimeException("Couldn't create directory:"+dirpath);
-			
 			if (path.exists() && !path.canWrite()) {
-				this.publishProgress("Could not write to " + path);
-				Thread.sleep(5000);
-				continue;
+				throw new BackgroundException("Could not write to " + path);
 			}
 
 			ArrayList<NameValuePair> nvps = new ArrayList<NameValuePair>();
@@ -217,21 +222,42 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 				
 				
 				if (version != 1)
-					throw new RuntimeException("Unsupported version");
+					throw new FatalBackgroundException("Must upgrade app from Market first!");
 				int error= inp2.readInt();
 				if (error==1)
-					throw new BackgroundException("Bad password");
+					throw new FatalBackgroundException("Bad password");
 				if (error==2)
 					throw new BackgroundException("Server is out of bandwidth");
 				if (error!=0)
 					throw new BackgroundException("Server error");
 				long dataversion = inp2.readLong();
+				Log.i("fplan","Server dataversion:"+dataversion);
 				if (startversion == -1)
-					startversion = dataversion;
+				{
+					if (metapath.exists())
+					{
+						DataInputStream ds=new DataInputStream(
+								new FileInputStream(metapath));
+						long metaversion=ds.readLong();
+						startversion=metaversion;
+						ds.close();
+						Log.i("fplan.download","Read metadata file, dataversion:"+startversion);
+					}
+					else
+					{
+						startversion = dataversion;
+						DataOutputStream ds=new DataOutputStream(
+								new FileOutputStream(metapath));
+						ds.writeLong(startversion);
+						Log.i("fplan.download","Created metadata file, dataversion:"+startversion);
+						ds.close();	
+					}
+				}
 				if (startversion != dataversion)
 				{
-					if (path.delete()==false)
-						throw new RuntimeException("Couldn't delete existing file "+path);
+					Log.i("fplan.download","Map dataversion changed mid-download. Was:"+startversion+" now: "+dataversion);
+
+					deleteStoredFiles();
 					throw new BackgroundException(
 							"Dataversion changed mid-download. Restarting.");
 				}
@@ -254,6 +280,7 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 				
 				RandomAccessFile raf=new RandomAccessFile(path,"rw");
 				raf.seek(filelength);
+				long last=SystemClock.uptimeMillis();
 				try
 				{
 					
@@ -274,7 +301,10 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 						Log.i("fplan.download","Writing chunk "+filelength+" level "+level+" byte "+cnt);	
 						cnt+=readlen;
 						perc=(float)100.0f*(totprog+cnt+filelength)/totalsize;
-						publishProgress(String.format("%.3f%%",perc));
+						long now=SystemClock.uptimeMillis();
+						if (now-last>2000)
+							publishProgress(String.format("%.3f%%",perc));
+						last=now;
 					}
 				}
 				finally
@@ -286,6 +316,8 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 
 			catch (BackgroundException e) {
 				throw e;
+			} catch (FatalBackgroundException e) {
+				throw e;			
 			} catch (Exception e) {
 				Log.e("fplan", "" + e);
 				e.printStackTrace();
@@ -301,6 +333,25 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 					}
 			}
 
+		}
+	}
+	private void deleteStoredFiles() throws FatalBackgroundException {
+		
+		File extpath2 = Environment.getExternalStorageDirectory();
+		File metapath = new File(extpath2,
+		"/Android/data/se.flightplanner/files/meta.dat");
+		if (metapath.exists())
+		{
+			if (metapath.delete()==false)
+				throw new FatalBackgroundException("Couldn't delete "+metapath.getName());
+		}
+		for(int dellevel=0;dellevel<=13;++dellevel)
+		{						
+			File levpath = new File(extpath2,
+					"/Android/data/se.flightplanner/files/level" + dellevel);
+			if (levpath.exists())
+				if (levpath.delete()==false)
+					throw new FatalBackgroundException("Couldn't delete existing file "+levpath.getName());
 		}
 	}
 

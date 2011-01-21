@@ -21,17 +21,15 @@
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
               android:text="Start: " />                
-<TextView android:id="@+id/label" 
+<TextView android:id="@+id/startdate" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
               android:text="110120" />                
 <TextView android:id="@+id/label" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
-              android:text=", Time "
-              android:paddingRight="12dp"
-               />                
-<TextView android:id="@+id/label" 
+              android:text="-" />                
+<TextView android:id="@+id/starttime" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
               android:text="10:15 Z" />                
@@ -46,7 +44,7 @@
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
               android:text="End:" />                
-<TextView android:id="@+id/starttime" 
+<TextView android:id="@+id/endtime" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
               android:paddingRight="12dp"
@@ -55,7 +53,7 @@
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
               android:text="Dur:" />                
-<TextView android:id="@+id/label" 
+<TextView android:id="@+id/duration" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
               android:paddingRight="12dp"
@@ -64,7 +62,7 @@
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
               android:text="Dist:" />                
-<TextView android:id="@+id/label" 
+<TextView android:id="@+id/distance" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
               android:text="78NM" />                
@@ -79,10 +77,10 @@
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
               android:text="Depart:" />                
-<TextView android:id="@+id/dep" 
+<TextView android:id="@+id/departure" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
-              android:text="Stockholm/Arlanda)" />                
+              android:text="Stockholm/Arlanda" />                
 </LinearLayout> 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="horizontal"
@@ -93,10 +91,10 @@
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
               android:text="Dest:" />                
-<TextView android:id="@+id/dest" 
+<TextView android:id="@+id/destination" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
-              android:text="Stockholm/Västerås)" />                
+              android:text="Stockholm/Västerås" />                
 </LinearLayout> 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="horizontal"
@@ -111,11 +109,18 @@
         android:text="@string/upload" 
         />
 <Button
-        android:id="@+id/exit"
+        android:id="@+id/back"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:paddingRight="8dp"
-        android:text="@string/exit" 
+        android:text="@string/back" 
+        />
+<Button
+        android:id="@+id/clearall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingRight="8dp"
+        android:text="@string/clearall" 
         />
  </LinearLayout>
  </LinearLayout>

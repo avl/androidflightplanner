@@ -3,10 +3,11 @@
     <string name="hello">Hello World, Nav!</string>
     <string name="app_name">flightplanner</string>
 <string name="detail_prompt">Map Detail</string>
-<string-array name="detail_array"><item>Low Detail [1MB download]</item>
+<string-array name="detail_array"><item>Low Detail [2MB download]</item>
 <item>High Detail [100MB download]</item>
 </string-array>
 <string name="ok">Ok</string>
 <string name="upload">Upload</string>
-<string name="exit">Exit</string>
+<string name="back">Back</string>
+<string name="clearall">Clear All</string>
 </resources>

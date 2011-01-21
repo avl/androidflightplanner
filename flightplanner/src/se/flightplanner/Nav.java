@@ -59,6 +59,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	final static int MENU_VIEW_RECORDINGS=6;
 	private LocationManager locman;
 	BackgroundMapDownloader terraindownloader;
+	private FlightPathLogger fplog;
 	
 	static class NavData
 	{
@@ -259,8 +260,14 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    }
 	    case MENU_VIEW_RECORDINGS:
 	    {
-			Intent intent = new Intent(this, ViewRecordings.class);
-	    	startActivityForResult(intent,VIEW_RECORDINGS);	 	
+	    	try {
+				fplog.saveCurrent(lookup);
+			} catch (IOException e) {
+				e.printStackTrace();				
+			}
+			{
+				viewRecordings();
+			}
 	    	break;
 	    }
 	    case MENU_LOGIN:
@@ -304,6 +311,12 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     }
 	    return false;
 	}
+	private void viewRecordings() {
+		Intent intent = new Intent(this, ViewRecordings.class);
+		intent.putExtra("se.flightplanner.user", getPreferences(MODE_PRIVATE).getString("user","")); 
+		intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password",""));			
+		startActivityForResult(intent,VIEW_RECORDINGS);
+	}
 
 
 	private Intent getSettingsIntent() {
@@ -332,7 +345,9 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		String user=getPreferences(MODE_PRIVATE).getString("user","user");
 		String pass=getPreferences(MODE_PRIVATE).getString("password","password");
 		map.enableTerrainMap(false);
-		terraindownloader=new BackgroundMapDownloader(this,user,pass);
+		int detail=getPreferences(MODE_PRIVATE).getInt("mapdetail",0);
+		
+		terraindownloader=new BackgroundMapDownloader(this,user,pass,detail);
 		terraindownloader.execute();
 	}
 	/*
@@ -363,8 +378,8 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     	super.onCreate(savedInstanceState);
     	
     	final NavData data = (NavData) getLastNonConfigurationInstance();
-    	
     	setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+    	fplog=new FlightPathLogger();
     	
         if (data != null) {
         	tripdata=data.tripdata;
@@ -401,7 +416,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		DisplayMetrics metrics = new DisplayMetrics();
 		getWindowManager().getDefaultDisplay().getMetrics(metrics);
 
-        map=new MovingMap(this,metrics);
+        map=new MovingMap(this,metrics,fplog);
         map.update_airspace(airspace,lookup);
         map.update_tripdata(tripdata);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);

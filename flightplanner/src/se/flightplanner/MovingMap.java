@@ -13,6 +13,7 @@ import se.flightplanner.GuiSituation.GuiClientInterface;
 import se.flightplanner.MapDrawer.DrawResult;
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
+import se.flightplanner.Project.iMerc;
 import se.flightplanner.vector.Vector;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -50,14 +51,15 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 	private ArrayList<Blob> blobs;
 	private float x_dpmm;
 	private float y_dpmm;
-	
+	private FlightPathLogger fplog;
 	public void doInvalidate()
 	{
 		invalidate();
 	}
-	public MovingMap(Context context,DisplayMetrics metrics)
+	public MovingMap(Context context,DisplayMetrics metrics, FlightPathLogger fplog)
 	{
 		super(context);
+		this.fplog=fplog;
 		bearingspeed=new BearingSpeedCalc();
 		lastpos=bearingspeed.calcBearingSpeed(null);
 		float dot_per_mm_y=metrics.ydpi/25.4f;
@@ -180,6 +182,13 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 			gui.updatePos(lastpos);
 		last_real_position=SystemClock.uptimeMillis();
 		tripstate.update_target(lastpos);
+		LatLon latlon=new LatLon(lastpos.getLatitude(),lastpos.getLongitude());
+		iMerc merc17=Project.latlon2imerc(latlon,17);
+		try {
+			fplog.log(merc17, lastpos.getTime(), (int)(lastpos.getSpeed()*3.6f/1.852f), lookup);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		invalidate();
 		if (curLostSignalRunnable!=null)
 			lostSignalTimer.removeCallbacks(curLostSignalRunnable);
@@ -187,8 +196,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 			@Override	
 			public void run() {
 				Log.i("fplan","Lost signal runnable called.");
-				last_real_position=0;
-				invalidate();
+				gps_disabled();
 			}
 		};
 		lostSignalTimer.postDelayed(curLostSignalRunnable, 5000);		
@@ -300,17 +308,29 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 			mapcache=new MapCache();
 			blobs=new ArrayList<Blob>();
 			try 
-			{
-				for(int i=0;i<=10;++i)
+			{				
+				int maxzoomlevel=0;
+				for(int i=0;i<=13;++i)
 				{
 					
 					File extpath = Environment.getExternalStorageDirectory();
 					File path = new File(extpath,
 							"/Android/data/se.flightplanner/files/level" + i);
+					if (!path.exists())
+						break;
 					Log.i("fplan","Reading map from "+path.toString());
 					blobs.add(new Blob(path.toString(),256));
+					maxzoomlevel=i;
 				}
-				bitmaps=new GetMapBitmap(mapcache);
+				if (maxzoomlevel==0)
+				{
+					blobs=null;
+					bitmaps=null;					
+				}
+				else
+				{					
+					bitmaps=new GetMapBitmap(mapcache,maxzoomlevel);
+				}
 			} catch (IOException e) {
 				//System.out.println("Failed opening terrain bitmap. Check file:"+path);
 				Log.e("fplan",e.toString());

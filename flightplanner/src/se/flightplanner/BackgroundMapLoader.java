@@ -69,7 +69,7 @@ public class BackgroundMapLoader extends AsyncTask<Key,BackgroundMapLoader.Loade
 				try {
 					Log.i("fplan.bitmap","Publish a real bitmap:"+key.getPos());
 					publishProgress(new LoadedBitmap(key,blobs.get(key.getZoomlevel()).get_bitmap(key.getPos())));
-				} catch (IOException e) {
+				} catch (Throwable e) {
 					Log.e("fplan","Background loading of tile "+key.getPos()+" failed."+e);
 					e.printStackTrace();
 				}				

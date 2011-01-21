@@ -7,6 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -69,7 +70,14 @@ public class TextureStore {
 				int imgsize=data.readInt(); //Our java-implementation doesn't fill imgsize correctly, so we ignore it when reading (the python version does however fill imgsize)
 				
 				BitmapFactory.Options opts = new BitmapFactory.Options();
-				opts.inScaled = false;								
+
+				try {
+					Field f = opts.getClass().getField("inScaled");
+					f.setBoolean(opts,false);
+				} catch (Throwable e) {
+					e.printStackTrace();
+				} 
+				
 				Bitmap bm=BitmapFactory.decodeStream(data,null,opts);
 				if (bm==null) 
 					throw new RuntimeException("Couldn't decode png-image");

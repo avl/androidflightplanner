@@ -14,9 +14,11 @@ import android.os.SystemClock;
 import android.util.Log;
 
 public class GetMapBitmap {
-	MapCache mapcache;
-	public GetMapBitmap(MapCache mapcache)
+	private MapCache mapcache;
+	private int maxzoomlevel;
+	public GetMapBitmap(MapCache mapcache,int maxzoomlevel)
 	{
+		this.maxzoomlevel=maxzoomlevel;
 		this.mapcache=mapcache;
 	}
 	static public class BitmapRes
@@ -38,7 +40,7 @@ public class GetMapBitmap {
 			iMerc curm=Project.imerc2imerc(m,desiredzoomlevel,zoomlevel);
 			curm=new iMerc(curm.getX() & (~255),curm.getY() & (~255));
 			boolean should_be_there=false;
-			if (zoomlevel==desiredzoomlevel || desiredzoomlevel>10 && zoomlevel==10)
+			if (zoomlevel==desiredzoomlevel || desiredzoomlevel>maxzoomlevel && zoomlevel==maxzoomlevel)
 				should_be_there=true;
 			Bitmap b=getBitmapImpl(curm,zoomlevel,cachesize,should_be_there);
 			if (b!=null)
@@ -56,7 +58,7 @@ public class GetMapBitmap {
 				return res;
 			}
 		}
-		for(int zoomlevel=desiredzoomlevel+1;zoomlevel<=10;++zoomlevel)
+		for(int zoomlevel=desiredzoomlevel+1;zoomlevel<=maxzoomlevel;++zoomlevel)
 		{
 			int zoomgap=(zoomlevel-desiredzoomlevel);
 			int gapfactor=1<<zoomgap;

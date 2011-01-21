@@ -7,6 +7,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.lang.reflect.Field;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -110,7 +111,12 @@ public class Blob {
 		Log.i("fplan","Ready to read out bitmap, size "+imagesize);
 		*/
 		BitmapFactory.Options opts = new BitmapFactory.Options();
-		opts.inScaled = false;								
+		try {
+			Field f = opts.getClass().getField("inScaled");
+			f.setBoolean(opts,false);
+		} catch (Throwable e) {
+			e.printStackTrace();
+		} 		
 		byte[] data=get_tile(coords);
 		if (data==null)
 			return null;
