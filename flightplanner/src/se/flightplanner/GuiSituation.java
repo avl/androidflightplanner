@@ -57,6 +57,8 @@ public class GuiSituation
 
 		InformationPanel getCurrentWarning();
 		
+		void cancelMapDownload();
+		
 	}
 	public interface Clickable
 	{
@@ -307,6 +309,9 @@ public class GuiSituation
 	}
 	public void updatePos(Location pos) {
 		this.lastpos=pos;
+	}
+	public void cancelMapDownload() {
+		movingMap.cancelMapDownload();
 	}
 	
 }

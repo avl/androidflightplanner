@@ -24,7 +24,7 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 	static public interface BackgroundMapDownloadOwner
 	{
 		public void onProgress(String prog);
-		public void onFinish(Airspace apace,AirspaceLookup lookup);
+		public void onFinish(Airspace apace,AirspaceLookup lookup, String error);
 	}
 	BackgroundMapDownloadOwner owner;
 	String user;
@@ -68,10 +68,15 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 	{
 		Log.i("fplan.download","onPostExecute:"+result);
 		if (result!=null)
-			owner.onFinish(result.airspace,result.lookup);
+			owner.onFinish(result.airspace,result.lookup,result.error);
 		else
-			owner.onFinish(null,null);
+			owner.onFinish(null,null,"error");
 			
+	}
+	@Override
+    protected void onCancelled()
+	{
+		owner.onFinish(null,null,"Cancelled");		
 	}
 
 	boolean waitAvailable() throws InterruptedException {
@@ -121,6 +126,7 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 		
 
 		DownloadedAirspaceData res=null;
+		publishProgress("Starting");
 		try {
 			waitAvailable();
 			res=downloadAirspace();
@@ -132,11 +138,13 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 		int failcount=0;
 		for (;;) {
 			try {
-
-				waitAvailable();				
-				
+				waitAvailable();								
 				if (Thread.currentThread().isInterrupted())
-					return null;
+				{
+					DownloadedAirspaceData  ret=new DownloadedAirspaceData();
+					ret.error="Cancelled";
+					return ret;					
+				}
 				long totprog = 0;
 				for (int level = 0; level <= MapDetailLevels.getMaxLevelFromDetail(mapdetail); ++level) {
 					Log.i("fplan.download","About to download level "+level);
@@ -144,10 +152,14 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 				}
 				return res;
 			} catch (InterruptedException e) {
-				return null;
+				DownloadedAirspaceData  ret=new DownloadedAirspaceData();
+				ret.error="Cancelled";
+				return ret;					
 			} catch (FatalBackgroundException e) {
 				DownloadedAirspaceData  ret=new DownloadedAirspaceData();
 				ret.error=e.what;
+				Log.i("fplan","Fatal background error:"+e.what);
+
 				return ret;
 			} catch (BackgroundException e) {
 				publishProgress(e.what);
@@ -231,7 +243,9 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 				if (error!=0)
 					throw new BackgroundException("Server error");
 				long dataversion = inp2.readLong();
-				Log.i("fplan","Server dataversion:"+dataversion);
+				Log.i("fplan","Server dataversion:"+dataversion+" interrupted:"+Thread.currentThread().isInterrupted());
+				if (Thread.currentThread().isInterrupted())
+					throw new FatalBackgroundException("Cancelled");
 				if (startversion == -1)
 				{
 					if (metapath.exists())
@@ -288,6 +302,8 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 					int cnt=0;
 					for(;;)
 					{
+						if (Thread.currentThread().isInterrupted())
+							throw new FatalBackgroundException("Cancelled");
 						int readlen=inp2.read(buffer);
 						if (readlen==-1)
 						{
@@ -298,7 +314,7 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 							Thread.sleep(50);
 						else
 							raf.write(buffer,0,readlen);
-						Log.i("fplan.download","Writing chunk "+filelength+" level "+level+" byte "+cnt);	
+						Log.i("fplan.download","Writing chunk "+filelength+" level "+level+" byte "+cnt+" interrupt:"+Thread.currentThread().isInterrupted());
 						cnt+=readlen;
 						perc=(float)100.0f*(totprog+cnt+filelength)/totalsize;
 						long now=SystemClock.uptimeMillis();

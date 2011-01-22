@@ -9,6 +9,7 @@ import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
 
 import se.flightplanner.BackgroundMapDownloader.BackgroundMapDownloadOwner;
+import se.flightplanner.MovingMap.MovingMapOwner;
 
 //import se.flightplanner.map3d.ElevationStore;
 //import se.flightplanner.map3d.TextureStore;
@@ -38,7 +39,7 @@ import android.view.MenuItem;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-public class Nav extends Activity implements LocationListener,BackgroundMapDownloadOwner {
+public class Nav extends Activity implements LocationListener,BackgroundMapDownloadOwner,MovingMapOwner {
     /** Called when the activity is first created. */
 	MovingMap map;
 	TripData tripdata;
@@ -416,7 +417,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		DisplayMetrics metrics = new DisplayMetrics();
 		getWindowManager().getDefaultDisplay().getMetrics(metrics);
 
-        map=new MovingMap(this,metrics,fplog);
+        map=new MovingMap(this,metrics,fplog,this);
         map.update_airspace(airspace,lookup);
         map.update_tripdata(tripdata);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
@@ -451,18 +452,34 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 
 	@Override
 	public void onProgress(String prog) {
-		map.set_download_status(prog);
+		map.set_download_status(prog,false);
 	}
 
 
 	@Override
-	public void onFinish(Airspace airspace,AirspaceLookup lookup) {
+	public void onFinish(Airspace airspace,AirspaceLookup lookup,String error) {
 		terraindownloader=null;		
 		this.airspace=airspace;
 		this.lookup=lookup;
-		map.set_download_status("");
+		Log.i("fplan","Finish:"+error);
+		if (error!=null)
+		{
+			map.set_download_status(error,true);
+		}
+		else
+		{
+			map.set_download_status("Complete",true);
+		}
         map.update_airspace(airspace,lookup);
 		map.enableTerrainMap(true);
+	}
+	@Override
+	public void cancelMapDownload() {
+		Log.i("fplan","cancelMapDownload:"+terraindownloader);
+		if (terraindownloader!=null)
+		{
+			terraindownloader.cancel(true);
+		}
 	}
     
 

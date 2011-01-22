@@ -52,6 +52,14 @@ public class ViewRecordings extends Activity implements HandleUpload {
 			readable.substring(17,19);				
 	}
 	@Override
+	public void onDestroy()
+	{
+		if (ful!=null)
+		{
+			ful.cancel(true);
+		}
+	}
+	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 		DisplayMetrics metrics = new DisplayMetrics();
@@ -197,7 +205,7 @@ public class ViewRecordings extends Activity implements HandleUpload {
 		if (ful!=null)
 		{
 			if (status.equals("success"))
-				RookieHelper.showmsg(this, "Upload successful");
+				RookieHelper.showmsg(this, "Upload successful!");
 			else
 				RookieHelper.showmsg(this, "Upload failed. Check connection, username and password!");
 		}

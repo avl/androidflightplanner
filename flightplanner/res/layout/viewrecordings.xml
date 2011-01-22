@@ -24,7 +24,7 @@
 <TextView android:id="@+id/startdate" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
-              android:text="110120" />                
+              android:text="" />                
 <TextView android:id="@+id/label" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
@@ -32,7 +32,7 @@
 <TextView android:id="@+id/starttime" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
-              android:text="10:15 Z" />                
+              android:text="" />                
 </LinearLayout>
  
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -48,7 +48,7 @@
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
               android:paddingRight="12dp"
-              android:text="11:30 Z" />                
+              android:text="" />                
 <TextView android:id="@+id/label" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
@@ -57,7 +57,7 @@
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
               android:paddingRight="12dp"
-              android:text="1h15m" />                
+              android:text="" />                
 <TextView android:id="@+id/label" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
@@ -65,7 +65,7 @@
 <TextView android:id="@+id/distance" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
-              android:text="78NM" />                
+              android:text="" />                
 
 </LinearLayout>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -80,7 +80,7 @@
 <TextView android:id="@+id/departure" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
-              android:text="Stockholm/Arlanda" />                
+              android:text="" />                
 </LinearLayout> 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="horizontal"
@@ -94,7 +94,7 @@
 <TextView android:id="@+id/destination" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
-              android:text="Stockholm/Västerås" />                
+              android:text="" />                
 </LinearLayout> 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="horizontal"

@@ -638,20 +638,10 @@ public class MapDrawer {
 
 		if (isDragging) {
 			float h = bigtextpaint.getTextSize();
-			y += h;
-			final Rect tr1 = new Rect();
-			thinlinepaint.setColor(Color.WHITE);
+			float topbutton_y = y+h;
 
 			String text = "Center";
-			bigtextpaint.getTextBounds(text, 0, text.length(), tr1);
-			tr1.bottom = (int) (tr1.top + h);
-			tr1.offsetTo((int) (right - tr1.width() - h), (int) y);
-			MapDrawer.grow(tr1, (int) (0.4f * h));
-			canvas.drawRect(tr1, backgroundpaint);
-			canvas.drawRect(tr1, thinlinepaint);
-
-			canvas.drawText(text, tr1.left + 0.4f * h, tr1.bottom - 0.4f * h,
-					bigtextpaint);
+			final Rect tr1 = drawButton(canvas, right,topbutton_y, text,-1,0,right);
 			clickables.add(new GuiSituation.Clickable() {
 				@Override
 				public Rect getRect() {
@@ -666,17 +656,8 @@ public class MapDrawer {
 			int edge = tr1.left;
 
 			text = "Set North Up";
-			final Rect tr2 = new Rect();
-			bigtextpaint.getTextBounds(text, 0, text.length(), tr2);
-			tr2.bottom = (int) (tr2.top + h);
-			tr2.offsetTo((int) (h), (int) y);
-			MapDrawer.grow(tr2, (int) (0.4f * h));
-			if (tr2.right < edge) {
-				canvas.drawRect(tr2, backgroundpaint);
-				canvas.drawRect(tr2, thinlinepaint);
-
-				canvas.drawText(text, tr2.left + 0.4f * h, tr2.bottom - 0.4f
-						* h, bigtextpaint);
+			final Rect tr2 = drawButton(canvas, 0,topbutton_y, text,1,0,edge);
+			if (tr2!=null) {				
 				clickables.add(new GuiSituation.Clickable() {
 					@Override
 					public Rect getRect() {
@@ -693,13 +674,50 @@ public class MapDrawer {
 		} else {
 			if (download_status != null && !download_status.equals("")) {
 				float y2 = (y + bigtextpaint.getTextSize() * 1.1f);
-				canvas.drawRect(0, y + 2, right, y2, backgroundpaint);
-				canvas.drawText("Download:" + download_status, left + 3, y2,
-						bigtextpaint);
+				
+				String text = "Load:"+download_status;
+				final Rect tr1 = drawButton(canvas, 0,y2, text,1,0,Integer.MAX_VALUE);
+				clickables.add(new GuiSituation.Clickable() {
+					@Override
+					public Rect getRect() {
+						return tr1;
+					}
+
+					@Override
+					public void onClick() {
+						Log.i("fplan","Cancel download");
+						gui.cancelMapDownload();
+					}
+				});
+				
 			}
 		}
 
 		return res;
+	}
+
+	private Rect drawButton(Canvas canvas, float x,float topbutton_y, String text,int layoutdir, int x1lim, int x2lim) {
+		float h2 = bigtextpaint.getTextSize();
+		thinlinepaint.setColor(Color.WHITE);
+		final Rect tr1 = new Rect();
+		bigtextpaint.getTextBounds(text, 0, text.length(), tr1);
+		tr1.bottom = (int) (tr1.top + h2);
+		
+		int xpos;
+		if (layoutdir<0)
+			xpos=(int) (x - tr1.width() - h2);
+		else				
+			xpos=(int) (x+h2);
+		tr1.offsetTo(xpos, (int) topbutton_y);
+		MapDrawer.grow(tr1, (int) (0.4f * h2));
+		if (tr1.left<x1lim || tr1.right>x2lim)
+			return null;
+		canvas.drawRect(tr1, backgroundpaint);
+		canvas.drawRect(tr1, thinlinepaint);
+
+		canvas.drawText(text, tr1.left + 0.4f * h2, tr1.bottom - 0.4f * h2,
+				bigtextpaint);
+		return tr1;
 	}
 
 	public int getNumInfoLines(int ysize) {

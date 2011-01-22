@@ -14,22 +14,17 @@ import se.flightplanner.MapDrawer.DrawResult;
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
 import se.flightplanner.Project.iMerc;
+import se.flightplanner.Timeout.DoSomething;
 import se.flightplanner.vector.Vector;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Rect;
-import android.graphics.Typeface;
-import android.graphics.Paint.Style;
-import android.graphics.drawable.ShapeDrawable;
-import android.graphics.drawable.shapes.OvalShape;
 import android.location.Location;
-import android.location.LocationManager;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.SystemClock;
-import android.text.format.Time;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -44,6 +39,8 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 	private MapDrawer drawer;
 	private int lastcachesize; //bitmap cache
 	private String download_status;
+	private boolean download_dismissable;
+	private Timeout dismiss_timeout;
 	private BearingSpeedCalc bearingspeed;
 	private MapCache mapcache;
 	private BackgroundMapLoader loader;
@@ -52,14 +49,21 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 	private float x_dpmm;
 	private float y_dpmm;
 	private FlightPathLogger fplog;
+	private MovingMapOwner owner;
+	interface MovingMapOwner
+	{
+		public void cancelMapDownload();
+	}
 	public void doInvalidate()
 	{
 		invalidate();
 	}
-	public MovingMap(Context context,DisplayMetrics metrics, FlightPathLogger fplog)
+	public MovingMap(Context context,DisplayMetrics metrics, FlightPathLogger fplog,MovingMapOwner owner)
 	{
 		super(context);
+		this.owner=owner;
 		this.fplog=fplog;
+		dismiss_timeout=new Timeout();
 		bearingspeed=new BearingSpeedCalc();
 		lastpos=bearingspeed.calcBearingSpeed(null);
 		float dot_per_mm_y=metrics.ydpi/25.4f;
@@ -285,9 +289,19 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 		}
 		invalidate();
 	}
-	public void set_download_status(String prog) {
-		// TODO Auto-generated method stub
+	public void set_download_status(String prog, boolean dismissable) {
 		download_status=prog;
+		download_dismissable=dismissable;
+		if (dismissable)
+		{
+			dismiss_timeout.timeout(new DoSomething(){
+				@Override
+				public void run() {
+					download_status="";
+					invalidate();
+				}
+			}, 10000);
+		}
 		invalidate();
 	}
 	public void enableTerrainMap(boolean b) {
@@ -359,7 +373,6 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 	private GuiSituation gui;
 	InformationPanel currentInfo;
 	public void showInfo(LatLon about) {
-		// TODO Auto-generated method stub
 		ArrayList<String> details = new ArrayList<String>(); 
 		ArrayList<String> extradetails = new ArrayList<String>();
 		Vector point=Project.latlon2mercvec(about,13);
@@ -425,6 +438,19 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 		{
 			debugRunnner=false;
 			debugRunnable=null;
+		}
+	}
+	@Override
+	public void cancelMapDownload() {
+		Log.i("fplan","cancel map download:");
+		if (download_dismissable)
+		{
+			download_status="";
+			invalidate();
+		}
+		else
+		{		
+			owner.cancelMapDownload();
 		}
 	}
 	
