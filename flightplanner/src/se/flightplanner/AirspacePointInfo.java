@@ -9,7 +9,6 @@ public class AirspacePointInfo implements InformationPanel
 	private String[] details;
 	private String[] extra;
 	private double distance;
-	private String kind;
 	private int when;
 	
 	private boolean is_direct;
@@ -18,15 +17,17 @@ public class AirspacePointInfo implements InformationPanel
 	 * @param is_direct True if this is a simple waypoint, which is the next in the trip, and 
 	 * we want the ETA calculated naively from the current actual groundspeed, using a direct track..
 	 */
-	public AirspacePointInfo(String kind,
+	public AirspacePointInfo(
 			String title,String[] details,String[] extra,Vector point,
 			boolean is_direct)
 	{
-		this.kind=kind;
 		this.title=title;
 		this.details=details;
 		this.extra=extra;
 		this.point=point;
+		if (point==null)
+			throw new RuntimeException("point is null");
+
 		this.is_direct=is_direct;
 	}
 	void update(double distance,int when)
@@ -66,6 +67,8 @@ public class AirspacePointInfo implements InformationPanel
 	}
 	@Override
 	public Vector getPoint() {
+		if (point==null)
+			throw new RuntimeException("point is null");
 		return point;
 	}
 	@Override

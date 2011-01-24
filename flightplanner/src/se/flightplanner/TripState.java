@@ -204,6 +204,18 @@ public class TripState implements InformationPanel {
 			waypointEvents=null;
 			target_wp=0;
 		}
+		if (waypointEvents!=null)
+		{
+			if (current_waypoint_idx>=waypointEvents.size())
+				current_waypoint_idx=current_waypoint_idx-1;
+			if (current_waypoint_idx<0)
+				current_waypoint_idx=0;
+		}
+		else
+		{
+			current_waypoint_idx=0;
+			TODO: Fix browsing of waypoints.
+		}
 
 	}
 
@@ -243,7 +255,9 @@ public class TripState implements InformationPanel {
 	}
 	
 	public String getTitleImpl(int i) {
-		if (tripdata==null || i>=tripdata.waypoints.size())
+		if (tripdata==null || tripdata.waypoints.size()==0) 
+			return "No Waypoints!";
+		if (i>=tripdata.waypoints.size())
 			return "Unknown";
 		Waypoint wp=tripdata.waypoints.get(i);
 		String ttitle="Unknown";
@@ -342,7 +356,9 @@ public class TripState implements InformationPanel {
 	@Override
 	public String getTitle() {
 		int i=current_waypoint_idx;
-		if (tripdata==null || i>=waypointEvents.size())
+		if (tripdata==null || waypointEvents.size()==0)
+			return "No Waypoints!";
+		if (i>=waypointEvents.size())
 			return "Unknown";
 		if (i==target_wp)
 			return "*"+waypointEvents.get(i).title;

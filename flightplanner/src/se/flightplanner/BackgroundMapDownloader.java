@@ -146,9 +146,11 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 					return ret;					
 				}
 				long totprog = 0;
-				for (int level = 0; level <= MapDetailLevels.getMaxLevelFromDetail(mapdetail); ++level) {
+				int maxlevel=MapDetailLevels.getMaxLevelFromDetail(mapdetail);
+				for (int level = 0; level <= maxlevel; ++level) {
 					Log.i("fplan.download","About to download level "+level);
-					totprog = downloadLevel(totprog, level);
+					
+					totprog = downloadLevel(totprog, level, maxlevel);
 				}
 				return res;
 			} catch (InterruptedException e) {
@@ -180,7 +182,7 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 		}
 	}
 
-	private long downloadLevel(long totprog, int level)
+	private long downloadLevel(long totprog, int level, int maxlevel)
 			throws InterruptedException, BackgroundException, FatalBackgroundException {
 		long startversion = -1;
 		for (;;) {
@@ -217,6 +219,7 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 			nvps.add(new BasicNameValuePair("level", "" + level));
 			nvps.add(new BasicNameValuePair("offset", "" + filelength));
 			nvps.add(new BasicNameValuePair("maxlen", "" + 1000000));
+			nvps.add(new BasicNameValuePair("maxlevel", "" + maxlevel));
 
 			InputStream inp=null;
 			try {
@@ -228,7 +231,10 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 				DataInputStream inp2 = new DataInputStream(inp);
 				int magic=inp2.readInt();
 				if (magic!=0xf00df00d)
-					throw new RuntimeException("Server error, got magic: "+magic);
+				{
+					Log.i("fplan","Bad magic: "+magic);
+					throw new FatalBackgroundException("Server error");
+				}
 				int version = inp2.readInt();
 				
 				

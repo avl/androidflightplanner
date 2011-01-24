@@ -400,7 +400,6 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    	catch (Throwable e)
 	    	{
 	    		e.printStackTrace();
-	    		RookieHelper.showmsg(this, e.toString());
 	    	}	    	
 	    	try
 	    	{

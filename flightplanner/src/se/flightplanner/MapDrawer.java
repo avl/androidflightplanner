@@ -452,16 +452,20 @@ public class MapDrawer {
 		if (we != null) {
 			float tsy = bigtextpaint.getTextSize() + 2;
 			final int maxlines = getNumInfoLines(bottom - top);
-			Merc me = Project.merc2merc(new Merc(we.getPoint()), 13, zoomlevel);
-			if (me != null) {
-				// float
-				// px=(float)rot_x(p.getx()-center.x,p.gety()-center.y)+ox;
-				// float
-				// py=(float)rot_y(p.getx()-center.x,p.gety()-center.y)+oy;
-				Vector p = tf.merc2screen(me);
-				thinlinepaint.setColor(Color.BLUE);
-				canvas.drawCircle((float) p.x, (float) p.y, 10.0f,
-						thinlinepaint);
+			Vector point=we.getPoint();
+			if (point!=null)
+			{
+				Merc me = Project.merc2merc(new Merc(point), 13, zoomlevel);
+				if (me != null) {
+					// float
+					// px=(float)rot_x(p.getx()-center.x,p.gety()-center.y)+ox;
+					// float
+					// py=(float)rot_y(p.getx()-center.x,p.gety()-center.y)+oy;
+					Vector p = tf.merc2screen(me);
+					thinlinepaint.setColor(Color.BLUE);
+					canvas.drawCircle((float) p.x, (float) p.y, 10.0f,
+							thinlinepaint);
+				}
 			}
 
 			thinlinepaint.setColor(Color.WHITE);
@@ -520,8 +524,23 @@ public class MapDrawer {
 			int totpage = 1 + details.length / maxlines;
 			actuallines += 1;
 			int y1 = (int) (y - tsy * (actuallines - 1)) - 2;
+			
+			float topy1=y - tsy * actuallines - 4;
+			
+			final Rect tr3 = drawButton(canvas, left+5,topy1-tsy*1.5f, "Close",1,left,right);
+			clickables.add(new GuiSituation.Clickable() {
+				@Override
+				public Rect getRect() {
+					return tr3;
+				}
+				@Override
+				public void onClick() {
+					gui.onCloseInfoPanel();
+				}
+			});
+			
 
-			RectF r = new RectF(0, y - tsy * actuallines - 4, right, bottom);
+			RectF r = new RectF(0, topy1, right, bottom);
 			canvas.drawRect(r, backgroundpaint);
 			if (dist>=0)
 				addTextIfFits(canvas, "1222.2nm", r,
@@ -602,6 +621,50 @@ public class MapDrawer {
 			// 50, y, bigtextpaint);
 			// canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),150,y,textpaint);
 
+		}
+		else
+		{
+			float y = bottom-(bigtextpaint.getTextSize()*1.5f + 2);
+			
+			final Rect tr3 = drawButton(canvas, right,y, "Waypoints",-1,left,right);
+			clickables.add(new GuiSituation.Clickable() {
+				@Override
+				public Rect getRect() {
+					return tr3;
+				}
+				@Override
+				public void onClick() {
+					gui.onShowWaypoints();
+				}
+			});
+			int rightedge=tr3.left-5;
+
+			final Rect tr1 = drawButton(canvas, left,y, "Zoom +",1,left,rightedge);
+			clickables.add(new GuiSituation.Clickable() {
+				@Override
+				public Rect getRect() {
+					return tr1;
+				}
+				@Override
+				public void onClick() {
+					gui.changeZoom(+1);
+				}
+			});
+			int edge = tr1.right+5;
+
+			final Rect tr2 = drawButton(canvas, edge,y, "Zoom -",1,edge,rightedge);
+			clickables.add(new GuiSituation.Clickable() {
+				@Override
+				public Rect getRect() {
+					return tr2;
+				}
+				@Override
+				public void onClick() {
+					gui.changeZoom(-1);
+				}
+			});
+			
+			
 		}
 
 		linepaint.setColor(Color.RED);

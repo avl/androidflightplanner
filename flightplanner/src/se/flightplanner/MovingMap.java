@@ -15,7 +15,6 @@ import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
 import se.flightplanner.Project.iMerc;
 import se.flightplanner.Timeout.DoSomething;
-import se.flightplanner.vector.Vector;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -95,7 +94,9 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 		tripdata=ptripdata;
 		tripstate=new TripState(tripdata,lookup);
 		if (lastpos!=null)
-			tripstate.update_target(lastpos);		
+			tripstate.update_target(lastpos);
+		if (gui!=null)
+			gui.updateTripState(tripstate);
 		invalidate();
 	}
 	protected void onDraw(Canvas canvas) {
@@ -111,7 +112,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 				throw new RuntimeException("The screen is way too small");
 
 			gui=new GuiSituation(this,drawer.getNumInfoLines(getBottom()-getTop()),lastpos,
-					getRight()-getLeft(),getBottom()-getTop());
+					getRight()-getLeft(),getBottom()-getTop(),tripstate,lookup);
 			
 		}
         canvas.drawColor(Color.BLACK);
@@ -128,10 +129,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 			Rect screenExtent=new Rect(
 					getLeft(),getTop(),
 					getRight(),getBottom());
-			if (currentInfo!=null)
-				currentInfo.updatemypos(Project.latlon2mercvec(
-						new LatLon(lastpos.getLatitude(),lastpos.getLongitude()), 13)
-							, lastpos.getSpeed() * 3.6 / 1.852);
+			gui.updatePos(lastpos);
 			
 			DrawResult res=drawer.draw_actual_map(tripdata, tripstate,
 					lookup,
@@ -141,7 +139,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 					gui,
 					last_real_position,
 					download_status,
-					currentInfo
+					gui.getCurrentInfo()
 					);
 			lastcachesize=res.lastcachesize;
 			if (mapcache!=null && mapcache.haveUnsatisfiedQueries())
@@ -228,6 +226,11 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 		tripstate=new TripState(tripdata,lookup);
 		if (lastpos!=null)
 			tripstate.update_target(lastpos);
+		if (gui!=null)
+		{
+			gui.updateLookup(lookup);
+			gui.updateTripState(tripstate);
+		}
 		invalidate();
 	}
 
@@ -238,42 +241,19 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 			debugHdgRad+=i*(10.0f*Math.PI/180.0f);
 		}
 		else
-		{				
-			sideways(i);
+		{		
+			if (gui!=null)
+				gui.onInfoPanelBrowse(i);
+			invalidate();
 		}
 		
 	}
-	public void sideways(int i) {
-		if (tripstate!=null)
-		{
-			if (i==-1)
-			{
-				if (currentInfo==null || !currentInfo.hasLeft())
-				{
-					currentInfo=null;
-				}
-				else
-				{						
-					currentInfo.left();
-				}
-			}
-			else if (i==1)
-			{
-				if (currentInfo==null)
-				{
-					currentInfo=tripstate;
-				}
-				else
-				{
-					if (currentInfo.hasRight())
-						tripstate.right();
-				}
-			}
-		}
-		
-		///lastpos.setBearing((lastpos.getBearing()+i*5)%360);
-		invalidate();
-	}
+
+	/**
+	 * Used by background map loader to reload UI
+	 * when finished loading a map, and upon
+	 * progress.
+	 */
 	@Override
 	public void updateUI(boolean done) {
 		Log.i("fplan.bitmap","updateUI: done="+done);
@@ -371,24 +351,6 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 	private Runnable curLostSignalRunnable;
 	
 	private GuiSituation gui;
-	InformationPanel currentInfo;
-	public void showInfo(LatLon about) {
-		ArrayList<String> details = new ArrayList<String>(); 
-		ArrayList<String> extradetails = new ArrayList<String>();
-		Vector point=Project.latlon2mercvec(about,13);
-		lookup.get_airspace_details(1.0,
-				point,details,extradetails);			
-		//Log.i("fplan","Actual GS for Current Position: "+actual_gs);
-		currentInfo=new AirspacePointInfo("fixed","Airspace",
-				details.toArray(new String[details.size()]),
-				extradetails.toArray(new String[extradetails.size()]),
-				point,true);
-		
-	}
-
-	public InformationPanel getCurrentWarning() {
-		return currentInfo;
-	}
 	
 	private Handler debugTimer;
 	private Runnable debugRunnable;

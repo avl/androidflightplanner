@@ -18,7 +18,7 @@ public class GuiSituation
 	private boolean extrainfo;
 	private int extrainfolineoffset;
 	private Merc drag_center13;
-
+	private AirspaceLookup lookup;
 	private GuiSituation.GuiState state=GuiState.IDLE;
 	private Timeout drag_timeout;
 	private float dragstartx,dragstarty;	
@@ -26,8 +26,9 @@ public class GuiSituation
 	private float drag_heading;
 	private GuiClientInterface movingMap;
 	private ArrayList<GuiSituation.Clickable> clickables;
-	
-	
+	private TripState tripstate;
+	private InformationPanel currentInfo;
+
 	public class DragTimeout implements DoSomething
 	{
 		@Override
@@ -44,21 +45,8 @@ public class GuiSituation
 	}
 	public interface GuiClientInterface
 	{
-
-		void sideways(int i);
-
-		/**
-		 * 
-		 * @param point Point to show info about.
-		 */
-		void showInfo(LatLon point);
-
-		void doInvalidate();
-
-		InformationPanel getCurrentWarning();
-		
-		void cancelMapDownload();
-		
+		void doInvalidate();	
+		void cancelMapDownload();				
 	}
 	public interface Clickable
 	{
@@ -66,11 +54,13 @@ public class GuiSituation
 		void onClick();
 	}
 	private int maxinfolines;
-	Location lastpos;
-	int xsize,ysize;
+	private Location lastpos;
+	private int xsize,ysize;
 	public GuiSituation(MovingMap map,int maxinfolines,Location initpos,
-			int xsize,int ysize)	
+			int xsize,int ysize,TripState tripstate,AirspaceLookup lookup)	
 	{
+		this.tripstate=tripstate;
+		this.lookup=lookup;
 		this.xsize=xsize;
 		this.ysize=ysize;
 		this.lastpos=initpos;
@@ -90,47 +80,61 @@ public class GuiSituation
 			onTouchFingerDown(tf, x,y,x_dpmm,y_dpmm);	
 		else
 		if (ev.getAction()==MotionEvent.ACTION_UP)
-			onTouchFingerUp(tf, x,y);
+			onTouchFingerUp(tf, x,y, x_dpmm, y_dpmm);
 		return true;
 	}
-	public void onClassicalClick(float x, float y)
+	public void onClassicalClick(float x, float y,float x_dpmm,float y_dpmm)
 	{
-		float b=ysize;
-		float r=xsize;
-		float w=xsize;//movingMap.getRight()-movingMap.getLeft();
-		float h=ysize;//movingMap.getBottom()-movingMap.getTop();
-		Rect fat_finger=new Rect((int)x,(int)y,(int)x,(int)y);
-		MapDrawer.grow(fat_finger,(int)(w*0.075f));
+		int best_idx=-1;
+		float bestdist=
+			Math.max((0.9f*x_dpmm)+5f,xsize*0.15f);
+		int idx=0;
 		for(GuiSituation.Clickable click : clickables)
 		{			
-			if (Rect.intersects(fat_finger,click.getRect()))
+			Rect r=click.getRect();
+			if (x>=r.left && x<=r.right && y>=r.top && y<=r.bottom)
 			{
-				click.onClick();
-				
-				return;
+				best_idx=idx;
+				bestdist=0;
+				break;
 			}
+			float dist=1e6f;
+			if (x>=r.left && x<=r.right)
+				dist=Math.min(Math.abs(y-r.top), Math.abs(y-r.bottom));
+			else if (y>=r.top && y<=r.bottom)
+				dist=Math.min(Math.abs(x-r.left), Math.abs(x-r.right));
+			else if (x<=r.left)
+				dist=Math.min(dist(x,y,r.left,r.top),dist(x,y,r.left,r.bottom));
+			else if (x>=r.right)
+				dist=Math.min(dist(x,y,r.right,r.top),dist(x,y,r.right,r.bottom));
+			/*
+			int cx=(r.left+r.right)/2;
+			int cy=(r.bottom+r.top)/2;
+			float dist=(cx-x)*(cx-x)+(cy-y)*(cy-y);
+			*/
+			
+			if (dist<=bestdist)
+			{
+				best_idx=idx;
+				bestdist=dist;
+			}
+			++idx;
 		}
-		
-		if (y>b-0.2*h)
+		if (best_idx!=-1)
 		{
-			if (x<0.33*w)
-				movingMap.sideways(-1);
-			else
-			if (x>r-0.33*w)
-				movingMap.sideways(+1);
-			else
-			{
-				cycleextrainfo();
-			}
+			clickables.get(best_idx).onClick();
+			return;
 		}
-		else
 		{
 			Transform tf = getTransform();
 			Merc m=tf.screen2merc(new Vector(x,y));
 			LatLon point=Project.merc2latlon(m,zoomlevel);
-			movingMap.showInfo(point);
+			showInfo(point);
 			movingMap.doInvalidate();
 		}
+	}
+	private float dist(float x, float y, float left, float top) {
+		return (float)Math.sqrt((x-left)*(x-left)+(y-top)*(y-top));
 	}
 	public void onTouchAbort()
 	{ 
@@ -151,7 +155,7 @@ public class GuiSituation
 		movingMap.doInvalidate();
 	}
 	void cycleextrainfo() {
-		InformationPanel we=movingMap.getCurrentWarning();
+		InformationPanel we=currentInfo;
 		if (we!=null)
 		{
 			String[] details;
@@ -229,13 +233,13 @@ public class GuiSituation
 		}
 		
 	}
-	public void onTouchFingerUp(Transform tf, float x, float y) {
+	public void onTouchFingerUp(Transform tf, float x, float y,float xdpmm,float ydpmm) {
 		switch(state)
 		{
 		case IDLE:
 			break;
 		case MAYBE_DRAG:
-			onClassicalClick(x, y);
+			onClassicalClick(x, y, xdpmm, ydpmm);
 			state=GuiState.IDLE;
 			break;
 		case DRAGGING:
@@ -309,9 +313,62 @@ public class GuiSituation
 	}
 	public void updatePos(Location pos) {
 		this.lastpos=pos;
+		if (currentInfo!=null)
+			currentInfo.updatemypos(Project.latlon2mercvec(
+				new LatLon(lastpos.getLatitude(),lastpos.getLongitude()), 13)
+					, lastpos.getSpeed() * 3.6 / 1.852);
+		
 	}
 	public void cancelMapDownload() {
 		movingMap.cancelMapDownload();
+	}
+	public void onShowWaypoints() {
+		currentInfo=tripstate;
+		movingMap.doInvalidate();
+	}
+	public void onCloseInfoPanel()
+	{
+		currentInfo=null;
+		movingMap.doInvalidate();
+	}
+	public void onInfoPanelBrowse(int i) {
+		if (currentInfo!=null)
+		{
+			if (i==-1)
+			{
+				if (currentInfo.hasLeft())
+					currentInfo.left();
+			} else if(i==+1)
+			{
+				if (currentInfo.hasRight())
+					currentInfo.right();				
+			}
+			movingMap.doInvalidate();
+		}
+		
+	}
+	public void updateTripState(TripState tripstate2) {
+		this.tripstate=tripstate2;
+	}
+	public void updateLookup(AirspaceLookup lookup)
+	{
+		this.lookup=lookup;
+	}
+	private void showInfo(LatLon about) {
+		ArrayList<String> details = new ArrayList<String>(); 
+		ArrayList<String> extradetails = new ArrayList<String>();
+		Vector point=Project.latlon2mercvec(about,13);
+		lookup.get_airspace_details(1.0,
+				point,details,extradetails);			
+		//Log.i("fplan","Actual GS for Current Position: "+actual_gs);
+		currentInfo=new AirspacePointInfo("Airspace",
+				details.toArray(new String[details.size()]),
+				extradetails.toArray(new String[extradetails.size()]),
+				point,true);
+		
+	}
+	public InformationPanel getCurrentInfo() {
+		return currentInfo;
 	}
 	
 }
