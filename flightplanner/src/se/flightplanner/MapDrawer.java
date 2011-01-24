@@ -215,6 +215,7 @@ public class MapDrawer {
 			res.lastcachesize = cachesize;
 		}
 
+		
 		// sigPointTree.verify();
 		if (zoomlevel >= 8 && lookup != null) {
 			for (AirspaceArea as : lookup.areas.get_areas(bb13)) {/*
@@ -246,6 +247,17 @@ public class MapDrawer {
 				}
 			}
 		}
+		if (lookup!=null)
+		{
+			for (SigPoint sp : lookup.allCities.findall(bb13)) {
+				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
+				Vector p = tf.merc2screen(m);
+				textpaint.setARGB(0xff, 0xff, 0xff, 0xb0);
+				linepaint.setARGB(0xff, 0xff, 0xff, 0xb0);
+				Log.i("fplan.draw","drawing: "+sp.name);
+				renderText(canvas, p, "["+sp.name+"]");
+			}			
+		}
 		if (zoomlevel >= 9 && lookup != null) {
 			for (SigPoint sp : lookup.allOthers.findall(bb13)) {
 				// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
@@ -255,9 +267,21 @@ public class MapDrawer {
 				Vector p = tf.merc2screen(m);
 				// Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
 				// textpaint.setARGB(0, 255,255,255);
-				textpaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
-				linepaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
-				renderText(canvas, p, sp.name);
+				String t;
+				if (sp.kind=="town")
+				{
+					textpaint.setARGB(0xff, 0xff, 0xff, 0xb0);
+					linepaint.setARGB(0xff, 0xff, 0xff, 0xb0);
+					Log.i("fplan.draw","drawing town: "+sp.name);
+					t="["+sp.name+"]";
+				}
+				else
+				{
+					textpaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
+					linepaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
+					t=sp.name;
+				}
+				renderText(canvas, p, t);
 			}
 
 			for (SigPoint sp : lookup.allObst.findall(smbb13)) {
@@ -284,17 +308,24 @@ public class MapDrawer {
 			}
 		}
 		if (zoomlevel >= 9 && lookup != null) {
-			for (SigPoint sp : lookup.allAirfields.findall(bb13)) {
+			for (SigPoint sp : lookup.minorAirfields.findall(bb13)) {
 				// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
 				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
 				Vector p = tf.merc2screen(m);
 				String text;
-				if (zoomlevel >= 9)
-					text = sp.name;
-				else
-					text = sp.name;
-				// Log.i("fplan",String.format("airf: %s: %f %f",sp.name,p.x,p.y));
-
+				text = sp.name;
+				textpaint.setColor(Color.GREEN);
+				linepaint.setColor(Color.GREEN);
+				renderText(canvas, p, text);
+			}
+		}
+		if (zoomlevel >= 8 && lookup != null) {
+			for (SigPoint sp : lookup.majorAirports.findall(bb13)) {
+				// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
+				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
+				Vector p = tf.merc2screen(m);
+				String text;
+				text = sp.name;
 				textpaint.setColor(Color.GREEN);
 				linepaint.setColor(Color.GREEN);
 				renderText(canvas, p, text);
@@ -303,8 +334,6 @@ public class MapDrawer {
 
 		if (tripdata != null && tripdata.waypoints.size() >= 2) {
 			float[] lines = new float[4 * (tripdata.waypoints.size() - 1)];
-			int curwp = -1;
-			curwp = tripstate.get_target();
 			for (int i = 0; i < tripdata.waypoints.size() - 1; ++i) {
 				// String part=tripdata.waypoints.get(i+1).legpart;
 				if (i == 0) {
@@ -324,12 +353,10 @@ public class MapDrawer {
 				lines[4 * i + 3] = (float) p2.y;
 
 			}
+
 			for (int i = 0; i < tripdata.waypoints.size() - 1; ++i) {
 				Paint p;
-				if (i == curwp - 1)
-					p = trippaint;
-				else
-					p = trippaint;
+				p = trippaint;
 				canvas.drawLine(lines[4 * i + 0], lines[4 * i + 1],
 						lines[4 * i + 2], lines[4 * i + 3], p);
 			}
@@ -501,7 +528,7 @@ public class MapDrawer {
 			 * distance, just store position. #Let moving map calculate time,
 			 * based on distance (or even based on position?)
 			 */
-
+			boolean extrainfo_available=we.getHasExtraInfo();
 			String[] details;
 			if (extrainfo)
 				details = we.getExtraDetails();
@@ -527,7 +554,7 @@ public class MapDrawer {
 			
 			float topy1=y - tsy * actuallines - 4;
 			
-			final Rect tr3 = drawButton(canvas, left+5,topy1-tsy*1.5f, "Close",1,left,right);
+			final Rect tr3 = drawButton(canvas, right-5,topy1-tsy*1.4f, "Close",-1,left,right);
 			clickables.add(new GuiSituation.Clickable() {
 				@Override
 				public Rect getRect() {
@@ -541,6 +568,7 @@ public class MapDrawer {
 			
 
 			RectF r = new RectF(0, topy1, right, bottom);
+			canvas.drawLine(0,topy1,right,topy1,thinlinepaint);
 			canvas.drawRect(r, backgroundpaint);
 			if (dist>=0)
 				addTextIfFits(canvas, "1222.2nm", r,
@@ -560,7 +588,7 @@ public class MapDrawer {
 					canvas.drawText(details[extrainfolineoffset + i], 2, y1
 							+ tsy + i * tsy, bigtextpaint);
 			}
-			if (tripstate.hasLeft()) {
+			if (we.hasLeft()) {
 				canvas.drawLine((int) (0 + 2.8f * x_dpmm),
 						(int) (bottom - 0.7f * y_dpmm),
 						(int) (0 + 2.0f * x_dpmm),
@@ -569,22 +597,24 @@ public class MapDrawer {
 						(int) (bottom - 1.5f * y_dpmm),
 						(int) (0 + 2.8f * x_dpmm),
 						(int) (bottom - 2.3f * y_dpmm), thinlinepaint);
-			} else {
-				canvas.drawLine((int) (0 + 3.25f * x_dpmm),
-						(int) (bottom - 0.7f * y_dpmm),
-						(int) (0 + 1.75f * x_dpmm),
-						(int) (bottom - 2.3f * y_dpmm), thinlinepaint);
-				canvas.drawLine((int) (0 + 3.25f * x_dpmm),
-						(int) (bottom - 2.3f * y_dpmm),
-						(int) (0 + 1.75f * x_dpmm),
-						(int) (bottom - 0.7f * y_dpmm), thinlinepaint);
-
+				
+				canvas.drawRect((int) (0.2f * x_dpmm),
+						(int) (bottom - 2.8f * y_dpmm), (int) (4.8f * x_dpmm),
+						(int) (bottom - 0.2f * y_dpmm), thinlinepaint);
 			}
-			canvas.drawRect((int) (0.2f * x_dpmm),
-					(int) (bottom - 2.8f * y_dpmm), (int) (4.8f * x_dpmm),
-					(int) (bottom - 0.2f * y_dpmm), thinlinepaint);
+			final Rect leftrect=new Rect(left,(int)topy1,(right-left)/4,bottom);
+			clickables.add(new GuiSituation.Clickable() {
+				@Override
+				public Rect getRect() {
+					return leftrect;
+				}
+				@Override
+				public void onClick() {
+					gui.onInfoPanelBrowse(-1);
+				}
+			});
 			float off = right - (5.0f * x_dpmm);
-			if (tripstate.hasRight()) {
+			if (we.hasRight()) {
 				canvas.drawLine((int) (0 + 2.0f * x_dpmm + off),
 						(int) (bottom - 0.7f * y_dpmm),
 						(int) (0 + 2.8f * x_dpmm + off),
@@ -598,24 +628,52 @@ public class MapDrawer {
 						(int) (4.8f * x_dpmm + off),
 						(int) (bottom - 0.2f * y_dpmm), thinlinepaint);
 			}
+			final Rect rightrect=new Rect(right-(right-left)/4,(int)topy1,right,bottom);
+			clickables.add(new GuiSituation.Clickable() {
+				@Override
+				public Rect getRect() {
+					return rightrect;
+				}
+				@Override
+				public void onClick() {
+					gui.onInfoPanelBrowse(+1);
+				}
+			});
+			
 			{
 				canvas.drawRect((int) (5.2f * x_dpmm),
 						(int) (bottom - 2.8f * y_dpmm),
 						(int) (-0.2f * x_dpmm + off),
 						(int) (bottom - 0.2f * y_dpmm), thinlinepaint);
-				String t;
-				if (extrainfo) {
-					if (totpage > 1)
-						t = String.format("Freq. %d of %d", page, totpage);
-					else
-						t = "Toggle Freq. Info (on)";
-				} else {
-					t = "Toggle Freq. Info (off)";
+				if (extrainfo_available)
+				{
+					String t;
+					if (extrainfo) {
+						if (totpage > 1)
+							t = String.format("Freq. %d of %d", page, totpage);
+						else
+							t = "Toggle Freq. Info (on)";
+					} else {
+						t = "Toggle Freq. Info (off)";
+					}
+					Rect tbounds = new Rect();
+					textpaint.getTextBounds(t, 0, t.length(), tbounds);
+					canvas.drawText(t, (right - left) * 0.5f - tbounds.width() / 2,
+							(int) (bottom - 1.0 * y_dpmm), textpaint);
 				}
-				Rect tbounds = new Rect();
-				textpaint.getTextBounds(t, 0, t.length(), tbounds);
-				canvas.drawText(t, (right - left) * 0.5f - tbounds.width() / 2,
-						(int) (bottom - 1.0 * y_dpmm), textpaint);
+				int w=(right-left)/4;
+				final Rect midrect=new Rect(left+w,(int)topy1,right-w,bottom);
+				clickables.add(new GuiSituation.Clickable() {
+					@Override
+					public Rect getRect() {
+						return midrect;
+					}
+					@Override
+					public void onClick() {
+						gui.cycleextrainfo();
+					}
+				});
+			
 			}
 			// canvas.drawText(String.format("%03.0f°",lastpos.getBearing()),
 			// 50, y, bigtextpaint);

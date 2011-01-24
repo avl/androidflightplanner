@@ -24,5 +24,7 @@ public interface InformationPanel {
 
 	public abstract void updatemypos(Vector latlon2mercvec, double d);
 
+	public abstract boolean getHasExtraInfo();
+
 
 }

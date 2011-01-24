@@ -1,4 +1,4 @@
-* FIXED: Significant points, entry/exit points and holding point would be nice.
+* FIXED: Significant points, entry/exit points and holding points would be nice.
 * FIXAD: Show current time, with seconds (för att man ska se att det uppdateras). 
 * WONTFIX: More instant feedback when clicking buttons would be nice. But impossible?
 * FIXED: Fix the "Current Position" warning so that it is updated live.
@@ -8,7 +8,7 @@
 * WONTFIX: Show GPS satellite positioning accuracy.
 * FIXED: Borde gå att stänga av programmet
 * Live descent info would be nice ("descend 370fpm to reach waypoint")
-* R-områden som går GND - UNL ritas fel ("under" marken)!
-* Borde ha skala på displayen.
-* Refactorera MovingMap. Klassen är för stor!!!
-
+* WONTFIX: (Only 3D version) R-områden som går GND - UNL ritas fel ("under" marken)! 
+* FIXED: Borde ha skala på displayen. (5 NM märke på pinnen)
+* FIXED: Refactorera MovingMap. Klassen är för stor!!!
+* Need declutter-functionality.

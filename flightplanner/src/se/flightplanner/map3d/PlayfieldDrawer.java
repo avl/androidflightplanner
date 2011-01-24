@@ -50,7 +50,7 @@ public class PlayfieldDrawer {
 		gtex=0;
 		observercontext=new ObserverContext(lookup);
 		airspacedrawer=new AirspaceDrawer(observercontext,new AltParser());
-		pointdrawer=new PointDrawer(lookup.allObst,lookup.allAirfields);
+		pointdrawer=new PointDrawer(lookup.allObst,lookup.majorAirports);
 		
 		//fonthandler=new FontHandler(fontbitmap);
 		guiDrawer=new GuiDrawer();

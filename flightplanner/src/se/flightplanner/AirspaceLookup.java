@@ -2,13 +2,16 @@ package se.flightplanner;
 
 import java.util.ArrayList;
 
+import android.util.Log;
+
 import se.flightplanner.vector.BoundingBox;
 import se.flightplanner.vector.Vector;
 import se.flightplanner.vector.Polygon.InsideResult;
 
 public class AirspaceLookup {
-	public void get_airspace_details(double abit,
+	public boolean get_airspace_details(double abit,
 		Vector just_a_bit_in,ArrayList<String> details,ArrayList<String> extradetails) {
+		boolean hasextra=false;
 		for(AirspaceArea inarea:areas.get_areas(BoundingBox.aroundpoint(just_a_bit_in, abit)))
 		{
 			
@@ -25,6 +28,7 @@ public class AirspaceLookup {
 					{
 						//Log.i("fplan","Adding airspace detail "+fre);
 						extradetails.add(fre);
+						hasextra=true;
 					}
 				}
 			}
@@ -34,7 +38,7 @@ public class AirspaceLookup {
 			details.add("0 ft-FL 095: Uncontrolled Airspace");
 			extradetails.add("0 ft-FL 095: Uncontrolled Airspace");
 		}
-		
+		return hasextra;
 	}
 
 	public AirspaceLookup(Airspace airspace) {
@@ -50,26 +54,39 @@ public class AirspaceLookup {
 			pointarr=new ArrayList<SigPoint>();
 		else
 			pointarr=airspace.getPoints();
-		ArrayList<SigPoint> airfields=new ArrayList<SigPoint>();
+		ArrayList<SigPoint> major_airports=new ArrayList<SigPoint>();
+		ArrayList<SigPoint> minor_airfields=new ArrayList<SigPoint>();
 		ArrayList<SigPoint> others=new ArrayList<SigPoint>();
 		ArrayList<SigPoint> obsts=new ArrayList<SigPoint>();
+		ArrayList<SigPoint> cities=new ArrayList<SigPoint>();
 		for(SigPoint po: pointarr)
 		{
-			if (po.kind.equals("airport"))
-				airfields.add(po);
+			//Log.i("fplan","Type:"+po.kind);
+			if (po.kind=="airport")
+				major_airports.add(po);
 			else
-			if (po.kind.equals("obstacle"))
+			if (po.kind=="airfield")
+				minor_airfields.add(po);
+			else
+			if (po.kind=="obstacle")
 				obsts.add(po);
+			else
+			if (po.kind=="city")
+				cities.add(po);
 			else
 				others.add(po);					
 		}
-		allAirfields=new AirspaceSigPointsTree(airfields);
+		majorAirports=new AirspaceSigPointsTree(major_airports);
+		minorAirfields=new AirspaceSigPointsTree(minor_airfields);
 		allObst=new AirspaceSigPointsTree(obsts);
 		allOthers=new AirspaceSigPointsTree(others);
+		allCities=new AirspaceSigPointsTree(cities);
 		// TODO Auto-generated constructor stub
 	}
 	public AirspaceAreaTree areas;
-	public AirspaceSigPointsTree allAirfields;
+	public AirspaceSigPointsTree minorAirfields;
+	public AirspaceSigPointsTree majorAirports;
 	public AirspaceSigPointsTree allObst;
 	public AirspaceSigPointsTree allOthers;
+	public AirspaceSigPointsTree allCities;
 }

@@ -214,7 +214,6 @@ public class TripState implements InformationPanel {
 		else
 		{
 			current_waypoint_idx=0;
-			TODO: Fix browsing of waypoints.
 		}
 
 	}
@@ -377,6 +376,10 @@ public class TripState implements InformationPanel {
 		//(it has to be, since it needs to be updated regardless of
 		//wether it is being shown as an InformationPanel or not)
 		
+	}
+	@Override
+	public boolean getHasExtraInfo() {
+		return false;
 	}
 	
 		

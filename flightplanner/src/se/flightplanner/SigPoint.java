@@ -36,6 +36,18 @@ public class SigPoint implements Serializable
 		SigPoint p=new SigPoint();
 		p.name=is.readUTF();
 		p.kind=is.readUTF().intern();
+		if (p.kind=="airport")
+		{
+			if (p.name.endsWith("*"))
+			{
+				p.name=p.name.substring(0,p.name.length()-1);
+				p.kind="airport";
+			}
+			else
+			{
+				p.kind="airfield";
+			}
+		}
 		p.alt=is.readFloat();		
 		p.latlon=LatLon.deserialize(is);
 		p.calcMerc();

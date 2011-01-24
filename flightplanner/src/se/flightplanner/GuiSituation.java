@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import se.flightplanner.GuiSituation.Clickable;
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
+import se.flightplanner.Project.iMerc;
 import se.flightplanner.Timeout.DoSomething;
 import se.flightplanner.vector.Vector;
 import android.graphics.Rect;
@@ -56,9 +57,16 @@ public class GuiSituation
 	private int maxinfolines;
 	private Location lastpos;
 	private int xsize,ysize;
+	static final private LatLon limitA=new LatLon(80,-179);
+	static final private LatLon limitB=new LatLon(-80,179);
+	private int limitx1,limity1,limitx2,limity2;
 	public GuiSituation(MovingMap map,int maxinfolines,Location initpos,
 			int xsize,int ysize,TripState tripstate,AirspaceLookup lookup)	
 	{
+		iMerc tmp=Project.latlon2imerc(limitA,13);
+		limitx1=tmp.getX();limity1=tmp.getY();
+		tmp=Project.latlon2imerc(limitB,13);
+		limitx2=tmp.getX();limity2=tmp.getY();
 		this.tripstate=tripstate;
 		this.lookup=lookup;
 		this.xsize=xsize;
@@ -92,6 +100,7 @@ public class GuiSituation
 		for(GuiSituation.Clickable click : clickables)
 		{			
 			Rect r=click.getRect();
+			if (r==null) continue;
 			if (x>=r.left && x<=r.right && y>=r.top && y<=r.bottom)
 			{
 				best_idx=idx;
@@ -214,6 +223,10 @@ public class GuiSituation
 					t.y+=deltay;
 				}
 				drag_base13=Project.merc2merc(t, zoomlevel, 13);
+				if (drag_base13.y<limity1) drag_base13.y=limity1;
+				if (drag_base13.y>limity2) drag_base13.y=limity2;
+				if (drag_base13.x<limitx1) drag_base13.x=limitx1;
+				if (drag_base13.x>limitx2) drag_base13.x=limitx2;
 				drag_heading=tf.getHdg();
 				state=GuiState.DRAGGING;
 				resetDragTimeout();
@@ -227,6 +240,10 @@ public class GuiSituation
 			float deltax=(float)(Math.cos(hdgrad)*deltax1-Math.sin(hdgrad)*deltay1);
 			float deltay=(float)(Math.sin(hdgrad)*deltax1+Math.cos(hdgrad)*deltay1);
 			drag_center13=new Merc(drag_base13.x-deltax,drag_base13.y-deltay);
+			if (drag_center13.x<limitx1) drag_center13.x=limitx1;
+			if (drag_center13.y<limity1) drag_center13.y=limity1;
+			if (drag_center13.x>limitx2) drag_center13.x=limitx2;
+			if (drag_center13.y>limity2) drag_center13.y=limity2;
 			resetDragTimeout();
 			movingMap.doInvalidate();
 			break;
@@ -355,16 +372,7 @@ public class GuiSituation
 		this.lookup=lookup;
 	}
 	private void showInfo(LatLon about) {
-		ArrayList<String> details = new ArrayList<String>(); 
-		ArrayList<String> extradetails = new ArrayList<String>();
-		Vector point=Project.latlon2mercvec(about,13);
-		lookup.get_airspace_details(1.0,
-				point,details,extradetails);			
-		//Log.i("fplan","Actual GS for Current Position: "+actual_gs);
-		currentInfo=new AirspacePointInfo("Airspace",
-				details.toArray(new String[details.size()]),
-				extradetails.toArray(new String[extradetails.size()]),
-				point,true);
+		currentInfo=new AirspacePointInfo(about,lookup);
 		
 	}
 	public InformationPanel getCurrentInfo() {

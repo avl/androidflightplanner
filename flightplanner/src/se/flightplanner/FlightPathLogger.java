@@ -107,9 +107,21 @@ public class FlightPathLogger {
 		iMerc closest13=null;
 		SigPoint closest_point=null;
 		int closest_dist=Integer.MAX_VALUE;
-		for (SigPoint sp : lookup.allAirfields.findall(bb13)) {
+		ArrayList<SigPoint> possible=new ArrayList<SigPoint>();
+		for (SigPoint sp : lookup.majorAirports.findall(bb13)) 
+			possible.add(sp);
+		for (SigPoint sp : lookup.minorAirfields.findall(bb13)) 
+			possible.add(sp);
+		for (SigPoint sp : lookup.allCities.findall(bb13)) 
+			possible.add(sp);
+		for (SigPoint sp : lookup.allOthers.findall(bb13))
+			if (sp.kind=="town")
+				possible.add(sp);
+		for (SigPoint sp : possible) {
 			iMerc m13 = Project.latlon2imerc(sp.latlon, 13);
 			int dist=difflen(m13,merc13);
+			if (sp.kind=="airport" || sp.kind=="airfield")
+				dist-=somedist/4; //prefer to give pos relative to airfield
 			if (dist<=closest_dist)
 			{
 				closest_point=sp;
