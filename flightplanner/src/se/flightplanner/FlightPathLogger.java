@@ -114,13 +114,15 @@ public class FlightPathLogger {
 			possible.add(sp);
 		for (SigPoint sp : lookup.allCities.findall(bb13)) 
 			possible.add(sp);
+		for (SigPoint sp : lookup.allTowns.findall(bb13)) 
+			possible.add(sp);
 		for (SigPoint sp : lookup.allOthers.findall(bb13))
 			if (sp.kind=="town")
 				possible.add(sp);
 		for (SigPoint sp : possible) {
 			iMerc m13 = Project.latlon2imerc(sp.latlon, 13);
 			int dist=difflen(m13,merc13);
-			if (sp.kind=="airport" || sp.kind=="airfield")
+			if (sp.kind=="port" || sp.kind=="field")
 				dist-=somedist/4; //prefer to give pos relative to airfield
 			if (dist<=closest_dist)
 			{
@@ -135,9 +137,9 @@ public class FlightPathLogger {
 	}
 	public static String describe_relative(iMerc mypos, iMerc fixed, String fixedname) {
 		iMerc delta=diff(mypos,fixed);
-		int len=difflen(fixed,mypos);		
-		double onenm=Project.approx_scale(mypos.getY(),13, 1.0);
-		double lennm=len/onenm;
+		double lennm=Project.exacter_distance(
+				Project.imerc2latlon(mypos, 13),
+				Project.imerc2latlon(fixed, 13));
 		if (lennm<1.0f)
 			return fixedname;
 		String dir="?";

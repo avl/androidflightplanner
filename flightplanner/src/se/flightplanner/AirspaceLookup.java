@@ -59,13 +59,14 @@ public class AirspaceLookup {
 		ArrayList<SigPoint> others=new ArrayList<SigPoint>();
 		ArrayList<SigPoint> obsts=new ArrayList<SigPoint>();
 		ArrayList<SigPoint> cities=new ArrayList<SigPoint>();
+		ArrayList<SigPoint> towns=new ArrayList<SigPoint>();
 		for(SigPoint po: pointarr)
 		{
 			//Log.i("fplan","Type:"+po.kind);
-			if (po.kind=="airport")
+			if (po.kind=="port")
 				major_airports.add(po);
 			else
-			if (po.kind=="airfield")
+			if (po.kind=="field")
 				minor_airfields.add(po);
 			else
 			if (po.kind=="obstacle")
@@ -74,6 +75,9 @@ public class AirspaceLookup {
 			if (po.kind=="city")
 				cities.add(po);
 			else
+			if (po.kind=="town")
+				towns.add(po);
+			else
 				others.add(po);					
 		}
 		majorAirports=new AirspaceSigPointsTree(major_airports);
@@ -81,6 +85,7 @@ public class AirspaceLookup {
 		allObst=new AirspaceSigPointsTree(obsts);
 		allOthers=new AirspaceSigPointsTree(others);
 		allCities=new AirspaceSigPointsTree(cities);
+		allTowns=new AirspaceSigPointsTree(towns);
 		// TODO Auto-generated constructor stub
 	}
 	public AirspaceAreaTree areas;
@@ -89,4 +94,5 @@ public class AirspaceLookup {
 	public AirspaceSigPointsTree allObst;
 	public AirspaceSigPointsTree allOthers;
 	public AirspaceSigPointsTree allCities;
+	public AirspaceSigPointsTree allTowns;
 }

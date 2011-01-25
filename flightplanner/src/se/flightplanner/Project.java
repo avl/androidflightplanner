@@ -6,6 +6,10 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 
+import android.util.Log;
+
+import se.flightplanner.Project.LatLon;
+import se.flightplanner.Project.Merc;
 import se.flightplanner.vector.Vector;
 
 public class Project {
@@ -277,6 +281,73 @@ public class Project {
 			return new iMerc(p.getX()<<delta,p.getY()<<delta);
 		else
 			return new iMerc(p.getX()>>(-delta),p.getY()>>(-delta));
+	}
+	
+
+	
+
+	static double scalar_prod(double[] v1,double[] v2)
+	{
+		double sum=0;
+		for(int i=0;i<3;++i)
+			sum+=v1[i]*v2[i];
+		return sum;
+	}	
+	static double[] to_vector(LatLon latlon)
+	{	
+		
+		double lat=latlon.lat/(180.0/Math.PI);
+		double lon=latlon.lon/(180.0/Math.PI);
+		double z=Math.sin(lat)*(1.0-1.0/298.257223563 );
+		double t=Math.cos(lat);
+		double x=t*Math.cos(lon);
+		double y=t*Math.sin(lon);	
+		return new double[]{x,y,z};
+	}
+	static double[] vector_difference(double[] v1,double[] v2)
+	{
+		return new double[]{v1[0]-v2[0],v1[1]-v2[1],v1[2]-v2[2]};
+	}
+	
+	static double vector_length(double[] v1)
+	{
+		return Math.sqrt(v1[0]*v1[0]+v1[1]*v1[1]+v1[2]*v1[2]);
+	}
+	static double[] vector_normalized(double[] v1)
+	{
+		double l=vector_length(v1);
+		if (Math.abs(l)<1e-10)
+			return new double[]{1,0,0};
+		return new double[]{v1[0]/l,v1[1]/l,v1[2]/l};
+	}
+	/**
+	 * Returns an approximation of the distance on the earth's surface
+	 * between the two given coordinates, as the eagle flies.
+	 * This is more exact than trying to use the approx_scale functions above,
+	 * but still just a pretty bad approximation (spherical earth!).
+	 */
+	public static double exacter_distance(LatLon latLon1, LatLon latLon2) {
+
+		double[] v1=to_vector(latLon1);
+		double[] v2=to_vector(latLon2);
+		v1=vector_normalized(v1);
+		v2=vector_normalized(v2);
+		double sc=scalar_prod(v1,v2);
+
+		double ang=0;
+		if (sc>=0.9999 || sc<-0.9999)
+		{
+			ang=vector_length(vector_difference(v1,v2));
+		}
+		else
+		{
+			ang=Math.acos(sc);
+		}
+		Log.i("fplan","ang: "+ang+" sc:"+sc);
+		
+		double ret=((6378137.0/1852.0)*ang); //nautical miles
+		Log.i("fplan","Dist between "+latLon1+" and "+latLon2+" is "+ret);
+		return ret;
 	}
 
 }

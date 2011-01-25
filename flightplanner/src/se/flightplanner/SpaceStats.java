@@ -17,6 +17,12 @@ public class SpaceStats
 	public int bearing;
 	public boolean inside;
 	public long updated;
+	/**
+	 * Only used by discontinued 3D-version.
+	 * @param ipos
+	 * @param area
+	 * @return
+	 */
 	public static SpaceStats getStats(iMerc ipos, AirspaceArea area) {
 		SpaceStats stats=new SpaceStats();
 		Vector pos=ipos.toVector();

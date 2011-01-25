@@ -41,11 +41,11 @@ public class SigPoint implements Serializable
 			if (p.name.endsWith("*"))
 			{
 				p.name=p.name.substring(0,p.name.length()-1);
-				p.kind="airport";
+				p.kind="port";
 			}
 			else
 			{
-				p.kind="airfield";
+				p.kind="field";
 			}
 		}
 		p.alt=is.readFloat();		

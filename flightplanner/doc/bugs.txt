@@ -11,4 +11,4 @@
 * WONTFIX: (Only 3D version) R-områden som går GND - UNL ritas fel ("under" marken)! 
 * FIXED: Borde ha skala på displayen. (5 NM märke på pinnen)
 * FIXED: Refactorera MovingMap. Klassen är för stor!!!
-* Need declutter-functionality.
+* Need declutter-functionality. 	

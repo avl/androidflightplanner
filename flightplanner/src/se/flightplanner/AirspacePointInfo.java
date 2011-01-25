@@ -3,6 +3,7 @@ package se.flightplanner;
 import java.util.ArrayList;
 
 import se.flightplanner.Project.LatLon;
+import se.flightplanner.Project.Merc;
 import se.flightplanner.vector.Vector;
 
 public class AirspacePointInfo implements InformationPanel
@@ -36,8 +37,9 @@ public class AirspacePointInfo implements InformationPanel
 	 * @param actualGs GS in knots
 	 */
 	public void updatemypos(Vector mypos, double actualGs) {
-		double onenm=Project.approx_scale(point.plus(mypos).mul(0.5).gety(),13,1.0);
-		this.distance=point.minus(mypos).length()/onenm; //in nautical miles.
+		this.distance=Project.exacter_distance(
+				Project.merc2latlon(new Merc(mypos), 13),
+				Project.merc2latlon(new Merc(point), 13));
 		if (actualGs>1e-3)
 			this.when=(int)(3600.0*distance/actualGs);
 		else

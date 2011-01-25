@@ -3,6 +3,7 @@ package se.flightplanner;
 import java.util.ArrayList;
 import java.util.Date;
 
+import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
 import se.flightplanner.TripData.Waypoint;
 import se.flightplanner.vector.Line;
@@ -74,6 +75,7 @@ public class TripState implements InformationPanel {
 		distance_to_destination=0.0;
 		Vector heading=Project.heading2vector(mylocation.getBearing());
 
+		LatLon myposlatlon=new LatLon(mylocation.getLatitude(),mylocation.getLongitude());
 		final Vector mypos=Project.latlon2mercvec(mylocation.getLatitude(),mylocation.getLongitude(),13);					
 		double nm=Project.approx_scale(mypos.gety(),13,corridor_width);
 		double onenm=Project.approx_scale(mypos.gety(),13,1.0);
@@ -166,13 +168,11 @@ public class TripState implements InformationPanel {
 			for(int i=target_wp;i<tripdata.waypoints.size();++i)
 			{
 				final Waypoint wp=tripdata.waypoints.get(i);
-				Merc m1=Project.latlon2merc(wp.latlon,13);
-				final Vector mv1=new Vector(m1.x,m1.y);				
 				double tdistance=0;
 				double used_gs;
 				if (i==target_wp)
 				{
-					tdistance=mypos.minus(mv1).length()/onenm;
+					tdistance=Project.exacter_distance(myposlatlon,wp.latlon);
 					used_gs=actual_gs;
 				}
 				else

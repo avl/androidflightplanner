@@ -98,7 +98,7 @@ public class MapDrawer {
 		arrowpaint.setStrokeCap(Paint.Cap.ROUND);
 	}
 
-	private void renderText(Canvas canvas, Vector p, String text) {
+	private void renderText(Canvas canvas, Vector p, String text, DeclutterTree declutter) {
 		Rect rect = new Rect();
 		textpaint.getTextBounds(text, 0, text.length(), rect);
 		int adj = (rect.bottom - rect.top) / 3;
@@ -106,12 +106,15 @@ public class MapDrawer {
 		rect.right += p.x + 1 + 7;
 		rect.top += p.y - 2 + adj;
 		rect.bottom += p.y + 3 + adj;
-		canvas.drawRect(rect, backgroundpaint);
-		canvas.drawText(text, (float) (p.x + 7), (float) (p.y + adj), textpaint);
-		linepaint.setStrokeWidth(10);
 		int c = linepaint.getColor();
-		linepaint.setColor(Color.BLACK);
-		canvas.drawPoint((float) p.x, (float) p.y, linepaint);
+		if (declutter==null || declutter.checkAndAdd(rect))
+		{
+			canvas.drawRect(rect, backgroundpaint);
+			canvas.drawText(text, (float) (p.x + 7), (float) (p.y + adj), textpaint);
+			linepaint.setStrokeWidth(10);
+			linepaint.setColor(Color.BLACK);
+			canvas.drawPoint((float) p.x, (float) p.y, linepaint);
+		}
 		linepaint.setColor(c);
 		linepaint.setStrokeWidth(5);
 		canvas.drawPoint((float) p.x, (float) p.y, linepaint);
@@ -247,6 +250,31 @@ public class MapDrawer {
 				}
 			}
 		}
+		DeclutterTree declutter=new DeclutterTree((int)(textpaint.getTextSize()*1.4f));
+		if (zoomlevel >= 7 && lookup != null) {
+			for (SigPoint sp : lookup.majorAirports.findall(bb13)) {
+				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
+				Vector p = tf.merc2screen(m);
+				String text;
+				text = sp.name;
+				textpaint.setColor(Color.GREEN);
+				linepaint.setColor(Color.GREEN);
+				renderText(canvas, p, text, declutter);
+			}
+		}
+
+		if (zoomlevel >= 9 && lookup != null) {
+			for (SigPoint sp : lookup.minorAirfields.findall(bb13)) {
+				// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
+				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
+				Vector p = tf.merc2screen(m);
+				String text;
+				text = sp.name;
+				textpaint.setColor(Color.GREEN);
+				linepaint.setColor(Color.GREEN);
+				renderText(canvas, p, text, declutter);
+			}
+		}
 		if (lookup!=null)
 		{
 			for (SigPoint sp : lookup.allCities.findall(bb13)) {
@@ -254,10 +282,20 @@ public class MapDrawer {
 				Vector p = tf.merc2screen(m);
 				textpaint.setARGB(0xff, 0xff, 0xff, 0xb0);
 				linepaint.setARGB(0xff, 0xff, 0xff, 0xb0);
-				Log.i("fplan.draw","drawing: "+sp.name);
-				renderText(canvas, p, "["+sp.name+"]");
+				renderText(canvas, p, "["+sp.name+"]", declutter);
 			}			
 		}
+		if (lookup!=null && zoomlevel>=7)
+		{
+			for (SigPoint sp : lookup.allTowns.findall(bb13)) {
+				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
+				Vector p = tf.merc2screen(m);
+				textpaint.setARGB(0xff, 0xff, 0xff, 0xb0);
+				linepaint.setARGB(0xff, 0xff, 0xff, 0xb0);
+				renderText(canvas, p, "["+sp.name+"]", declutter);
+			}			
+		}
+		
 		if (zoomlevel >= 9 && lookup != null) {
 			for (SigPoint sp : lookup.allOthers.findall(bb13)) {
 				// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
@@ -268,20 +306,12 @@ public class MapDrawer {
 				// Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
 				// textpaint.setARGB(0, 255,255,255);
 				String t;
-				if (sp.kind=="town")
-				{
-					textpaint.setARGB(0xff, 0xff, 0xff, 0xb0);
-					linepaint.setARGB(0xff, 0xff, 0xff, 0xb0);
-					Log.i("fplan.draw","drawing town: "+sp.name);
-					t="["+sp.name+"]";
-				}
-				else
 				{
 					textpaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
 					linepaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
 					t=sp.name;
 				}
-				renderText(canvas, p, t);
+				renderText(canvas, p, t, declutter);
 			}
 
 			for (SigPoint sp : lookup.allObst.findall(smbb13)) {
@@ -301,34 +331,10 @@ public class MapDrawer {
 				// textpaint.setARGB(0, 255,255,255);
 				textpaint.setARGB(0xff, 0xff, 0xa0, 0xff);
 				linepaint.setARGB(0xff, 0xff, 0xa0, 0xff);
-				renderText(canvas, p, String.format("%.0fft", sp.alt));
+				renderText(canvas, p, String.format("%.0fft", sp.alt),null);
 				// canvas.drawText(String.format("%.0fft",sp.alt), (float)(p.x),
 				// (float)(p.y), textpaint);
 				// canvas.drawPoint((float)p.x,(float)p.y,linepaint);
-			}
-		}
-		if (zoomlevel >= 9 && lookup != null) {
-			for (SigPoint sp : lookup.minorAirfields.findall(bb13)) {
-				// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
-				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
-				Vector p = tf.merc2screen(m);
-				String text;
-				text = sp.name;
-				textpaint.setColor(Color.GREEN);
-				linepaint.setColor(Color.GREEN);
-				renderText(canvas, p, text);
-			}
-		}
-		if (zoomlevel >= 8 && lookup != null) {
-			for (SigPoint sp : lookup.majorAirports.findall(bb13)) {
-				// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
-				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
-				Vector p = tf.merc2screen(m);
-				String text;
-				text = sp.name;
-				textpaint.setColor(Color.GREEN);
-				linepaint.setColor(Color.GREEN);
-				renderText(canvas, p, text);
 			}
 		}
 
@@ -371,7 +377,7 @@ public class MapDrawer {
 				// double py=rot_y(m.x-center.x,m.y-center.y)+oy;
 				textpaint.setColor(Color.WHITE);
 				linepaint.setColor(Color.WHITE);
-				renderText(canvas, p, wp.name);
+				renderText(canvas, p, wp.name,null);
 			}
 		}
 		boolean havefix = lastpos.getTime() > 3600 * 24 * 10 * 1000
