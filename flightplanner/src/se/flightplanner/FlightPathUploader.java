@@ -1,6 +1,8 @@
 package se.flightplanner;
 
+import java.io.DataInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -46,12 +48,22 @@ public class FlightPathUploader extends AsyncTask<String, Void, String> {
 			ArrayList<NameValuePair> nvps=new ArrayList<NameValuePair>();
 			nvps.add(new BasicNameValuePair("filename", filename));
 			try {
+				FileInputStream fileinp=new FileInputStream(path);
 				Log.i("fplan.vr","httpUpload");
-				DataDownloader.httpUpload("/api/uploadtrip",
+				DataInputStream ret=new DataInputStream(DataDownloader.httpUpload("/api/uploadtrip",
 						user,pass,
 						nvps,
-						path);
-				Log.i("fplan.vr","upload finished");
+						fileinp));
+				int magic=ret.readInt();
+				if (magic!=0xf00db00f)
+					throw new RuntimeException("Server error uploading trip");
+				int ver=ret.readInt();
+				if (ver!=1)
+					throw new RuntimeException("Your app is too old for the server. Time to update it! (sorry about this)");
+				int errorcode=ret.readInt();
+				Log.i("fplan.vr","upload finished:"+errorcode);
+				if (errorcode!=0)
+					return "error: "+errorcode;			
 			} catch (ClientProtocolException e) {
 				e.printStackTrace();
 				return "failed";

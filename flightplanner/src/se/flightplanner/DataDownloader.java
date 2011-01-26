@@ -3,10 +3,14 @@ package se.flightplanner;
 import java.io.InputStream;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -15,6 +19,7 @@ import java.util.zip.InflaterInputStream;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpVersion;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -24,7 +29,9 @@ import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.params.CoreProtocolPNames;
 import org.json.JSONObject;
+
 
 import android.util.Log;
 
@@ -82,6 +89,7 @@ public class DataDownloader {
 		
 		HttpPost req = httpConnect(path, user, pass, nvps, zip);
 		DefaultHttpClient cli=new DefaultHttpClient();
+		
 		String strres;
 
 		if (zip)
@@ -146,10 +154,40 @@ public class DataDownloader {
 	}
 	public static InputStream httpUpload(String path,
 			String user,String pass,
-			ArrayList<NameValuePair> nvps,File filepath) throws ClientProtocolException, IOException
+			ArrayList<NameValuePair> nvps,InputStream inp) throws ClientProtocolException, IOException
 	{
-		FileEntity is=new FileEntity(filepath, "binary/octet-stream");
+
+		File pathobj=new File(path);
+		URL url=new URL(get_addr()+path);
+		HttpURLConnection conn=(HttpURLConnection)url.openConnection();
+		conn.setRequestMethod("POST"); 
+		conn.setUseCaches(false); 
+        conn.setDoOutput(true);
+		conn.setDoInput(true);
+		String boundary="DEFFCGGBDNDOODMJFNDAEIIKFDENEJKNMCFPNAMA";
+		conn.setRequestProperty("Content-Type","multipart/form-data;boundary="+boundary);
+		
+		DataOutputStream out=new DataOutputStream(new BufferedOutputStream(conn.getOutputStream()));
+		out.writeBytes("--"+boundary+"\r\n");
+		out.writeBytes("Content-Disposition: form-data; name=\"upload\";filename=\""+pathobj.getName() +"\"\r\n"); 
+		out.writeBytes("\r\n");
+		byte[] chunk=new byte[1024];
+		for(;;)
+		{
+			int len=inp.read(chunk);
+			if (len<=0)
+				break;
+			out.write(chunk,0,len);
+		}
+		out.writeBytes("\r\n");
+		out.writeBytes("--"+boundary+"\r\n");
+		out.flush();
+		out.close();
+		return new BufferedInputStream(conn.getInputStream()); 
+		//FileEntity is=new FileEntity(filepath, "binary/octet-stream");
+		/*
 		DefaultHttpClient cli=new DefaultHttpClient();
+		cli.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
 		nvps.add(new BasicNameValuePair("user",user));
 		nvps.add(new BasicNameValuePair("pass",user));
 		boolean first=true;
@@ -179,7 +217,8 @@ public class DataDownloader {
 			throw new RuntimeException("No request body");
 		}
 		InputStream ret=ent.getContent();
-		return ret;		
+		return ret;
+		*/		
 	}
 
 	private static HttpPost httpConnect(String path, String user, String pass,
