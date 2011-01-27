@@ -123,6 +123,7 @@ public class BitBuf {
 	public void serialize(DataOutputStream data) throws IOException {
 		int numints=(size+31)/32;
 		data.writeInt(numints);
+		data.writeInt(size);
 		for(int i=0;i<numints;++i)
 		{
 			data.writeInt(this.bits[i]);
@@ -131,9 +132,11 @@ public class BitBuf {
 	}
 	public static BitBuf deserialize(DataInputStream data) throws IOException {
 		BitBuf ret=new BitBuf();
-		ret.capacity=ret.size=data.readInt();
+		ret.capacity=data.readInt();
+		ret.size=data.readInt();
 		for(int i=0;i<ret.size;++i)
 			ret.bits[i]=data.readInt();
+		
 		int magic=data.readInt();
 		if (magic!=0xfeed42)
 			throw new RuntimeException("Bad magic in BitBuf");

@@ -70,14 +70,14 @@ public class FlightPathLogger {
 			}
 			else
 			{
-				Log.i("fplan.fplog","Starting new chunk");
+				//Log.i("fplan.fplog","Starting new chunk");
 				chunk=new Chunk(merc17,gps_timestamp_ms);
 				chunk.setStartPlace(findPlace(merc17,lookup));
 				chunks.add(chunk);
 				active=true;
 			}
 			chunk.log(merc17,gps_timestamp_ms);
-			Log.i("fplan.fplog","Merc:"+merc17+" stamp:"+gps_timestamp_ms);
+			//Log.i("fplan.fplog","Merc:"+merc17+" stamp:"+gps_timestamp_ms);
 		}
 		else
 		{
@@ -85,7 +85,7 @@ public class FlightPathLogger {
 			{
 				if (chunks.size()>0)
 				{					
-					Log.i("fplan.fplog","Finishing chunk");
+					//Log.i("fplan.fplog","Finishing chunk");
 					Chunk chunk=chunks.get(chunks.size()-1);
 					chunk.log(merc17,gps_timestamp_ms);
 					chunk.finish(findPlace(chunk.last17,lookup));
@@ -266,7 +266,7 @@ public class FlightPathLogger {
 			File extpath = Environment.getExternalStorageDirectory();
 			File tripdirpath = new File(extpath,
 				"/Android/data/se.flightplanner/files/triplog/");
-			Log.i("fplan.fplog","Writing"+filename);
+			//Log.i("fplan.fplog","Writing"+filename);
 			serialize(filename, tripdirpath);				
 			
 		}
@@ -361,7 +361,7 @@ public class FlightPathLogger {
 			
 				data.flush();
 				data.close();
-				Log.i("fplan.fplog","Wrote "+path);
+				//Log.i("fplan.fplog","Wrote "+path);
 				
 			} catch (IOException e)
 			{
@@ -487,6 +487,12 @@ public class FlightPathLogger {
 		}
 		public int sizebits() {
 			return binbuf.size();
+		}
+		public void saveto(File path,String filename) throws IOException {
+			Date d=new Date(startstamp);
+			//Log.i("fplan.fplog","Writing to "+filename);
+			serialize(filename, path);				
+			
 		}
 		
 		

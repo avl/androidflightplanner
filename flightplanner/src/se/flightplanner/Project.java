@@ -343,10 +343,8 @@ public class Project {
 		{
 			ang=Math.acos(sc);
 		}
-		Log.i("fplan","ang: "+ang+" sc:"+sc);
 		
 		double ret=((6378137.0/1852.0)*ang); //nautical miles
-		Log.i("fplan","Dist between "+latLon1+" and "+latLon2+" is "+ret);
 		return ret;
 	}
 

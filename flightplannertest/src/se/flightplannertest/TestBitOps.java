@@ -2,6 +2,8 @@ package se.flightplannertest;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Random;
 
 import org.junit.Test;
@@ -14,6 +16,7 @@ import se.flightplanner.FlightPathLogger.Chunk.PosTime;
 import se.flightplanner.Project.iMerc;
 
 public class TestBitOps {
+	static final File testdataoutputdir=new File("/home/anders/saker/fplan/fplanquick/testdata/");
 	@Test
 	public void testBinaryRep()
 	{
@@ -94,22 +97,26 @@ public class TestBitOps {
 		}
 	}
 	@Test 
-	public void testFlightLogger1()
+	public void testFlightLogger1() throws IOException
 	{
 		Chunk chunk=new Chunk(new iMerc(0,0),0);
 		chunk.log(new iMerc(0,0),1000);
+		chunk.saveto(testdataoutputdir,"simple1.dat");
+		
 		chunk.rewind();
+		
 		PosTime item=chunk.playback();
 		assertEquals(new iMerc(0,0),item.pos);
 		assertEquals(1000,item.stamp);
 	}
 	@Test 
-	public void testFlightLogger2()
+	public void testFlightLogger2() throws IOException
 	{
 		Chunk chunk=new Chunk(new iMerc(0,0),0);
 		chunk.log(new iMerc(0,0),1000);
 		chunk.log(new iMerc(5,0),2000);
 		chunk.log(new iMerc(10,0),3000);
+		chunk.saveto(testdataoutputdir,"simple2.dat");
 		chunk.rewind();
 		PosTime item=chunk.playback();
 		assertEquals(new iMerc(0,0),item.pos);
@@ -122,7 +129,7 @@ public class TestBitOps {
 		assertEquals(3000,item.stamp);
 	}
 	@Test
-	public void testFlightLoggerLong()
+	public void testFlightLoggerLong() throws IOException
 	{		
 		Chunk chunk=new Chunk(new iMerc(0,0),0);
 		for(int check=0;check<2;++check)
@@ -169,6 +176,10 @@ public class TestBitOps {
 				}
 				
 			}
+			if (check==0)
+			{
+				chunk.saveto(testdataoutputdir,"long3.dat");
+			}
 			if (check==1)
 				System.out.println("Bits:"+chunk.sizebits()+" per second: "+chunk.sizebits()/3600.0f);
 		}		
@@ -214,6 +225,6 @@ public class TestBitOps {
 				new iMerc(1000,1000), //me
 				new iMerc(500,1000), //soomething
 				"Arlanda");
-		assertEquals("0 NM east of Arlanda",desc);
+		assertEquals("Arlanda",desc);
 	}
 }

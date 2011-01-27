@@ -48,6 +48,7 @@ public class BinaryCodeBuf {
 	 */
 	public boolean gammacode(long x)
 	{
+		long origx=x;
 		if (x==0)
 		{
 			seq1.setsingle(false);
