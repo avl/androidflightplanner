@@ -45,14 +45,11 @@ public class FlightPathUploader extends AsyncTask<String, Void, String> {
 				"/Android/data/se.flightplanner/files/triplog/");
 			File path= new File(tripdirpath,filename);
 			
-			ArrayList<NameValuePair> nvps=new ArrayList<NameValuePair>();
-			nvps.add(new BasicNameValuePair("filename", filename));
 			try {
 				FileInputStream fileinp=new FileInputStream(path);
 				Log.i("fplan.vr","httpUpload");
 				DataInputStream ret=new DataInputStream(DataDownloader.httpUpload("/api/uploadtrip",
 						user,pass,
-						nvps,
 						fileinp));
 				int magic=ret.readInt();
 				if (magic!=0xf00db00f)

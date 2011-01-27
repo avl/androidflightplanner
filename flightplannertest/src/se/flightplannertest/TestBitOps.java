@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import se.flightplanner.BinaryCodeBuf;
@@ -122,67 +123,80 @@ public class TestBitOps {
 		assertEquals(new iMerc(0,0),item.pos);
 		assertEquals(1000,item.stamp);
 		item=chunk.playback();
-		assertEquals(new iMerc(4,0),item.pos);
+		assertEquals(new iMerc(5,0),item.pos);
 		assertEquals(2000,item.stamp);
 		item=chunk.playback();
-		assertEquals(new iMerc(9,0),item.pos);
+		assertEquals(new iMerc(10,0),item.pos);
 		assertEquals(3000,item.stamp);
 	}
 	@Test
 	public void testFlightLoggerLong() throws IOException
 	{		
-		Chunk chunk=new Chunk(new iMerc(0,0),0);
-		for(int check=0;check<2;++check)
+		for(int iter=0;iter<3;++iter)
 		{
-			int x=0,y=0;
-			int vx=10,vy=0;
-			Random r=new Random(42);
-			if (check==1)
+			Chunk chunk=new Chunk(new iMerc(0,0),0);
+			for(int check=0;check<2;++check)
 			{
-				chunk.rewind();
-			}
-			long stamp=0;
-			for(int i=0;i<3600;++i)
-			{
-				int dx=0;
-				int dy=0;
-				if (r.nextInt(10)<=2)
+				int x=0,y=0;
+				int vx=10,vy=0;
+				Random r=new Random(42+iter);
+				if (check==1)
 				{
-					dx=r.nextInt(30)-15;
-					dy=r.nextInt(30)-15;
+					chunk.rewind();
 				}
-				if (r.nextInt(10)<=5)
+				long stamp=0;
+				for(int i=0;i<3600;++i)
 				{
-					dx=r.nextInt(2)-1;
-					dy=r.nextInt(2)-1;
+					int dx=0;
+					int dy=0;
+					if (r.nextInt(10)<=2)
+					{
+						dx=r.nextInt(30)-15;
+						dy=r.nextInt(30)-15;
+					}
+					if (r.nextInt(10)<=5)
+					{
+						dx=r.nextInt(2)-1;
+						dy=r.nextInt(2)-1;
+					}
+					vx+=dx;
+					vy+=dy;
+					if (Math.abs(vx)>800) vx=0;
+					if (Math.abs(vy)>800) vy=0;
+					x+=vx;
+					y+=vy;
+
+					switch(iter)
+					{
+					case 0: stamp+=2000;break;
+					case 1: stamp+=1000;break;
+					case 2: stamp+=1500;break;					
+					}
+					if (check==0)
+					{
+						assertTrue(chunk.log(new iMerc(x,y),stamp));
+					}
+					else
+					{
+						//System.out.println("Size:"+chunk.sizebits()/8192+"kB");
+						PosTime it=chunk.playback();
+						
+						//System.out.println(""+iter+""+it.pos.getX()+" , "+x);
+						assertTrue(Math.abs(it.pos.getX()-x)<25);
+						assertTrue(Math.abs(it.pos.getY()-y)<25);					
+					}
+					
 				}
-				vx+=dx;
-				vy+=dy;
-				if (Math.abs(vx)>800) vx=0;
-				if (Math.abs(vy)>800) vy=0;
-				x+=vx;
-				y+=vy;
-				stamp+=2000;
 				if (check==0)
 				{
-					assertTrue(chunk.log(new iMerc(x,y),stamp));
+					chunk.saveto(testdataoutputdir,"long"+(iter+1)+".dat");
 				}
-				else
+				if (check==1)
 				{
-					//System.out.println("Size:"+chunk.sizebits()/8192+"kB");
-					PosTime it=chunk.playback();
-					assertTrue(Math.abs(it.pos.getX()-x)<50);
-					assertTrue(Math.abs(it.pos.getY()-y)<50);					
+					System.out.println("Bits:"+chunk.sizebits()+" per second: "+chunk.sizebits()/3600.0f);
 				}
-				
 			}
-			if (check==0)
-			{
-				chunk.saveto(testdataoutputdir,"long3.dat");
-			}
-			if (check==1)
-				System.out.println("Bits:"+chunk.sizebits()+" per second: "+chunk.sizebits()/3600.0f);
-		}		
+		}
 	}
 	@Test 
 	public void testFlightLogger3()

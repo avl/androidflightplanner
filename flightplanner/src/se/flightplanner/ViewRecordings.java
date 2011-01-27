@@ -58,6 +58,7 @@ public class ViewRecordings extends Activity implements HandleUpload {
 		{
 			ful.cancel(true);
 		}
+		super.onDestroy();
 	}
 	@Override
     public void onCreate(Bundle savedInstanceState) {

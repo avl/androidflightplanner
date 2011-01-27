@@ -154,7 +154,7 @@ public class DataDownloader {
 	}
 	public static InputStream httpUpload(String path,
 			String user,String pass,
-			ArrayList<NameValuePair> nvps,InputStream inp) throws ClientProtocolException, IOException
+			InputStream inp) throws ClientProtocolException, IOException
 	{
 
 		File pathobj=new File(path);
@@ -171,6 +171,8 @@ public class DataDownloader {
 		out.writeBytes("--"+boundary+"\r\n");
 		out.writeBytes("Content-Disposition: form-data; name=\"upload\";filename=\""+pathobj.getName() +"\"\r\n"); 
 		out.writeBytes("\r\n");
+		out.writeUTF(user);
+		out.writeUTF(pass);
 		byte[] chunk=new byte[1024];
 		for(;;)
 		{
