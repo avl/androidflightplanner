@@ -166,6 +166,11 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		    	loadTrip();
 		    	return;
 			}
+			else if (then!=null && then.equals("viewrec"))
+			{
+				viewRecordings();
+				return;
+			}
 		}
 	}
 
@@ -261,14 +266,17 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    }
 	    case MENU_VIEW_RECORDINGS:
 	    {
-	    	try {
-				fplog.saveCurrent(lookup);
-			} catch (IOException e) {
-				e.printStackTrace();				
-			}
-			{
-				viewRecordings();
-			}
+	    	if (!haveUserAndPass())
+	    	{
+		    	Intent intent = getSettingsIntent();
+		    	intent.putExtra("se.flightplanner.thenopen", "viewrec");
+		    	startActivityForResult(intent,SETUP_INFO);
+	    	}
+	    	else
+	    	{
+	    		viewRecordings();
+	    	}
+			
 	    	break;
 	    }
 	    case MENU_LOGIN:
@@ -313,10 +321,19 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    return false;
 	}
 	private void viewRecordings() {
-		Intent intent = new Intent(this, ViewRecordings.class);
-		intent.putExtra("se.flightplanner.user", getPreferences(MODE_PRIVATE).getString("user","")); 
-		intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password",""));			
-		startActivityForResult(intent,VIEW_RECORDINGS);
+    	try
+		{
+    		Intent intent = new Intent(this, ViewRecordings.class);
+    		intent.putExtra("se.flightplanner.user", getPreferences(MODE_PRIVATE).getString("user","")); 
+    		intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password",""));
+    		fplog.saveCurrent(lookup);
+    		startActivityForResult(intent,VIEW_RECORDINGS);
+		}
+    	catch(Exception e)
+    	{
+    		RookieHelper.showmsg(this,e.getMessage());
+    	}
+		
 	}
 
 

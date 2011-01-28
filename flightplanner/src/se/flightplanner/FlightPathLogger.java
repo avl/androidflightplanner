@@ -38,9 +38,11 @@ public class FlightPathLogger {
 	
 	public void saveCurrent(AirspaceLookup lookup) throws IOException
 	{
+		Log.i("fplan.fplog","saveCurrent called. active:"+active+" chunksize: "+chunks.size());
 		if (active && chunks.size()>0)
 		{
 			Chunk chunk=chunks.get(chunks.size()-1);
+			Log.i("fplan.fplog","startstamp:"+chunk.startstamp);
 			if (chunk.startstamp>24*86400*10)
 			{
 				chunk.setEndPlace(findPlace(chunk.last17,lookup));
@@ -55,7 +57,12 @@ public class FlightPathLogger {
 	 * @throws IOException 
 	 */
 	public void log(iMerc merc17,long gps_timestamp_ms,int speedHint,AirspaceLookup lookup) throws IOException
-	{	
+	{
+		if (gps_timestamp_ms<86400*10)
+		{
+			Log.i("fplan.fplog","gps timestamp is 0");
+			return;
+		}
 		boolean splitup=false;
 		if (active && chunks.size()>0)
 		{

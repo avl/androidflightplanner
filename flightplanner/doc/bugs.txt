@@ -12,3 +12,5 @@
 * FIXED: Borde ha skala på displayen. (5 NM märke på pinnen)
 * FIXED: Refactorera MovingMap. Klassen är för stor!!!
 * Need declutter-functionality. 	
+* Need more testing of trip functionality and general stability testing.
+* Feature freeze in effect 2011-01-28.
