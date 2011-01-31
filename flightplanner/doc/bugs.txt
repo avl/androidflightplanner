@@ -23,4 +23,4 @@
 * FIXED: Zoom out knappen får inte plats på Xperia. Dålig idé... :-).
 * Center och "north up" knapparna funkar inget bra på xperia.
 * FIXED: Se till att triploggen sparas när man gör destroy på appen.
- 
+* Borde verkligen ladda airspacedata i bakgrunden också.

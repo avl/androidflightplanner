@@ -39,6 +39,7 @@ public class DataDownloader {
 	public static boolean debugMode() {
 		return false;
 	}
+	
 	static private String get_addr()
 	{
 		String addr;
