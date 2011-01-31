@@ -11,7 +11,7 @@ import java.io.Serializable;
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
 
-public class SigPoint implements Serializable
+public class SigPoint implements Serializable,Comparable<SigPoint>
 {
 	private static final long serialVersionUID = 1939452363561911490L;
 	public Merc pos;
@@ -19,6 +19,14 @@ public class SigPoint implements Serializable
 	public String kind; //interned
 	public double alt;
 	public LatLon latlon;
+	@Override
+	public int compareTo(SigPoint o) {
+		if (pos.x<o.pos.x) return -1;
+		if (pos.x>o.pos.x) return +1;
+		if (pos.y<o.pos.y) return -1;
+		if (pos.y>o.pos.y) return +1;		
+		return name.compareTo(o.name);
+	}
 	public void serialize(DataOutputStream os) throws IOException
 	{
 		if (name!=null)

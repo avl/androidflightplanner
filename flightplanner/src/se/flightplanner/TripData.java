@@ -25,7 +25,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import se.flightplanner.Project.LatLon;
-import se.flightplanner.map3d.ElevationStore;
 
 import android.content.Context;
 import android.location.Location;

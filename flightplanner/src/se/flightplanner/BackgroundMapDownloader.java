@@ -116,6 +116,7 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 			Log.i("fplan","BSP-trees finished");
 	        return ad;
 		} catch (Exception e) {
+			e.printStackTrace();
 			publishProgress(e.toString());
 			return null;
 		}
@@ -129,10 +130,16 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 		publishProgress("Starting");
 		try {
 			waitAvailable();
-			res=downloadAirspace();
+			res=downloadAirspace();			
 		} catch (InterruptedException e2) {
 			DownloadedAirspaceData  ret=new DownloadedAirspaceData();
 			ret.error="Cancelled";
+			return ret;
+		}
+		if (res==null)
+		{
+			DownloadedAirspaceData  ret=new DownloadedAirspaceData();
+			ret.error="Failed";
 			return ret;
 		}
 		int failcount=0;
@@ -320,7 +327,7 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 							Thread.sleep(50);
 						else
 							raf.write(buffer,0,readlen);
-						Log.i("fplan.download","Writing chunk "+filelength+" level "+level+" byte "+cnt+" interrupt:"+Thread.currentThread().isInterrupted());
+						//Log.i("fplan.download","Writing chunk "+filelength+" level "+level+" byte "+cnt+" interrupt:"+Thread.currentThread().isInterrupted());
 						cnt+=readlen;
 						perc=(float)100.0f*(totprog+cnt+filelength)/totalsize;
 						long now=SystemClock.uptimeMillis();

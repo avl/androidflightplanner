@@ -5,8 +5,6 @@ package se.flightplanner;
 
 import android.os.SystemClock;
 import se.flightplanner.Project.iMerc;
-import se.flightplanner.map3d.ObserverContext;
-import se.flightplanner.map3d.ObserverContext.ObserverState;
 import se.flightplanner.vector.Vector;
 import se.flightplanner.vector.Polygon.InsideResult;
 

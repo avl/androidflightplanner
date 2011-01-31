@@ -209,11 +209,17 @@ public class Airspace implements Serializable{
 	void serialize_to_file(String filename) throws Exception
 	{
 		File extpath = Environment.getExternalStorageDirectory();
-		File path = new File(extpath,
-				"/Android/data/se.flightplanner/files/"+filename);
+		File dirpath = new File(extpath,
+				"/Android/data/se.flightplanner/files/");
+		if (!dirpath.exists())
+			dirpath.mkdirs();
+		File path = new File(dirpath,filename);
+		if (path.exists())
+			path.delete();
 		OutputStream ofstream=new BufferedOutputStream(
 				new FileOutputStream(path)
 				);
+		
 		try
 		{
 			DataOutputStream os=new DataOutputStream(ofstream);

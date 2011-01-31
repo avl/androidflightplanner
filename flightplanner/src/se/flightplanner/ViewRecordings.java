@@ -8,6 +8,8 @@ import se.flightplanner.FlightPathLogger.Chunk;
 import se.flightplanner.FlightPathUploader.HandleUpload;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
@@ -87,6 +89,7 @@ public class ViewRecordings extends Activity implements HandleUpload {
 
         list.setAdapter(adapter);
 		updateFileList(adapter);
+		final ViewRecordings outer_this=this;
 		final String[] chosenfile=new String[]{null};
         AdapterView.OnItemClickListener i=new AdapterView.OnItemClickListener()
         {
@@ -123,16 +126,33 @@ public class ViewRecordings extends Activity implements HandleUpload {
         {
 			@Override
 			public void onClick(View arg0) {
-				Log.i("fplan.vr","On Clear Button! Count:"+adapter.getCount());
-				for(int i=0;i<adapter.getCount();++i)
-				{
-					String item=tofilename(adapter.getItem(i));
-					Log.i("fplan.vr","Deleting "+item);
-					File path=new File(tripdirpath,item);
-					path.delete();
-				}
-				updateFileList(adapter);
-				list.invalidate();
+				
+				DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
+				    @Override
+				    public void onClick(DialogInterface dialog, int which) {
+				        switch (which){
+				        case DialogInterface.BUTTON_POSITIVE:
+							Log.i("fplan.vr","On Clear Button! Count:"+adapter.getCount());
+							for(int i=0;i<adapter.getCount();++i)
+							{
+								String item=tofilename(adapter.getItem(i));
+								Log.i("fplan.vr","Deleting "+item);
+								File path=new File(tripdirpath,item);
+								path.delete();
+							}
+							updateFileList(adapter);
+							list.invalidate();
+				            break;
+
+				        case DialogInterface.BUTTON_NEGATIVE:
+				            break;
+				        }
+				    }
+				};
+				AlertDialog.Builder builder = new AlertDialog.Builder(outer_this);
+				builder.setMessage("Really delete all recorded trips?").setPositiveButton("Delete!", dialogClickListener)
+				    .setNegativeButton("My goodness, no!", dialogClickListener).show();
+				
 			}        	
         });
         

@@ -11,6 +11,16 @@
 * WONTFIX: (Only 3D version) R-områden som går GND - UNL ritas fel ("under" marken)! 
 * FIXED: Borde ha skala på displayen. (5 NM märke på pinnen)
 * FIXED: Refactorera MovingMap. Klassen är för stor!!!
-* Need declutter-functionality. 	
+* FIXED: Need declutter-functionality. 	
 * Need more testing of trip functionality and general stability testing.
-* Feature freeze in effect 2011-01-28.
+* FIXED: Feature freeze in effect 2011-01-28.
+* WONTFIX: Need declutter-deflicker-functionality.
+* TRIAGED: Altitude mode for log
+* TRIAGED: Emergency screen? (With calculated impact position etc)
+* FIXED: Fast-mode for old hardware? (Set 'no basemap')
+* FIXED: Need to stress the initial setup a bit, there's an exception that seems to happen on initial map download?
+* För liten image cache på xperia? Bilder blinkar?
+* FIXED: Zoom out knappen får inte plats på Xperia. Dålig idé... :-).
+* Center och "north up" knapparna funkar inget bra på xperia.
+* FIXED: Se till att triploggen sparas när man gör destroy på appen.
+ 

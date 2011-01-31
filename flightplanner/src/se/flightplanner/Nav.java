@@ -155,6 +155,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			pedit.commit();
 			
 			String then=data.getStringExtra("se.flightplanner.thenopen");
+			map.update_detail(getPreferences(MODE_PRIVATE).getInt("mapdetail", 0));
 			if (then!=null && then.equals("loadterrain"))
 			{
 				loadTerrain();
@@ -349,8 +350,8 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 
 
 	private boolean haveUserAndPass() {
-		String user=getPreferences(MODE_PRIVATE).getString("user","user");
-		String pass=getPreferences(MODE_PRIVATE).getString("password","password");
+		String user=getPreferences(MODE_PRIVATE).getString("user",null);
+		String pass=getPreferences(MODE_PRIVATE).getString("password",null);
 		if (user==null || user.length()==0)
 			return false;
 		if (pass==null || pass.length()==0)
@@ -434,7 +435,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		getWindowManager().getDefaultDisplay().getMetrics(metrics);
 
         map=new MovingMap(this,metrics,fplog,this);
-        map.update_airspace(airspace,lookup);
+        map.update_airspace(airspace,lookup,getPreferences(MODE_PRIVATE).getInt("mapdetail", 0));
         map.update_tripdata(tripdata);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
 		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,0, this);
@@ -465,6 +466,26 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			map.gps_disabled();
 	}
 
+	@Override
+	public void onPause()
+	{
+		try {
+			fplog.saveCurrent(lookup);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		super.onPause();
+	}
+	@Override
+	public void onDestroy()
+	{
+		try {
+			fplog.saveCurrent(lookup);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		super.onDestroy();
+	}
 
 	@Override
 	public void onProgress(String prog) {
@@ -486,7 +507,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		{
 			map.set_download_status("Complete",true);
 		}
-        map.update_airspace(airspace,lookup);
+        map.update_airspace(airspace,lookup,getPreferences(MODE_PRIVATE).getInt("mapdetail", 0));
 		map.enableTerrainMap(true);
 	}
 	@Override

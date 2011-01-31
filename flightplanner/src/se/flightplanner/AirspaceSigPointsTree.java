@@ -1,6 +1,7 @@
 package se.flightplanner;
 
 import java.util.ArrayList;
+import java.util.Collections;
 
 import android.util.Log;
 
@@ -45,6 +46,7 @@ public class AirspaceSigPointsTree {
 			SigPoint point=(SigPoint)item.payload();
 			res.add(point);
 		}		
+		///Collections.sort(res);
 		return res;
 	}
 	public void verify() {

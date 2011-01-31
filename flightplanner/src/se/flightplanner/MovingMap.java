@@ -49,6 +49,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 	private float y_dpmm;
 	private FlightPathLogger fplog;
 	private MovingMapOwner owner;
+	private int detaillevel;
 	interface MovingMapOwner
 	{
 		public void cancelMapDownload();
@@ -130,12 +131,15 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 					getLeft(),getTop(),
 					getRight(),getBottom());
 			gui.updatePos(lastpos);
-			
+			GetMapBitmap usebitmaps=bitmaps;
+			if (MapDetailLevels.getMaxLevelFromDetail(detaillevel)<0)
+				usebitmaps=null;
+				
 			DrawResult res=drawer.draw_actual_map(tripdata, tripstate,
 					lookup,
 					canvas,					
 					screenExtent,lastpos,
-					bitmaps, //isDragging
+					usebitmaps, //isDragging
 					gui,
 					last_real_position,
 					download_status,
@@ -221,8 +225,9 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 		}
 		
 	}
-	public void update_airspace(Airspace pairspace, AirspaceLookup plookup) {
+	public void update_airspace(Airspace pairspace, AirspaceLookup plookup,int newdetaillevel) {
 		lookup=plookup;
+		detaillevel=newdetaillevel;
 		tripstate=new TripState(tripdata,lookup);
 		if (lastpos!=null)
 			tripstate.update_target(lastpos);
@@ -414,6 +419,10 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 		{		
 			owner.cancelMapDownload();
 		}
+	}
+	public void update_detail(int det) {
+		detaillevel=det;
+		invalidate();
 	}
 	
 }

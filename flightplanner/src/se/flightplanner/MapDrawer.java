@@ -36,6 +36,9 @@ public class MapDrawer {
 	private Paint textpaint;
 	private float x_dpmm, y_dpmm;
 	private SimpleDateFormat formatter = new SimpleDateFormat("kkmmss");
+	private String zoom_in_text=null;
+	private String zoom_out_text=null;
+	private boolean zoom_buttons;
 
 	public MapDrawer(float x_dpmm, float y_dpmm) {
 		this.x_dpmm = x_dpmm;
@@ -128,7 +131,7 @@ public class MapDrawer {
 	private int right;
 	private int top;
 	private int bottom;
-
+	private int last_zoomlevel;
 	public DrawResult draw_actual_map(TripData tripdata, TripState tripstate,
 			AirspaceLookup lookup, Canvas canvas, Rect screen_extent,
 			Location lastpos, GetMapBitmap bitmaps, final GuiSituation gui,
@@ -250,7 +253,16 @@ public class MapDrawer {
 				}
 			}
 		}
+		
+		//if (declutter==null)		
 		DeclutterTree declutter=new DeclutterTree((int)(textpaint.getTextSize()*1.4f));
+		/*else
+			declutter.clearIfNeeded();
+		if (last_zoomlevel!=zoomlevel)
+		{
+			declutter.clear();
+			last_zoomlevel=zoomlevel;
+		}*/
 		if (zoomlevel >= 7 && lookup != null) {
 			for (SigPoint sp : lookup.majorAirports.findall(bb13)) {
 				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
@@ -560,7 +572,7 @@ public class MapDrawer {
 			
 			float topy1=y - tsy * actuallines - 4;
 			
-			final Rect tr3 = drawButton(canvas, right-5,topy1-tsy*1.4f, "Close",-1,left,right);
+			final Rect tr3 = drawButton(canvas, right-5,topy1-tsy*1.4f, "Close",-1,left,right,false);
 			clickables.add(new GuiSituation.Clickable() {
 				@Override
 				public Rect getRect() {
@@ -690,7 +702,7 @@ public class MapDrawer {
 		{
 			float y = bottom-(bigtextpaint.getTextSize()*1.5f + 2);
 			
-			final Rect tr3 = drawButton(canvas, right,y, "Waypoints",-1,left,right);
+			final Rect tr3 = drawButton(canvas, right,y, "Waypoints",-1,left,right,false);
 			clickables.add(new GuiSituation.Clickable() {
 				@Override
 				public Rect getRect() {
@@ -702,32 +714,64 @@ public class MapDrawer {
 				}
 			});
 			int rightedge=tr3.left-5;
-
-			final Rect tr1 = drawButton(canvas, left,y, "Zoom +",1,left,rightedge);
-			clickables.add(new GuiSituation.Clickable() {
-				@Override
-				public Rect getRect() {
-					return tr1;
+			if (zoom_in_text==null)
+			{
+				Rect tr1 = drawButton(canvas, left,y, "Zoom +",1,left,rightedge,true);
+				int edge = tr1.right+5;
+				Rect tr2 = drawButton(canvas, edge,y, "Zoom -",1,edge,rightedge,true);
+				if (tr2==null)
+				{
+					tr1 = drawButton(canvas, left,y, "+",1,left,rightedge,true);
+					edge = tr1.right+5;
+					tr2 = drawButton(canvas, edge,y, "-",1,edge,rightedge,true);
+					if (tr2!=null)
+					{
+						zoom_buttons=true;
+						zoom_in_text="+";
+						zoom_out_text="-";
+					}
+					else
+					{
+						zoom_buttons=false;
+						zoom_in_text="none";
+						zoom_out_text="none";						
+					}
 				}
-				@Override
-				public void onClick() {
-					gui.changeZoom(+1);
+				else
+				{
+					zoom_buttons=true;
+					zoom_in_text="Zoom +";
+					zoom_out_text="Zoom -";					
 				}
-			});
-			int edge = tr1.right+5;
-
-			final Rect tr2 = drawButton(canvas, edge,y, "Zoom -",1,edge,rightedge);
-			clickables.add(new GuiSituation.Clickable() {
-				@Override
-				public Rect getRect() {
-					return tr2;
-				}
-				@Override
-				public void onClick() {
-					gui.changeZoom(-1);
-				}
-			});
-			
+				
+			}
+			if (zoom_buttons)
+			{
+				final Rect tr1 = drawButton(canvas, left,y, zoom_in_text,1,left,rightedge,false);
+				clickables.add(new GuiSituation.Clickable() {
+					@Override
+					public Rect getRect() {
+						return tr1;
+					}
+					@Override
+					public void onClick() {
+						gui.changeZoom(+1);
+					}
+				});
+				int edge = tr1.right+5;
+	
+				final Rect tr2 = drawButton(canvas, edge,y, zoom_out_text,1,edge,rightedge,false);
+				clickables.add(new GuiSituation.Clickable() {
+					@Override
+					public Rect getRect() {
+						return tr2;
+					}
+					@Override
+					public void onClick() {
+						gui.changeZoom(-1);
+					}
+				});
+			}
 			
 		}
 
@@ -768,7 +812,7 @@ public class MapDrawer {
 			float topbutton_y = y+h;
 
 			String text = "Center";
-			final Rect tr1 = drawButton(canvas, right,topbutton_y, text,-1,0,right);
+			final Rect tr1 = drawButton(canvas, right,topbutton_y, text,-1,0,right,false);
 			clickables.add(new GuiSituation.Clickable() {
 				@Override
 				public Rect getRect() {
@@ -783,7 +827,7 @@ public class MapDrawer {
 			int edge = tr1.left;
 
 			text = "Set North Up";
-			final Rect tr2 = drawButton(canvas, 0,topbutton_y, text,1,0,edge);
+			final Rect tr2 = drawButton(canvas, 0,topbutton_y, text,1,0,edge,false);
 			if (tr2!=null) {				
 				clickables.add(new GuiSituation.Clickable() {
 					@Override
@@ -803,7 +847,7 @@ public class MapDrawer {
 				float y2 = (y + bigtextpaint.getTextSize() * 1.1f);
 				
 				String text = "Load:"+download_status;
-				final Rect tr1 = drawButton(canvas, 0,y2, text,1,0,Integer.MAX_VALUE);
+				final Rect tr1 = drawButton(canvas, 0,y2, text,1,0,Integer.MAX_VALUE,false);
 				clickables.add(new GuiSituation.Clickable() {
 					@Override
 					public Rect getRect() {
@@ -823,7 +867,7 @@ public class MapDrawer {
 		return res;
 	}
 
-	private Rect drawButton(Canvas canvas, float x,float topbutton_y, String text,int layoutdir, int x1lim, int x2lim) {
+	private Rect drawButton(Canvas canvas, float x,float topbutton_y, String text,int layoutdir, int x1lim, int x2lim,boolean measureOnly) {
 		float h2 = bigtextpaint.getTextSize();
 		thinlinepaint.setColor(Color.WHITE);
 		final Rect tr1 = new Rect();
@@ -839,11 +883,14 @@ public class MapDrawer {
 		MapDrawer.grow(tr1, (int) (0.4f * h2));
 		if (tr1.left<x1lim || tr1.right>x2lim)
 			return null;
-		canvas.drawRect(tr1, backgroundpaint);
-		canvas.drawRect(tr1, thinlinepaint);
-
-		canvas.drawText(text, tr1.left + 0.4f * h2, tr1.bottom - 0.4f * h2,
-				bigtextpaint);
+		if (!measureOnly)
+		{
+			canvas.drawRect(tr1, backgroundpaint);
+			canvas.drawRect(tr1, thinlinepaint);
+	
+			canvas.drawText(text, tr1.left + 0.4f * h2, tr1.bottom - 0.4f * h2,
+					bigtextpaint);
+		}
 		return tr1;
 	}
 

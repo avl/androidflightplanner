@@ -372,7 +372,8 @@ public class GuiSituation
 		this.lookup=lookup;
 	}
 	private void showInfo(LatLon about) {
-		currentInfo=new AirspacePointInfo(about,lookup);
+		if (lookup!=null)
+			currentInfo=new AirspacePointInfo(about,lookup);
 		
 	}
 	public InformationPanel getCurrentInfo() {
