@@ -37,7 +37,7 @@ import android.util.Log;
 
 public class DataDownloader {
 	public static boolean debugMode() {
-		return false;
+		return true;
 	}
 	
 	static private String get_addr()

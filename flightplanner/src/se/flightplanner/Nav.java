@@ -30,6 +30,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -176,16 +177,47 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	}
 
 
+	private AsyncTask<Void, Void, String[]> loadtrips; 
 	private void loadTrip() {
 		final String user=getPreferences(MODE_PRIVATE).getString("user","user");
 		final String password=getPreferences(MODE_PRIVATE).getString("password","password");
-		String[] ttrips=null;
-		try {
-			ttrips = TripData.get_trips(
-					user,password);
-		} catch (Throwable e) {				
-			RookieHelper.showmsg(this,"Couldn't connect to server:"+e.toString());		    	
+		if (loadtrips!=null || load_trip_task!=null)
+		{
+			
+			RookieHelper.showmsg(this,"Trip list is loading! Have patience!");
+			return;
 		}
+		loadtrips=new AsyncTask<Void, Void, String[]>()
+		{
+			@Override
+			protected String[] doInBackground(
+					Void... params) {
+				try {
+					String[] ttrips = TripData.get_trips(
+							user,password);
+					return ttrips;
+				} catch (Throwable e) {				
+					return null;		    	
+				}								
+			}
+			@Override
+			protected void onPostExecute(String[] result) {
+				super.onPostExecute(result);
+				loadtrips=null;
+				selectTrip(user, password, result);
+			}
+			@Override
+			protected void onCancelled() {
+				super.onCancelled();
+				loadtrips=null;
+			}
+		};
+		loadtrips.execute(null);
+		
+		
+	}
+	private void selectTrip(final String user, final String password,
+			String[] ttrips) {
 		if (ttrips!=null)
 		{
 			final String[] trips=ttrips;
@@ -196,48 +228,12 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			}
 			else
 			{
-		        final Nav nav=this;
+		        final Nav nav=this;		        
 		    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		    	builder.setTitle("Choose Trip");
 		    	builder.setItems(trips, new DialogInterface.OnClickListener() {
 		    	    public void onClick(DialogInterface dialog, int item) {	    	        
-				    	try {
-							nav.tripdata=TripData.get_trip(user,password,trips[item]);
-							
-							/*
-							
-							
-							{
-								ArrayList<NameValuePair> nvps=new ArrayList<NameValuePair>();
-								nvps.add(new BasicNameValuePair("trip",trips[item]));
-								InputStream strm=DataDownloader.postRaw("/api/get_elev_near_trip",user, password, nvps,false);
-								nav.estore=ElevationStore.deserialize(new DataInputStream(strm));
-								strm.close();
-							}
-							{
-								ArrayList<NameValuePair> nvps=new ArrayList<NameValuePair>();
-								nvps.add(new BasicNameValuePair("trip",trips[item]));
-								InputStream strm=DataDownloader.postRaw("/api/get_map_near_trip",user, password, nvps,false);
-								nav.tstore=TextureStore.deserialize(new DataInputStream(strm));
-								strm.close();
-							}
-							*/
-
-					    	try
-					    	{
-					    		nav.tripdata.serialize_to_file(nav,"tripdata.bin");
-					    		//nav.estore.serialize_to_file(nav,"elev.bin");
-					    		//nav.tstore.serialize_to_file(nav,"tex.bin");
-					    	} 
-					    	catch(Throwable e) 
-					    	{
-					    		RookieHelper.showmsg(nav, e.toString());
-					    	}
-							
-							map.update_tripdata(nav.tripdata);
-				    	} catch (Throwable e) {
-							RookieHelper.showmsg(nav,"Couldn't fetch trip from server:"+e.toString());
-						}
+				    	nav.loadSelectedTrip(user, password, trips[item]);
 		    	    }
 		    	});
 		    	AlertDialog diag=builder.create();
@@ -517,6 +513,41 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		{
 			terraindownloader.cancel(true);
 		}
+	}
+	AsyncTask<Void,Void,TripData> load_trip_task;
+	private void loadSelectedTrip(final String user, final String password,
+			final String trip) {
+		final Nav nav=this;
+		if (load_trip_task!=null)
+			return;
+		load_trip_task=new AsyncTask<Void,Void,TripData>()
+		{
+			protected TripData doInBackground(Void... params) {
+				try {			
+					return TripData.get_trip(user,password,trip);			
+				} catch (Throwable e) {
+					e.printStackTrace();
+					return null;
+				}
+			}
+			@Override
+				protected void onPostExecute(TripData result) {
+					// TODO Auto-generated method stub
+					super.onPostExecute(result);
+				try
+				{
+					nav.tripdata=result;
+					nav.tripdata.serialize_to_file(nav,"tripdata.bin");
+					map.update_tripdata(nav.tripdata);				
+				} 
+				catch(Throwable e) 
+				{
+					RookieHelper.showmsg(nav, e.toString());
+				}					
+			}
+			
+		};
+		load_trip_task.execute(null);
 	}
     
 

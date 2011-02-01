@@ -72,7 +72,7 @@ public class FlightPathLogger {
 				splitup=true;
 		}
 		
-		if (speedHint>20 && !splitup)
+		if (speedHint>15 && !splitup)
 		{
 			Chunk chunk=null;
 			if (active && chunks.size()>0)
@@ -87,7 +87,7 @@ public class FlightPathLogger {
 				chunks.add(chunk);
 				active=true;
 			}
-			chunk.log(merc17,gps_timestamp_ms);
+			chunk.log(merc17,gps_timestamp_ms,speedHint);
 			Log.i("fplan.fplog","Merc:"+merc17+" stamp:"+gps_timestamp_ms);
 		}
 		else
@@ -98,7 +98,7 @@ public class FlightPathLogger {
 				{					
 					//Log.i("fplan.fplog","Finishing chunk");
 					Chunk chunk=chunks.get(chunks.size()-1);
-					chunk.log(merc17,gps_timestamp_ms);
+					chunk.log(merc17,gps_timestamp_ms,speedHint);
 					chunk.finish(findPlace(chunk.last17,lookup));
 					if (chunk.startstamp>24*86400*10)
 						chunk.saveToDisk();
@@ -207,6 +207,7 @@ public class FlightPathLogger {
 		private long distance_millinm;
 		private boolean finished;
 		
+		private int diag_maxspeedhint;
 
 		
 		
@@ -223,6 +224,7 @@ public class FlightPathLogger {
 			this.laststamp=startstamp;
 			this.laststampdelta=1000;
 			this.finished=false;
+			this.diag_maxspeedhint=0;
 			this.distance_millinm=0;
 		}
 		private Chunk() {
@@ -272,6 +274,10 @@ public class FlightPathLogger {
 		}
 		
 		private void saveToDisk() throws IOException {
+			if (distance_millinm<2000 && diag_maxspeedhint<40) //don't even save very short trips. They're probably just fast taxi. 
+				return;
+			if (laststamp-startstamp<40000 && diag_maxspeedhint<40) //not even close to a minute.
+				return;
 			Date d=new Date(startstamp);
 			String filename=dateformat.format(d);
 			File extpath = Environment.getExternalStorageDirectory();
@@ -408,10 +414,13 @@ public class FlightPathLogger {
 		/**
 		 * Return false if coding failed because we need to start a new chunk
 		 * otherwise true.
+		 * @param speedHint 
 		 */
-		public boolean log(iMerc merc17,long gps_timestamp_ms)
+		public boolean log(iMerc merc17,long gps_timestamp_ms, int speedHint)
 		{			
 			//Calculate the timestamp delta to be coded
+			if (speedHint>diag_maxspeedhint)
+				diag_maxspeedhint=speedHint;
 			long code_stampdelta=(gps_timestamp_ms-this.laststamp);
 			if (code_stampdelta<1000) return true; //can't log events this close in time			
 			if (code_stampdelta>300*1000) return false;
