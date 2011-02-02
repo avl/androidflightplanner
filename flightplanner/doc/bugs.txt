@@ -24,3 +24,5 @@
 * Center och "north up" knapparna funkar inget bra på xperia.
 * FIXED: Se till att triploggen sparas när man gör destroy på appen.
 * FIXED: Borde verkligen ladda airspacedata i bakgrunden också.
+* Borde skapa ny nolabel-karta, utan openstreetmap flygplats-namn!
+
