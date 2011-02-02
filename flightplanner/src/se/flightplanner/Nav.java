@@ -497,9 +497,12 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 
 	@Override
 	public void onFinish(Airspace airspace,AirspaceLookup lookup,String error) {
-		terraindownloader=null;		
-		this.airspace=airspace;
-		this.lookup=lookup;
+		terraindownloader=null;
+		if (airspace!=null)
+		{
+			this.airspace=airspace;
+			this.lookup=lookup;
+		}
 		Log.i("fplan","Finish:"+error);
 		if (error!=null)
 		{
