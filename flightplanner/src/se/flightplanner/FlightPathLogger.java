@@ -56,7 +56,7 @@ public class FlightPathLogger {
 	 * @param nomenclature
 	 * @throws IOException 
 	 */
-	public void log(iMerc merc17,long gps_timestamp_ms,int speedHint,AirspaceLookup lookup) throws IOException
+	public void log(iMerc merc17,long gps_timestamp_ms,int speedHint,AirspaceLookup lookup,int altitude) throws IOException
 	{
 		if (gps_timestamp_ms<86400*10)
 		{
@@ -87,7 +87,7 @@ public class FlightPathLogger {
 				chunks.add(chunk);
 				active=true;
 			}
-			chunk.log(merc17,gps_timestamp_ms,speedHint);
+			chunk.log(merc17,gps_timestamp_ms,speedHint,altitude);
 			Log.i("fplan.fplog","Merc:"+merc17+" stamp:"+gps_timestamp_ms);
 		}
 		else
@@ -98,7 +98,7 @@ public class FlightPathLogger {
 				{					
 					//Log.i("fplan.fplog","Finishing chunk");
 					Chunk chunk=chunks.get(chunks.size()-1);
-					chunk.log(merc17,gps_timestamp_ms,speedHint);
+					chunk.log(merc17,gps_timestamp_ms,speedHint,altitude);
 					chunk.finish(findPlace(chunk.last17,lookup));
 					if (chunk.startstamp>24*86400*10)
 						chunk.saveToDisk();
@@ -203,9 +203,11 @@ public class FlightPathLogger {
 		private int lastrate;
 		private int lastturn;
 		private long laststamp;
+		private int lastaltitude;
 		private int laststampdelta;
 		private long distance_millinm;
 		private boolean finished;
+		private int version;
 		
 		private int diag_maxspeedhint;
 
@@ -223,9 +225,11 @@ public class FlightPathLogger {
 			this.lastrate=50;
 			this.laststamp=startstamp;
 			this.laststampdelta=1000;
+			this.lastaltitude=0;
 			this.finished=false;
 			this.diag_maxspeedhint=0;
 			this.distance_millinm=0;
+			this.version=3;
 		}
 		private Chunk() {
 			//Just use for loadFromDisk
@@ -312,8 +316,8 @@ public class FlightPathLogger {
 				int magic=data.readInt();
 				if (magic!=0xfafafa01)
 					throw new RuntimeException("Bad magic, got: "+magic);
-				int version=data.readInt();
-				if (version<1 || version>2)
+				version=data.readInt();
+				if (version<1 || version>3)
 					throw new RuntimeException("Bad version, got: "+version);
 				start_place=data.readUTF();
 				end_place=data.readUTF();
@@ -322,6 +326,7 @@ public class FlightPathLogger {
 				last17=iMerc.deserialize(data);
 				lasthdg=data.readInt();
 				lastrate=data.readInt();
+				lastaltitude=data.readInt();
 				lastturn=data.readInt();
 				laststamp=data.readLong();
 				laststampdelta=data.readInt();
@@ -353,7 +358,8 @@ public class FlightPathLogger {
 						);
 				DataOutputStream data=new DataOutputStream(ofstream);
 				data.writeInt(0xfafafa01); //magic
-				data.writeInt(2); //version
+				data.writeInt(3); //version
+				version=3;
 				
 				if (start_place!=null)
 					data.writeUTF(start_place);
@@ -369,6 +375,7 @@ public class FlightPathLogger {
 				last17.serialize(data);
 				data.writeInt(lasthdg);
 				data.writeInt(lastrate);
+				data.writeInt(lastaltitude);
 				data.writeInt(lastturn);
 				data.writeLong(laststamp);
 				data.writeInt(laststampdelta);
@@ -408,6 +415,7 @@ public class FlightPathLogger {
 			this.lastturn=0;
 			this.lastrate=50;
 			this.laststamp=startstamp;
+			this.lastaltitude=0;
 			this.laststampdelta=1000;
 			
 		}
@@ -415,8 +423,9 @@ public class FlightPathLogger {
 		 * Return false if coding failed because we need to start a new chunk
 		 * otherwise true.
 		 * @param speedHint 
+		 * @param altitude 
 		 */
-		public boolean log(iMerc merc17,long gps_timestamp_ms, int speedHint)
+		public boolean log(iMerc merc17,long gps_timestamp_ms, int speedHint, int altitude)
 		{			
 			//Calculate the timestamp delta to be coded
 			if (speedHint>diag_maxspeedhint)
@@ -446,14 +455,15 @@ public class FlightPathLogger {
 			//Code timestamp, turn and rate.
 			int presize=binbuf.size();
 			int helper=code_turn-lastturn;
+			int curaltitude=(altitude/25);
 			//System.out.println("Encoding "+(code_stampdelta-laststampdelta)+","+(code_turn)+","+(code_rate-lastrate));
-			if (!binbuf.gammacode(code_stampdelta-laststampdelta) ||
-				!binbuf.gammacode(code_turn) ||
-				!binbuf.gammacode(code_rate-lastrate)
-				)
+			binbuf.gammacode(code_stampdelta-laststampdelta);
+			binbuf.gammacode(code_turn);
+			binbuf.gammacode(code_rate-lastrate);
+			if (version>=3)
 			{
-				binbuf.rewind2size(presize);
-				return false;
+				//System.out.println("gammacoding alt: "+(curaltitude));
+				binbuf.gammacode(curaltitude-lastaltitude);
 			}
 						
 			this.lastturn=code_turn;
@@ -463,12 +473,14 @@ public class FlightPathLogger {
 			//System.out.println("Encoded hdg:"+lasthdg);
 			this.last17=travel(this.last17,this.lastrate,this.lasthdg,this.laststampdelta);
 			this.laststamp=gps_timestamp_ms;
+			this.lastaltitude=curaltitude;
 			return true;
 		}
 		static public class PosTime
 		{
 			public iMerc pos;
 			public long stamp;
+			public int altitude;
 		}
 		public PosTime playback()
 		{
@@ -476,6 +488,12 @@ public class FlightPathLogger {
 			long raw_stampdelta=binbuf.gammadecode();
 			long raw_turn=binbuf.gammadecode();
 			long raw_rate=binbuf.gammadecode();
+			if (version>=3)
+			{
+				long raw_alt=binbuf.gammadecode();
+				lastaltitude+=(int)raw_alt;
+				//System.out.println("gamma-decoded alt:"+lastaltitude);
+			}
 			//System.out.println("Decoded "+(pre-binbuf.available())+" bits");
 			//System.out.println("Decoding "+(raw_stampdelta)+","+(raw_turn)+","+(raw_rate));
 			//int lastsecs=laststampdelta/1000;
@@ -495,6 +513,7 @@ public class FlightPathLogger {
 			PosTime item=new PosTime();
 			item.pos=last17.copy();
 			item.stamp=laststamp;
+			item.altitude=lastaltitude*25;
 			return item;
 		}
 		private iMerc travel(iMerc pos, int rate, int hdg,

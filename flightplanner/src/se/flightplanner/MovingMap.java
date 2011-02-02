@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.Random;
 import java.util.TimeZone;
 
 import se.flightplanner.BackgroundMapLoader.UpdatableUI;
@@ -191,7 +192,8 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 		LatLon latlon=new LatLon(lastpos.getLatitude(),lastpos.getLongitude());
 		iMerc merc17=Project.latlon2imerc(latlon,17);
 		try {
-			fplog.log(merc17, lastpos.getTime(), (int)(lastpos.getSpeed()*3.6f/1.852f), lookup);
+			int altfeet=(int)(lastpos.getAltitude()/0.3048);
+			fplog.log(merc17, lastpos.getTime(), (int)(lastpos.getSpeed()*3.6f/1.852f), lookup,altfeet);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -363,6 +365,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 	private Merc debugMerc;
 	private float debugSpeed;
 	private float debugHdgRad;
+	private static Random random=new Random();
 	public void enableDriving(boolean debugdrive) 
 	{
 		if (debugdrive)
@@ -392,7 +395,8 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 					loc.setLatitude(l.lat);
 					loc.setLongitude(l.lon);
 					loc.removeBearing();
-					loc.removeSpeed();
+					loc.removeSpeed();					
+					loc.setAltitude(100.0*random.nextFloat());
 					Date d = new Date();
 					loc.setTime(d.getTime());
 					outer.gps_update(loc);					

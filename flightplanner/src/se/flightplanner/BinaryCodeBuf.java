@@ -46,13 +46,14 @@ public class BinaryCodeBuf {
 	/**
 	 * Returns true if successful, otherwise false.
 	 */
-	public boolean gammacode(long x)
+	public void gammacode(long x)
 	{
 		long origx=x;
 		if (x==0)
 		{
 			seq1.setsingle(false);
-			return bitbuf.write(seq1);
+			bitbuf.write(seq1);
+			return;
 		}
 		seq1.setsingle(true);		
 		if (x<0)
@@ -76,7 +77,6 @@ public class BinaryCodeBuf {
 		bitbuf.write(seq3);
 		bitbuf.write(seq4);
 		bitbuf.write(seq5);
-		return true;
 	}
 	public long gammadecode()
 	{

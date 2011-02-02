@@ -84,7 +84,7 @@ public class BitBuf {
 		return b;
 	}
 	
-	public boolean write(BitSeq seq) {
+	public void write(BitSeq seq) {
 		int bitlen=idx*32+off;
 		assure(bitlen+seq.size());
 		int s=seq.size();
@@ -104,7 +104,6 @@ public class BitBuf {
 		int newsize=32*idx+off;
 		if (newsize>size)
 			size=newsize;
-		return true;
 	}
 	public int size() {
 		return size;

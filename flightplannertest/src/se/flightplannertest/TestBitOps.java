@@ -101,7 +101,7 @@ public class TestBitOps {
 	public void testFlightLogger1() throws IOException
 	{
 		Chunk chunk=new Chunk(new iMerc(0,0),0);
-		chunk.log(new iMerc(0,0),1000);
+		chunk.log(new iMerc(0,0),1000,60,0);
 		chunk.saveto(testdataoutputdir,"simple1.dat");
 		
 		chunk.rewind();
@@ -114,9 +114,9 @@ public class TestBitOps {
 	public void testFlightLogger2() throws IOException
 	{
 		Chunk chunk=new Chunk(new iMerc(0,0),0);
-		chunk.log(new iMerc(0,0),1000);
-		chunk.log(new iMerc(5,0),2000);
-		chunk.log(new iMerc(10,0),3000);
+		chunk.log(new iMerc(0,0),1000,60,0);
+		chunk.log(new iMerc(5,0),2000,60,0);
+		chunk.log(new iMerc(10,0),3000,60,0);
 		chunk.saveto(testdataoutputdir,"simple2.dat");
 		chunk.rewind();
 		PosTime item=chunk.playback();
@@ -144,20 +144,24 @@ public class TestBitOps {
 				{
 					chunk.rewind();
 				}
+				int alt=25;
 				long stamp=0;
 				for(int i=0;i<3600;++i)
 				{
 					int dx=0;
 					int dy=0;
+					int dz=0;
 					if (r.nextInt(10)<=2)
 					{
 						dx=r.nextInt(30)-15;
 						dy=r.nextInt(30)-15;
+						dz=r.nextInt(50)-25;
 					}
 					if (r.nextInt(10)<=5)
 					{
 						dx=r.nextInt(2)-1;
 						dy=r.nextInt(2)-1;
+						dz=r.nextInt(500)-250;
 					}
 					vx+=dx;
 					vy+=dy;
@@ -165,6 +169,7 @@ public class TestBitOps {
 					if (Math.abs(vy)>800) vy=0;
 					x+=vx;
 					y+=vy;
+					alt+=dz;
 
 					switch(iter)
 					{
@@ -174,16 +179,19 @@ public class TestBitOps {
 					}
 					if (check==0)
 					{
-						assertTrue(chunk.log(new iMerc(x,y),stamp));
+						assertTrue(chunk.log(new iMerc(x,y),stamp,60,alt));
 					}
 					else
 					{
 						//System.out.println("Size:"+chunk.sizebits()/8192+"kB");
 						PosTime it=chunk.playback();
 						
-						//System.out.println(""+iter+""+it.pos.getX()+" , "+x);
 						assertTrue(Math.abs(it.pos.getX()-x)<25);
 						assertTrue(Math.abs(it.pos.getY()-y)<25);					
+						assertTrue(Math.abs(it.stamp-stamp)<25);
+						
+						//System.out.println("Alt should:"+alt+" is:"+it.altitude);
+						assertTrue(Math.abs(it.altitude-alt)<=50);					
 					}
 					
 				}
@@ -212,9 +220,9 @@ public class TestBitOps {
 			for(int dy : dys)
 			{
 				Chunk chunk=new Chunk(new iMerc(0,0),0);
-				chunk.log(new iMerc(0,0),1000);
-				chunk.log(new iMerc(dx,dy),2000);
-				chunk.log(new iMerc(2*dx,2*dy),3000);
+				chunk.log(new iMerc(0,0),1000,60,0);
+				chunk.log(new iMerc(dx,dy),2000,60,0);
+				chunk.log(new iMerc(2*dx,2*dy),3000,60,0);
 				chunk.rewind();
 				PosTime item=chunk.playback();
 				assertEquals(new iMerc(0,0),item.pos);

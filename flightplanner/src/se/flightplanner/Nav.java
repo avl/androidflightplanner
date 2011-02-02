@@ -181,6 +181,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	private void loadTrip() {
 		final String user=getPreferences(MODE_PRIVATE).getString("user","user");
 		final String password=getPreferences(MODE_PRIVATE).getString("password","password");
+		final Nav nav=this;
 		if (loadtrips!=null || load_trip_task!=null)
 		{
 			
@@ -203,6 +204,11 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			@Override
 			protected void onPostExecute(String[] result) {
 				super.onPostExecute(result);
+				if (result==null)
+				{
+					RookieHelper.showmsg(nav, "Load failed. Check internet connection.");
+					return;
+				}
 				loadtrips=null;
 				selectTrip(user, password, result);
 			}
@@ -212,7 +218,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 				loadtrips=null;
 			}
 		};
-		loadtrips.execute(null);
+		loadtrips.execute((Void)null);
 		
 		
 	}
@@ -530,10 +536,19 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 					return null;
 				}
 			}
+			protected void onCancelled() {
+				load_trip_task=null;
+			};
 			@Override
-				protected void onPostExecute(TripData result) {
-					// TODO Auto-generated method stub
-					super.onPostExecute(result);
+			protected void onPostExecute(TripData result) {
+				// TODO Auto-generated method stub
+				super.onPostExecute(result);
+				load_trip_task=null;
+				if (result==null)
+				{
+					RookieHelper.showmsg(nav,"Failed to load trip. Check internet connection.");
+					return;
+				}
 				try
 				{
 					nav.tripdata=result;
@@ -547,7 +562,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			}
 			
 		};
-		load_trip_task.execute(null);
+		load_trip_task.execute((Void)null);
 	}
     
 

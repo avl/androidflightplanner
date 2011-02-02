@@ -14,8 +14,8 @@
 * FIXED: Need declutter-functionality. 	
 * Need more testing of trip functionality and general stability testing.
 * FIXED: Feature freeze in effect 2011-01-28.
-* WONTFIX: Need declutter-deflicker-functionality.
-* TRIAGED: Altitude mode for log
+* TRIAGED: Need declutter-deflicker-functionality.
+* FIXED: Altitude mode for log
 * TRIAGED: Emergency screen? (With calculated impact position etc)
 * FIXED: Fast-mode for old hardware? (Set 'no basemap')
 * FIXED: Need to stress the initial setup a bit, there's an exception that seems to happen on initial map download?
@@ -23,4 +23,4 @@
 * FIXED: Zoom out knappen får inte plats på Xperia. Dålig idé... :-).
 * Center och "north up" knapparna funkar inget bra på xperia.
 * FIXED: Se till att triploggen sparas när man gör destroy på appen.
-* Borde verkligen ladda airspacedata i bakgrunden också.
+* FIXED: Borde verkligen ladda airspacedata i bakgrunden också.
