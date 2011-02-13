@@ -89,7 +89,7 @@ public class GetMapBitmap {
 						dst.top=(j*256)/gapfactor;
 						dst.bottom=dst.top+256/gapfactor;						
 						canvas.drawBitmap(b,src,dst,null);			
-						mapcache.eject(new Key(curm,zoomlevel));
+						//mapcache.eject(new Key(curm,zoomlevel));
 					}
 					
 				}

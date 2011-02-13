@@ -135,10 +135,8 @@ public class MapCache {
 			if (backgroundload)
 				queryhistory.add(key);
 		}
-		else
-		{
+		if (l!=null)
 			l.lastuse=SystemClock.uptimeMillis();
-		}
 		return l;
 	}
 	synchronized public void garbageCollect(int cachesize) {
@@ -146,13 +144,14 @@ public class MapCache {
 		ArrayList<Key> deletelist=new ArrayList<Key>();
 		long oldest_age=0;
 		Key oldest=null;
+		//Log.i("fplan.bitmap","garbageCollect, cache size: "+cachesize+" map: "+map.size());
 		for(Entry<Key, MapCache.Payload> e:map.entrySet())
 		{
 			long age=now-e.getValue().lastuse;
 
 			if (age>30000)				
 				deletelist.add(e.getKey());
-			if (map.size()>=cachesize)
+			if (map.size()>cachesize)
 			{
 				if (age>oldest_age)
 				{

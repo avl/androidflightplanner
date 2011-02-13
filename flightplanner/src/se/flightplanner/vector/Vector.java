@@ -18,6 +18,10 @@ public class Vector implements Serializable {
 		x=px;
 		y=py;
 	}
+	public Vector copy()
+	{
+		return new Vector(x,y);
+	}
 	public boolean equals(Vector vo)
 	{
 		Vector v=(Vector)vo;

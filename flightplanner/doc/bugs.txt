@@ -19,10 +19,16 @@
 * TRIAGED: Emergency screen? (With calculated impact position etc)
 * FIXED: Fast-mode for old hardware? (Set 'no basemap')
 * FIXED: Need to stress the initial setup a bit, there's an exception that seems to happen on initial map download?
-* För liten image cache på xperia? Bilder blinkar?
+* FIXAD: För liten image cache på xperia? Bilder blinkar? Fulfixad!
 * FIXED: Zoom out knappen får inte plats på Xperia. Dålig idé... :-).
 * Center och "north up" knapparna funkar inget bra på xperia.
 * FIXED: Se till att triploggen sparas när man gör destroy på appen.
 * FIXED: Borde verkligen ladda airspacedata i bakgrunden också.
 * Borde skapa ny nolabel-karta, utan openstreetmap flygplats-namn!
-
+* Roterande kompassros skulle vara schysst.
+* "Styr såhär"-"bug" skulle vara bra.
+* Waypoints som är efter 'current waypoint' borde inte kunna visas som "skipped".
+* FIXAD: Notam-hinder och notam-areor borde visas i appen!
+* Elevation-data borde vi ha också.
+* Should show time/estimated times. Good to see if you're on schedule.
+* Test if the MapDrawer.tileOnScreen function really works.

@@ -11,6 +11,8 @@ import se.flightplanner.Project.Merc;
 import se.flightplanner.Project.iMerc;
 import se.flightplanner.TripData.Waypoint;
 import se.flightplanner.vector.BoundingBox;
+import se.flightplanner.vector.ConvexPolygon;
+import se.flightplanner.vector.Line;
 import se.flightplanner.vector.Vector;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -183,11 +185,13 @@ public class MapDrawer {
 					(int) screen_center.y & (~255));
 			int diagonal = (int) Math.sqrt((sizex / 2) * (sizex / 2)
 					+ (sizey * sizey * 3) / 5);
+			//Log.i("fplan.bitmap","Diagonal: "+diagonal+" sizex:"+sizex+" sizey: "+sizey);
 			int minus = (diagonal + 255) / 256;
+			//minus=2;
 			int tot = 2 * minus + 1;
 			iMerc topleft = new iMerc(centertile.getX() - (256 * minus),
 					centertile.getY() - 256 * minus);
-			int cachesize = tot * tot;
+			int cachesize = tot * tot+2*tot;
 			float hdg = (float) (tf.hdgrad * (180.0 / Math.PI));
 
 			for (int j = 0; j < tot; ++j) {
@@ -224,21 +228,7 @@ public class MapDrawer {
 		
 		// sigPointTree.verify();
 		if (zoomlevel >= 8 && lookup != null) {
-			for (AirspaceArea as : lookup.areas.get_areas(bb13)) {/*
-																 * boolean
-																 * all_left
-																 * =true;
-																 * boolean
-																 * all_right
-																 * =true;
-																 * boolean
-																 * all_above
-																 * =true;
-																 * boolean
-																 * all_below
-																 * =true; int
-																 * l=as.points
-																 */
+			for (AirspaceArea as : lookup.areas.get_areas(bb13)) {
 				ArrayList<Vector> vs = new ArrayList<Vector>();
 				for (LatLon latlon : as.points) {
 					Merc m = Project.latlon2merc(latlon, zoomlevel);
@@ -906,11 +896,13 @@ public class MapDrawer {
 
 	private boolean tileOnScreen(float cx, float cy, Transform tf) {
 		float maxdiag = 363;
-		if (cx + maxdiag < left)
+		if (left!=0 || top!=0)
+			return false;
+		if (cx + maxdiag < 0)
 			return false;
 		if (cx - maxdiag > right)
 			return false;
-		if (cy + maxdiag < top)
+		if (cy + maxdiag < 0)
 			return false;
 		if (cy - maxdiag > bottom)
 			return false;
@@ -919,20 +911,25 @@ public class MapDrawer {
 		Vector v = new Vector();
 		int sidex = 0;
 		int sidey = 0;
+		Vector[] tilecorners=new Vector[4];
 		for (int j = 0; j < 2; ++j) {
 			for (int i = 0; i < 2; ++i) {
 				v.x = 256 * i;
-				v.y = 256 * j;
-				Vector r = v.rot(tf.hdgrad);
+				v.y = 256 * j;				
+				Vector r = v.rot(tf.hdgrad);			
 				r.x += base.x;
 				r.y += base.y;
+				int idx=i;
+				if (j==1)
+					idx=3-i;
+				tilecorners[idx]=r.copy();
 				int cursidex = 0;
 				int cursidey = 0;
-				if (v.x < left)
+				if (v.x < 0)
 					cursidex = -1;
 				if (v.x > right)
 					cursidex = 1;
-				if (v.y < top)
+				if (v.y < 0)
 					cursidey = -1;
 				if (v.y > bottom)
 					cursidey = 1;
@@ -950,7 +947,18 @@ public class MapDrawer {
 		}
 		if (sidex != 0 || sidey != 0)
 			return false;
-		return true;
+		//If we get here, the tile is either outside of screen,
+		//or one of its lines is intersecting, but no vertex is on screen.
+		//this means that if the polygon is on the screen, one of
+		//the screen corners has to be in the polygon.
+		//(Since the tile/polygon is known to be smaller than screen)
+		ConvexPolygon tilepol=new ConvexPolygon(tilecorners);
+		if (tilepol.inside(new Vector(0,0))) return true;
+		if (tilepol.inside(new Vector(right,0))) return true;
+		if (tilepol.inside(new Vector(right,bottom))) return true;
+		if (tilepol.inside(new Vector(0,bottom))) return true;
+		
+		return false;
 
 	}
 
