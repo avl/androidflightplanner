@@ -6,6 +6,7 @@
 <string-array name="detail_array"><item>No basemap [250kB download]</item><item>Low Detail [2MB download]</item>
 <item>High Detail [100MB download]</item>
 
+<item>Very High [1GB download]</item>
 </string-array>
 <string name="ok">Ok</string>
 <string name="upload">Upload</string>

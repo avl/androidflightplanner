@@ -32,3 +32,5 @@
 * Elevation-data borde vi ha också.
 * Should show time/estimated times. Good to see if you're on schedule.
 * Test if the MapDrawer.tileOnScreen function really works.
+* Borde vara Z-tid på GPS-fixen, som det står!
+* Om man är i flightmode borde det inte gå att försöka ladda ner kartor.
