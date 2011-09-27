@@ -42,10 +42,11 @@ import android.widget.TextView;
 
 public class Nav extends Activity implements LocationListener,BackgroundMapDownloadOwner,MovingMapOwner {
     /** Called when the activity is first created. */
-	MovingMap map;
+	MainMapIf map;
 	TripData tripdata;
 	Airspace airspace;
 	AirspaceLookup lookup;
+	TripState tripstate;
 	//ElevationStore estore;
 	//TextureStore tstore;
 	//AirspaceAreaTree areaTree;
@@ -59,6 +60,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	final static int MENU_FINISH=4;
 	final static int MENU_SETTINGS=5;
 	final static int MENU_VIEW_RECORDINGS=6;
+	final static int MENU_VIEW_CHARTS=7;
 	private LocationManager locman;
 	BackgroundMapDownloader terraindownloader;
 	private FlightPathLogger fplog;
@@ -70,6 +72,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		//ElevationStore estore;
 		//TextureStore tstore;
 		AirspaceLookup lookup;
+		TripState state;
 	}
 	
 	@Override
@@ -78,12 +81,14 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    data.tripdata=tripdata;
 	    data.airspace=airspace;
 	    data.lookup=lookup;
+	    data.state=tripstate;
 	    //data.estore=estore;
 	    //data.tstore=tstore;
 	    return data;
 	}
 	
 	private boolean debugdrive;
+	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 		if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER)
 		{
@@ -124,6 +129,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    menu.add(0, MENU_DOWNLOAD_TERRAIN, 0, "Download Map");
 	    menu.add(0, MENU_SETTINGS, 0, "Settings");
 	    menu.add(0, MENU_VIEW_RECORDINGS, 0, "Recorded Trips");
+	    menu.add(0, MENU_VIEW_CHARTS, 0, "Charts");
 	    menu.add(0, MENU_FINISH, 0, "Exit");
 	    return true;
 	}
@@ -267,6 +273,11 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    	startActivityForResult(intent,SETUP_INFO);	    	
 	    	break;
 	    }
+	    case MENU_VIEW_CHARTS:
+	    {
+	    	viewAdChart();
+	    	break;
+	    }
 	    case MENU_VIEW_RECORDINGS:
 	    {
 	    	if (!haveUserAndPass())
@@ -336,10 +347,37 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     	{
     		RookieHelper.showmsg(this,e.getMessage());
     	}
-		
 	}
 
-
+	private void viewAdChart()
+	{
+		final String[] ads=airspace.getAdChartNames();		
+		
+		if (ads==null || ads.length==0)
+		{	    		
+			RookieHelper.showmsg(this,"No aerodrome charts downloaded. Go to Settings, select High Detail maps, then go back and Download Map again.");
+		}
+		else
+		{
+	        final Nav nav=this;		        
+	    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
+	    	builder.setTitle("Choose Aerodrome");
+	    	builder.setItems(ads, new DialogInterface.OnClickListener() {
+	    	    public void onClick(DialogInterface dialog, int item) {	    	        
+			    	nav.loadSelectedAd(ads[item]);
+	    	    }
+	    	});
+	    	AlertDialog diag=builder.create();
+	    	diag.show();
+		}
+	}
+	protected void loadSelectedAd(String string) {
+		Intent intent = new Intent(this, AdChartActivity.class);
+		intent.putExtra("se.flightplanner.user", getPreferences(MODE_PRIVATE).getString("user","")); 
+		intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password",""));
+		map.releaseMemory();
+		startActivityForResult(intent,VIEW_RECORDINGS);
+	}
 	private Intent getSettingsIntent() {
 		Intent intent = new Intent(this, SetupInfo.class);
 		intent.putExtra("se.flightplanner.user", getPreferences(MODE_PRIVATE).getString("user","user")); 
@@ -399,6 +437,8 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     	super.onCreate(savedInstanceState);
     	
     	final NavData data = (NavData) getLastNonConfigurationInstance();
+    	
+    	tripstate=new TripState(null);
     	setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
     	fplog=new FlightPathLogger();
     	
@@ -436,13 +476,14 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		DisplayMetrics metrics = new DisplayMetrics();
 		getWindowManager().getDefaultDisplay().getMetrics(metrics);
 
-        map=new MovingMap(this,metrics,fplog,this);
+        tripstate=new TripState(tripdata);
+        map=new MovingMap(this,metrics,fplog,this,tripstate);
         map.update_airspace(airspace,lookup,getPreferences(MODE_PRIVATE).getInt("mapdetail", 0));
-        map.update_tripdata(tripdata);
+        map.update_tripdata(tripdata,tripstate);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
 		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,0, this);
         
-		setContentView(map);
+		map.thisSetContentView(this);
 		map.gps_update(null);
     }
     
@@ -453,6 +494,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     }
     
     
+	@Override
 	public void onLocationChanged(Location location) {
 		map.gps_update(location);
 		//RookieHelper.showmsg(this, ""+location.getLatitude()+","+location.getLongitude());
@@ -556,7 +598,8 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 				{
 					nav.tripdata=result;
 					nav.tripdata.serialize_to_file(nav,"tripdata.bin");
-					map.update_tripdata(nav.tripdata);				
+					tripstate=new TripState(nav.tripdata);
+					map.update_tripdata(nav.tripdata,tripstate);				
 				} 
 				catch(Throwable e) 
 				{

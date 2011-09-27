@@ -12,7 +12,6 @@ import se.flightplanner.Project.iMerc;
 import se.flightplanner.TripData.Waypoint;
 import se.flightplanner.vector.BoundingBox;
 import se.flightplanner.vector.ConvexPolygon;
-import se.flightplanner.vector.Line;
 import se.flightplanner.vector.Vector;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -206,7 +205,7 @@ public class MapDrawer {
 						continue;
 					BitmapRes b = null;
 					// Log.i("fplan","Bitmap for "+cur);
-					b = bitmaps.getBitmap(cur, zoomlevel, cachesize);
+					b = bitmaps.getBitmap(cur, zoomlevel);
 					if (b != null && b.b != null) {
 						// float px=(float)(v.x+i*256);
 						// float py=(float)(v.y+j*256);

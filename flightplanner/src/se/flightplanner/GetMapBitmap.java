@@ -1,6 +1,7 @@
 package se.flightplanner;
 
 import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
@@ -26,14 +27,14 @@ public class GetMapBitmap {
 		public Bitmap b;
 		public Rect rect;
 	}
-	BitmapRes getBitmap(iMerc m, int zoomlevel,int cachesize)
+	BitmapRes getBitmap(iMerc m, int zoomlevel)
 	{
-		return collectUsableBitmap(m,zoomlevel,cachesize);
+		return collectUsableBitmap(m,zoomlevel);
 	}
 	/**
 	 * Doesn't load anything from disk.
 	 */
-	BitmapRes collectUsableBitmap(iMerc m, int desiredzoomlevel,int cachesize)
+	private BitmapRes collectUsableBitmap(iMerc m, int desiredzoomlevel)
 	{
 		for(int zoomlevel=desiredzoomlevel;zoomlevel>=0;--zoomlevel)
 		{
@@ -42,7 +43,7 @@ public class GetMapBitmap {
 			boolean should_be_there=false;
 			if (zoomlevel==desiredzoomlevel || desiredzoomlevel>maxzoomlevel && zoomlevel==maxzoomlevel)
 				should_be_there=true;
-			Bitmap b=getBitmapImpl(curm,zoomlevel,cachesize,should_be_there);
+			Bitmap b=getBitmapImpl(curm,zoomlevel,should_be_there);
 			if (b!=null)
 			{
 				iMerc gotten=Project.imerc2imerc(curm,zoomlevel,desiredzoomlevel);
@@ -73,7 +74,7 @@ public class GetMapBitmap {
 				for (int i=0;i<gapfactor;++i)
 				{
 					curm=new iMerc(basecurm.getX()+i*256,basecurm.getY()+j*256);
-					Bitmap b=getBitmapImpl(curm,zoomlevel,cachesize,false);
+					Bitmap b=getBitmapImpl(curm,zoomlevel,false);
 					if (b!=null)
 					{
 						if (out==null)
@@ -106,7 +107,7 @@ public class GetMapBitmap {
 		return null;
 	}
 	
-	Bitmap getBitmapImpl(iMerc m, int zoomlevel,int cachesize,boolean backgroundload)
+	private Bitmap getBitmapImpl(iMerc m, int zoomlevel,boolean backgroundload)
 	{
 		MapCache.Payload l = mapcache.query(m, zoomlevel,backgroundload);
 		if (l!=null)
@@ -126,6 +127,9 @@ public class GetMapBitmap {
 		mapcache.inject(m,zoomlevel,bmap,false);
 	}
 	*/
+	public void releaseMemory() {
+		mapcache.releaseMemory();
+	}
 	
 	
 }

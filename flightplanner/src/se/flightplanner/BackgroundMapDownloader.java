@@ -4,6 +4,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -88,6 +89,7 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 				return true;
 			}
 			Log.i("fplan.download","Waiting for flash to become available");
+			publishProgress("Flash unavailable");
 			Thread.sleep(2000);
 			if (Thread.currentThread().isInterrupted())
 				return false;
@@ -142,6 +144,21 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 			ret.error="Failed";
 			return ret;
 		}
+		
+		try {
+			waitAvailable();
+			downloadAdCharts();
+		} catch (InterruptedException e2) {			
+			res.error="Cancelled";
+			return res;
+		} catch (Exception e) {
+			res.error="Failed";
+			return res;
+		}
+		
+		
+		
+		
 		int failcount=0;
 		for (;;) {
 			try {
@@ -189,6 +206,123 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 		}
 	}
 
+	private void downloadAdCharts() throws Exception {
+		
+		
+		File extpath = Environment.getExternalStorageDirectory();
+		File metapath = new File(extpath,
+				"/Android/data/se.flightplanner/files/chartmeta.dat");
+		long stamp=0;
+		long lateststamp=0;
+		if (metapath.exists())
+		{
+			DataInputStream ds=new DataInputStream(
+					new FileInputStream(metapath));
+			stamp=ds.readLong();
+			ds.close();
+			Log.i("fplan.download","Read adchart metadata file, stamp:"+stamp);
+		}
+		
+		final class AD
+		{
+			String chartname;
+			String humanreadable;
+		}
+		ArrayList<AD> newcharts=new ArrayList<AD>();
+		{
+			ArrayList<NameValuePair> nvps = new ArrayList<NameValuePair>();
+			nvps.add(new BasicNameValuePair("version", "1"));
+			nvps.add(new BasicNameValuePair("stamp", "" + stamp));
+			InputStream inp = DataDownloader.postRaw("/api/getnewadchart", user,pass, nvps,false);
+			DataInputStream inp2 = new DataInputStream(inp);
+			if (inp2.readInt()!=0xf00d1011)
+				throw new RuntimeException("Bad magic");
+			int version=inp2.readInt();
+			if (version!=1) throw new RuntimeException("Bad version number");
+			lateststamp=inp2.readLong();
+			int numcharts=inp2.readInt();
+			publishProgress("Listing Aerodromes");
+			for(int i=0;i<numcharts;++i)
+			{
+				AD ad=new AD();
+				ad.chartname=inp2.readUTF();
+				ad.humanreadable=inp2.readUTF();
+			}
+			assert(inp2.readInt()==0xaabbccda);
+		}
+		
+		
+		for(AD chart:newcharts)
+		{
+			File chartprojpath = new File(extpath,
+					"/Android/data/se.flightplanner/files/"+chart.chartname+".proj");
+			publishProgress("Downloading "+chart.humanreadable);
+			ArrayList<NameValuePair> nvps = new ArrayList<NameValuePair>();
+			nvps.add(new BasicNameValuePair("version", "1"));
+			nvps.add(new BasicNameValuePair("chart", "" + stamp));
+			InputStream inp = DataDownloader.postRaw("/api/getadchart", user,pass, nvps,false);
+			DataInputStream inp2=new DataInputStream(inp);
+			assert(inp2.readInt()==0xaabbccdc);
+			int status=inp2.readInt();
+			if (status==1)
+				throw new RuntimeException("Bad password");
+			if (status!=0)
+				throw new RuntimeException("Failed getting chart");			
+
+			int version=inp2.readInt();
+			int numlevels=inp2.readInt();
+			if (version!=1) throw new RuntimeException("Bad version number");
+
+			{			
+				DataOutputStream ds=new DataOutputStream(
+						new FileOutputStream(chartprojpath));
+				for(int i=0;i<6;++i)
+					ds.writeFloat(inp2.readFloat());
+				Log.i("fplan.download","Created chart proj file");
+				ds.close();
+			}			
+			
+			assert(inp2.readInt()==0xaabbccde);
+			byte[] buf=new byte[4096];
+			String master_cksum=null;
+			for(int i=0;i<numlevels;++i)
+			{
+				File chartblobpath= new File(extpath,
+						"/Android/data/se.flightplanner/files/"+chart.chartname+"-"+i+".bin");
+				String cksum=inp2.readUTF();
+				if (master_cksum==null)
+					master_cksum=cksum;
+				else
+					if (master_cksum!=cksum)
+						throw new RuntimeException("Chart changed mid download. Please retry.");
+				int blobsize=inp2.readInt();
+				
+				DataOutputStream ds=new DataOutputStream(
+						new FileOutputStream(chartblobpath));
+				if (blobsize>40000000)
+					throw new RuntimeException("AD Chart is way too large");
+				while(blobsize>0)
+				{
+					int len=(int)blobsize;
+					if (len>4096)
+						len=4096;
+					inp2.readFully(buf,0,len);
+					ds.write(buf,0,len);
+					blobsize-=len;
+				}
+				
+				assert(inp2.readInt()==0xaabbccdf);
+				
+			}				
+			assert(inp2.readInt()==0xf111);
+		}
+		DataOutputStream ds=new DataOutputStream(
+				new FileOutputStream(metapath));
+		ds.writeLong(lateststamp);
+		Log.i("fplan.download","Wrote chart metadata file, stamp:"+lateststamp);
+		ds.close();	
+		
+	}
 	private long downloadLevel(long totprog, int level, int maxlevel)
 			throws InterruptedException, BackgroundException, FatalBackgroundException {
 		long startversion = -1;
@@ -282,15 +416,15 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 				}
 				if (startversion != dataversion)
 				{
-					Log.i("fplan.download","Map dataversion changed mid-download. Was:"+startversion+" now: "+dataversion);
+					Log.i("fplan.download","Map dataversion changed. Was:"+startversion+" now: "+dataversion);
 
 					deleteStoredFiles();
 					throw new BackgroundException(
-							"Dataversion changed mid-download. Restarting.");
+							"Dataversion changed. Restarting download.");
 				}
 				long curlevelsize = inp2.readLong();
 				long totalsize = inp2.readLong();
-				long sizeleft = inp2.readLong();
+				long sizeleft = inp2.readLong(); //of current level
 				
 				float perc=(float)100.0f*(totprog+filelength)/totalsize;
 				publishProgress(String.format("%.3f%%",perc));

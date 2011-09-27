@@ -59,7 +59,7 @@ public class Airspace implements Serializable{
 			throw new RuntimeException("Too many points: "+numpoints);
 		a.points=new ArrayList<SigPoint>();
 		for(int i=0;i<numpoints;++i)
-			a.points.add(SigPoint.deserialize(is));
+			a.points.add(SigPoint.deserialize(is,version));
 		
 		return a;
 	}
@@ -261,6 +261,15 @@ public class Airspace implements Serializable{
 	}
 	public ArrayList<SigPoint> getPoints() {
 		return points;
+	}
+	public String[] getAdChartNames() {
+		ArrayList<String> list=new ArrayList<String>();
+		for(SigPoint p:points)
+		{
+			if (p.chart!=null)
+				list.add(p.chart.name);
+		}
+		return list.toArray(new String[]{});
 	}
 	
 }

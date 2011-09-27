@@ -16,6 +16,7 @@ import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
 import se.flightplanner.Project.iMerc;
 import se.flightplanner.Timeout.DoSomething;
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -30,7 +31,7 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
-public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
+public class MovingMap extends View implements UpdatableUI,GuiClientInterface,MainMapIf {
 	private TripData tripdata;
 	private TripState tripstate;
 	private AirspaceLookup lookup;
@@ -59,7 +60,8 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 	{
 		invalidate();
 	}
-	public MovingMap(Context context,DisplayMetrics metrics, FlightPathLogger fplog,MovingMapOwner owner)
+	public MovingMap(Context context,DisplayMetrics metrics, FlightPathLogger fplog,MovingMapOwner owner,
+			TripState ptripstate)
 	{
 		super(context);
 		this.owner=owner;
@@ -72,7 +74,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 		float dot_per_mm_x=metrics.xdpi/25.4f;
 		x_dpmm=dot_per_mm_x;
 		
-		tripstate=new TripState(null,null);
+		this.tripstate=ptripstate;
 		
 		//float bigtextsize=dot_per_mm_y*2.7f; //6.5 mm text size
 		//float textsize=dot_per_mm_y*1.75f; //6.5 mm text size
@@ -91,10 +93,10 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 		setKeepScreenOn(true);
 	}
 	
-	public void update_tripdata(TripData ptripdata)
+	public void update_tripdata(TripData ptripdata,TripState newstate)
 	{
 		tripdata=ptripdata;
-		tripstate=new TripState(tripdata,lookup);
+		tripstate=newstate;//new TripState(tripdata);
 		if (lastpos!=null)
 			tripstate.update_target(lastpos);
 		if (gui!=null)
@@ -230,9 +232,6 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 	public void update_airspace(Airspace pairspace, AirspaceLookup plookup,int newdetaillevel) {
 		lookup=plookup;
 		detaillevel=newdetaillevel;
-		tripstate=new TripState(tripdata,lookup);
-		if (lastpos!=null)
-			tripstate.update_target(lastpos);
 		if (gui!=null)
 		{
 			gui.updateLookup(lookup);
@@ -424,9 +423,18 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface {
 			owner.cancelMapDownload();
 		}
 	}
+	public void releaseMemory()
+	{
+		bitmaps.releaseMemory();
+	}
+
 	public void update_detail(int det) {
 		detaillevel=det;
 		invalidate();
+	}
+	@Override
+	public void thisSetContentView(Activity nav) {
+		nav.setContentView(this);		
 	}
 	
 }

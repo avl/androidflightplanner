@@ -22,7 +22,6 @@ public class TripState implements InformationPanel {
 	}
 	private String[] extradummy;
 	private TripData tripdata;
-	private AirspaceLookup lookup;
 	/**
 	 * The waypoint which is our current target.
 	 * Starts out as waypoint 1, (the second one in the list),
@@ -39,9 +38,8 @@ public class TripState implements InformationPanel {
 	 */
 	private ArrayList<WaypointInfo> waypointEvents;
 	static private final double corridor_width=2.0; //nominal width of corridor of flight
-	TripState(TripData trip,AirspaceLookup plookup)
+	TripState(TripData trip)
 	{
-		lookup=plookup;
 		waypointEvents=new ArrayList<WaypointInfo>();
 		tripdata=trip;
 		current_waypoint_idx=0;

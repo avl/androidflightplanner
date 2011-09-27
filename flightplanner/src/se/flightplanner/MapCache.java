@@ -1,6 +1,7 @@
 package se.flightplanner;
 
 import java.util.ArrayList;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -82,12 +83,21 @@ public class MapCache {
 	{
 		return queryhistory.size()>0;
 	}
+	/*!
+	 * This method gets a work list of maximum 4 items,
+	 * which need to be loaded by a background loader
+	 * somehow.
+	 */
 	synchronized Key[] get_and_reset_queryhistory(int count)
 	{
 		HashSet<Key> keys=new HashSet<Key>();
 		HashSet<Key> intersection = new HashSet<Key>(faked);
 		intersection.retainAll(queryhistory);
+		//intersection now contains faked items which
+		//are also being asked for.
 
+		//load faked items from query history before items
+		//which don't have a fake. 
 		for(int j=0;j<2;++j)
 		{
 			if (keys.size()>=4) break;
@@ -181,7 +191,17 @@ public class MapCache {
 		}
 		queryhistory.clear();
 		faked.clear();
+		
 	
+	}
+	public void releaseMemory() {
+		ArrayList<Key> deletelist=new ArrayList<Key>();
+		for (Key k:map.keySet())
+			deletelist.add(k);
+		for(Key key : deletelist)
+			eject(key);
+		queryhistory.clear();
+		faked.clear();
 	}
 
 }
