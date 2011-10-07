@@ -17,12 +17,29 @@ import se.flightplanner.Project.iMerc;
 
 public class Blob {
 	private int tilesize=256;
+	public int getX1() {
+		return x1;
+	}
+	public int getY1() {
+		return y1;
+	}
+	public int getX2() {
+		return x2;
+	}
+	public int getY2() {
+		return y2;
+	}
 	private int x1;
 	private int y1;
+	private int x2;
+	private int y2;
 	private int sx;
 	private int sy;
 	private int zoomlevel;
 	private long size;
+	
+	
+	
 	public static class TileNumber
 	{
 		public int x;
@@ -46,8 +63,8 @@ public class Blob {
 		size=raf.length();
         x1=raf.readInt();
         y1=raf.readInt();
-        int x2=raf.readInt();
-        int y2=raf.readInt();
+        x2=raf.readInt();
+        y2=raf.readInt();
         zoomlevel=raf.readInt();
 
         TileNumber t1=get_tile_number(new iMerc(x1,y1));

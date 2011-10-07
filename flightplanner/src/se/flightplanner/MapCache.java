@@ -68,7 +68,7 @@ public class MapCache {
 			return;
 		}
 		Key k=new Key(m,zoomlevel);
-		Log.i("fplan.bitmap","Injected bitmap"+k+" fake:"+fake);
+		//Log.i("fplan.bitmap","Injected bitmap"+k+" fake:"+fake);
 		long now=SystemClock.uptimeMillis();
 		MapCache.Payload p=new MapCache.Payload();
 		p.lastuse=now;
@@ -139,11 +139,15 @@ public class MapCache {
 	}	
 	synchronized public MapCache.Payload query(iMerc m, int zoomlevel, boolean backgroundload) {
 		Key key=new Key(m,zoomlevel);
+		Log.i("fplan.adchart","Queried: "+m.getX()+","+m.getY());
 		MapCache.Payload l=map.get(key);
 		if (l==null || l.fake)
 		{
 			if (backgroundload)
+			{
+				Log.i("fplan.adchart","Missing, adding to queryhistory");
 				queryhistory.add(key);
+			}
 		}
 		if (l!=null)
 			l.lastuse=SystemClock.uptimeMillis();

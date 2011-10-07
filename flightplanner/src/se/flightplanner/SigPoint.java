@@ -15,15 +15,16 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 {
 	private static final long serialVersionUID = 1939452363561911490L;
 	
-	public static class Chart
+	public static class Chart implements Serializable
 	{
-		int width;
-		int height;
-		String name;
-		String checksum;
-		String url;
-		float[][] A; //2x2 matrix with airport chart projection scale/rotation latlon -> image pixels
-		float[] T; //2 vector with airport chart projection translation
+		private static final long serialVersionUID = 6324069623768703289L;
+		public int width;
+		public int height;
+		public String name;
+		public String checksum;
+		public String url;
+		public double[][] A; //2x2 matrix with airport chart projection scale/rotation latlon -> image pixels
+		public double[] T; //2 vector with airport chart projection translation
 	}
 	
 	public Merc pos;
@@ -56,6 +57,27 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 			os.writeUTF("");
 		os.writeFloat((float) alt);
 		latlon.serialize(os);
+		
+		if (chart!=null)
+		{
+			os.writeByte(2);
+			os.writeInt(chart.width);
+			os.writeInt(chart.height);
+			os.writeUTF(chart.name);
+			os.writeUTF(chart.checksum);
+			os.writeUTF(chart.url);
+			os.writeDouble(chart.A[0][0]);
+			os.writeDouble(chart.A[1][0]);
+			os.writeDouble(chart.A[0][1]);
+			os.writeDouble(chart.A[1][1]);
+			os.writeDouble(chart.T[0]);
+			os.writeDouble(chart.T[1]);
+		}
+		else
+		{
+			os.writeByte(0);			
+		}
+		
 	}
 	public static SigPoint deserialize(DataInputStream is,int version) throws IOException {
 		SigPoint p=new SigPoint();
@@ -88,15 +110,21 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 				c.name=is.readUTF();
 				c.checksum=is.readUTF();
 				c.url=is.readUTF();
-				float[] matrix=new float[6];
+				double [] matrix=new double[6];
 				for(int i=0;i<6;++i)
-					matrix[i]=is.readFloat();
-				c.A=new float[][]{new float[2],new float[2]};
+				{
+					if (version>=4)
+						matrix[i]=is.readDouble();
+					else
+						matrix[i]=is.readFloat();
+				}
+				c.A=new double[][]{new double[2],new double[2]};
 				c.A[0][0]=matrix[0];
 				c.A[1][0]=matrix[1];
 				c.A[0][1]=matrix[2];
 				c.A[1][1]=matrix[3];
-				c.T=new float[]{matrix[4],matrix[5]};			
+				c.T=new double[]{matrix[4],matrix[5]};	
+				p.chart=c;
 			}
 			
 		}

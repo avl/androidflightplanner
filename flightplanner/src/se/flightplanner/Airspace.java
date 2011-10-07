@@ -17,6 +17,9 @@ import java.io.Serializable;
 import java.io.StringBufferInputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
@@ -25,6 +28,7 @@ import org.json.JSONObject;
 
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
+import se.flightplanner.SigPoint.Chart;
 import se.flightplanner.vector.BoundingBox;
 
 import android.app.Activity;
@@ -44,7 +48,7 @@ public class Airspace implements Serializable{
 		int version=is.readInt();
 		if (magic!=0x8A31CDA)
 			throw new RuntimeException("Couldn't load airspace data, bad header magic. Was: "+magic+" should be: "+0x8A31CDA);
-		if (version!=1 && version!=2)
+		if (version!=1 && version!=2 && version!=3 && version!=4)
 			throw new RuntimeException("Couldn't load airspace data, bad version");
 		
 		int numspaces=is.readInt();
@@ -67,7 +71,7 @@ public class Airspace implements Serializable{
 		
 		int numspaces=spaces.size();
 		os.writeInt(0x8A31CDA);
-		os.writeInt(2); //version 2
+		os.writeInt(4); //version 4
 		os.writeInt(numspaces);
 		for(int i=0;i<numspaces;++i)
 			spaces.get(i).serialize(os);
@@ -114,7 +118,7 @@ public class Airspace implements Serializable{
 		else
 		{
 			ArrayList<NameValuePair> nvps=new ArrayList<NameValuePair>();
-			nvps.add(new BasicNameValuePair("version","2"));			
+			nvps.add(new BasicNameValuePair("version","4"));			
 			inp=DataDownloader.postRaw("/api/get_airspaces",null, null, nvps,false);
 		}
 		Airspace airspace=deserialize(new DataInputStream(inp));
@@ -262,14 +266,43 @@ public class Airspace implements Serializable{
 	public ArrayList<SigPoint> getPoints() {
 		return points;
 	}
-	public String[] getAdChartNames() {
-		ArrayList<String> list=new ArrayList<String>();
+	static private class Pair
+	{
+		String airport;
+		String chart;
+	}
+	public void getAdChartNames(ArrayList<String> chartName,ArrayList<String> airportName) {
+		ArrayList<Pair> tmp=new ArrayList<Airspace.Pair>();
 		for(SigPoint p:points)
 		{
 			if (p.chart!=null)
-				list.add(p.chart.name);
+			{
+				Pair pair=new Pair();
+				pair.airport=p.name;
+				pair.chart=p.chart.name;
+				tmp.add(pair);
+			}
 		}
-		return list.toArray(new String[]{});
+		Collections.sort(tmp, new Comparator<Pair>() {
+			@Override
+			public int compare(Pair object1, Pair object2) {
+				return object1.airport.compareTo(object2.airport);
+			}
+		});
+		for(Pair pair:tmp)
+		{
+			chartName.add(pair.chart);
+			airportName.add(pair.airport);
+		}
+
+	}
+	public Chart getChart(String name) {
+		for(SigPoint p:points)
+		{
+			if (p.chart!=null && p.chart.name==name)
+				return p.chart;
+		}
+		return null;
 	}
 	
 }

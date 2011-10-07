@@ -18,6 +18,7 @@ import se.flightplanner.BackgroundMapLoader.LoadedBitmap;
 import se.flightplanner.MapCache.Key;
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.os.StatFs;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -124,86 +125,103 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 		}
 		
 	}
+	private long checkspace(long atleast) throws FatalBackgroundException
+	{
+		StatFs stat = new StatFs(Environment.getExternalStorageDirectory().getPath());
+		long bytesAvailable = (long)stat.getBlockSize() *(long)stat.getBlockCount();
+		long megs=bytesAvailable/(1000000);
+		if (bytesAvailable<atleast)
+			throw new FatalBackgroundException("Error: Disk full.");
+		return bytesAvailable;
+	}
 	@Override
 	protected DownloadedAirspaceData doInBackground(Void... dummy) {
-		
-
-		DownloadedAirspaceData res=null;
-		publishProgress("Starting");
-		try {
-			waitAvailable();
-			res=downloadAirspace();			
-		} catch (InterruptedException e2) {
-			DownloadedAirspaceData  ret=new DownloadedAirspaceData();
-			ret.error="Cancelled";
-			return ret;
-		}
-		if (res==null)
+		try
 		{
-			DownloadedAirspaceData  ret=new DownloadedAirspaceData();
-			ret.error="Failed";
-			return ret;
-		}
-		
-		try {
-			waitAvailable();
-			downloadAdCharts();
-		} catch (InterruptedException e2) {			
-			res.error="Cancelled";
-			return res;
-		} catch (Exception e) {
-			res.error="Failed";
-			return res;
-		}
-		
-		
-		
-		
-		int failcount=0;
-		for (;;) {
+	
+			DownloadedAirspaceData res=null;
+			publishProgress("Starting");
+			checkspace(5000000);
 			try {
-				waitAvailable();								
-				if (Thread.currentThread().isInterrupted())
-				{
+				waitAvailable();
+				res=downloadAirspace();			
+			} catch (InterruptedException e2) {
+				DownloadedAirspaceData  ret=new DownloadedAirspaceData();
+				ret.error="Cancelled";
+				return ret;
+			}
+			if (res==null)
+			{
+				DownloadedAirspaceData  ret=new DownloadedAirspaceData();
+				ret.error="Failed";
+				return ret;
+			}
+			
+			try {
+				waitAvailable();
+				downloadAdCharts();
+			} catch (InterruptedException e2) {			
+				res.error="Cancelled";
+				return res;
+			} catch (Exception e) {
+				e.printStackTrace();
+				res.error="Failed";
+				return res;
+			}
+			
+			
+			
+			
+			int failcount=0;
+			for (;;) {
+				try {
+					waitAvailable();
+					if (Thread.currentThread().isInterrupted())
+					{
+						DownloadedAirspaceData  ret=new DownloadedAirspaceData();
+						ret.error="Cancelled";
+						return ret;					
+					}
+					long totprog = 0;
+					int maxlevel=MapDetailLevels.getMaxLevelFromDetail(mapdetail);
+					for (int level = 0; level <= maxlevel; ++level) {
+						Log.i("fplan.download","About to download level "+level);
+						
+						totprog = downloadLevel(totprog, level, maxlevel);
+					}
+					return res;
+				} catch (InterruptedException e) {
 					DownloadedAirspaceData  ret=new DownloadedAirspaceData();
 					ret.error="Cancelled";
 					return ret;					
+				} catch (BackgroundException e) {
+					publishProgress(e.what);
+					try {
+						Thread.sleep(5000);
+					} catch (InterruptedException e1) {
+						return null;
+					}
+					++failcount;
+					if (failcount>25)
+					{
+						DownloadedAirspaceData  ret=new DownloadedAirspaceData();
+						ret.error="Too many failures";
+						return ret;					
+					}
 				}
-				long totprog = 0;
-				int maxlevel=MapDetailLevels.getMaxLevelFromDetail(mapdetail);
-				for (int level = 0; level <= maxlevel; ++level) {
-					Log.i("fplan.download","About to download level "+level);
-					
-					totprog = downloadLevel(totprog, level, maxlevel);
-				}
-				return res;
-			} catch (InterruptedException e) {
-				DownloadedAirspaceData  ret=new DownloadedAirspaceData();
-				ret.error="Cancelled";
-				return ret;					
-			} catch (FatalBackgroundException e) {
-				DownloadedAirspaceData  ret=new DownloadedAirspaceData();
-				ret.error=e.what;
-				Log.i("fplan","Fatal background error:"+e.what);
-
-				return ret;
-			} catch (BackgroundException e) {
-				publishProgress(e.what);
-				try {
-					Thread.sleep(5000);
-				} catch (InterruptedException e1) {
-					return null;
-				}
-				++failcount;
-				if (failcount>25)
-				{
-					DownloadedAirspaceData  ret=new DownloadedAirspaceData();
-					ret.error="Too many failures";
-					return ret;					
-				}
+	
 			}
-
+			
+			
+		} 
+		catch (FatalBackgroundException e) 
+		{
+			DownloadedAirspaceData  ret=new DownloadedAirspaceData();
+			ret.error=e.what;
+			Log.i("fplan","Fatal background error:"+e.what);
+			return ret;			
 		}
+		
 	}
 
 	private void downloadAdCharts() throws Exception {
@@ -220,7 +238,8 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 					new FileInputStream(metapath));
 			stamp=ds.readLong();
 			ds.close();
-			Log.i("fplan.download","Read adchart metadata file, stamp:"+stamp);
+			
+			Log.i("fplan.download","adchart metadata stamp:"+stamp);
 		}
 		
 		final class AD
@@ -241,14 +260,17 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 			if (version!=1) throw new RuntimeException("Bad version number");
 			lateststamp=inp2.readLong();
 			int numcharts=inp2.readInt();
-			publishProgress("Listing Aerodromes");
+			publishProgress("Listing Aerodromes, charts:"+numcharts);
 			for(int i=0;i<numcharts;++i)
 			{
 				AD ad=new AD();
 				ad.chartname=inp2.readUTF();
 				ad.humanreadable=inp2.readUTF();
+				Log.i("fplan.download","Queing chart "+ad.chartname);
+				newcharts.add(ad);
 			}
-			assert(inp2.readInt()==0xaabbccda);
+			if (inp2.readInt()!=0xaabbccda) throw new FatalBackgroundException("Bad magic 5");
+
 		}
 		
 		
@@ -256,18 +278,21 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 		{
 			File chartprojpath = new File(extpath,
 					"/Android/data/se.flightplanner/files/"+chart.chartname+".proj");
-			publishProgress("Downloading "+chart.humanreadable);
+			publishProgress(chart.humanreadable);
 			ArrayList<NameValuePair> nvps = new ArrayList<NameValuePair>();
 			nvps.add(new BasicNameValuePair("version", "1"));
-			nvps.add(new BasicNameValuePair("chart", "" + stamp));
+			nvps.add(new BasicNameValuePair("chart", chart.chartname));
 			InputStream inp = DataDownloader.postRaw("/api/getadchart", user,pass, nvps,false);
 			DataInputStream inp2=new DataInputStream(inp);
-			assert(inp2.readInt()==0xaabbccdc);
+			if (inp2.readInt()!=0xaabb1234)
+				throw new FatalBackgroundException("Bad magic:");
 			int status=inp2.readInt();
+			if (status==3)
+				continue; //Skip this chart, we don't have a projection for it. This may happen from time to time.
 			if (status==1)
-				throw new RuntimeException("Bad password");
+				throw new FatalBackgroundException("Bad password");
 			if (status!=0)
-				throw new RuntimeException("Failed getting chart");			
+				throw new FatalBackgroundException("Failed getting chart:"+status);	
 
 			int version=inp2.readInt();
 			int numlevels=inp2.readInt();
@@ -282,7 +307,9 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 				ds.close();
 			}			
 			
-			assert(inp2.readInt()==0xaabbccde);
+			if (inp2.readInt()!=0xaabbccde)
+				throw new FatalBackgroundException("Bad magic 2");
+			
 			byte[] buf=new byte[4096];
 			String master_cksum=null;
 			for(int i=0;i<numlevels;++i)
@@ -293,14 +320,20 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 				if (master_cksum==null)
 					master_cksum=cksum;
 				else
-					if (master_cksum!=cksum)
+					if (!master_cksum.equals(cksum))
+					{
+						Log.i("fplan.download","Chart:"+chart.chartname+" master ck:"+master_cksum+" ck:"+cksum);
 						throw new RuntimeException("Chart changed mid download. Please retry.");
+					}
 				int blobsize=inp2.readInt();
+				
+				checkspace(5000000);
 				
 				DataOutputStream ds=new DataOutputStream(
 						new FileOutputStream(chartblobpath));
 				if (blobsize>40000000)
 					throw new RuntimeException("AD Chart is way too large");
+				Log.i("fplan.download","Reading "+blobsize+" byte blob.");
 				while(blobsize>0)
 				{
 					int len=(int)blobsize;
@@ -311,10 +344,11 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 					blobsize-=len;
 				}
 				
-				assert(inp2.readInt()==0xaabbccdf);
+				if (inp2.readInt()!=0xaabbccdf) throw new FatalBackgroundException("Bad magic 3");
 				
-			}				
-			assert(inp2.readInt()==0xf111);
+			}		
+			if (inp2.readInt()!=0xf111) throw new FatalBackgroundException("Bad magic 4");
+			
 		}
 		DataOutputStream ds=new DataOutputStream(
 				new FileOutputStream(metapath));
@@ -326,6 +360,7 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 	private long downloadLevel(long totprog, int level, int maxlevel)
 			throws InterruptedException, BackgroundException, FatalBackgroundException {
 		long startversion = -1;
+		boolean first=true;
 		for (;;) {
 			File extpath = Environment.getExternalStorageDirectory();
 			File metapath = new File(extpath,
@@ -425,6 +460,12 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 				long curlevelsize = inp2.readLong();
 				long totalsize = inp2.readLong();
 				long sizeleft = inp2.readLong(); //of current level
+				
+				if (first)
+				{
+					first=false;
+					checkspace(sizeleft);
+				}
 				
 				float perc=(float)100.0f*(totprog+filelength)/totalsize;
 				publishProgress(String.format("%.3f%%",perc));

@@ -55,6 +55,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	final static int SETUP_INFO=1;
 	final static int SETTINGS_DIALOG=2;
 	final static int VIEW_RECORDINGS=3;
+	final static int VIEW=4;
 	
 	final static int MENU_DOWNLOAD_TERRAIN=3;
 	final static int MENU_FINISH=4;
@@ -351,9 +352,11 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 
 	private void viewAdChart()
 	{
-		final String[] ads=airspace.getAdChartNames();		
+		final ArrayList<String> ads=new ArrayList<String>();
+		final ArrayList<String> humanReadableNames=new ArrayList<String>();
+		airspace.getAdChartNames(ads,humanReadableNames);		
 		
-		if (ads==null || ads.length==0)
+		if (ads.size()==0)
 		{	    		
 			RookieHelper.showmsg(this,"No aerodrome charts downloaded. Go to Settings, select High Detail maps, then go back and Download Map again.");
 		}
@@ -362,21 +365,24 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	        final Nav nav=this;		        
 	    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
 	    	builder.setTitle("Choose Aerodrome");
-	    	builder.setItems(ads, new DialogInterface.OnClickListener() {
+	    	builder.setItems(humanReadableNames.toArray(new String[]{}), new DialogInterface.OnClickListener() {
 	    	    public void onClick(DialogInterface dialog, int item) {	    	        
-			    	nav.loadSelectedAd(ads[item]);
+			    	nav.loadSelectedAd(ads.get(item));
 	    	    }
 	    	});
 	    	AlertDialog diag=builder.create();
 	    	diag.show();
 		}
 	}
-	protected void loadSelectedAd(String string) {
+	protected void loadSelectedAd(String name) {
 		Intent intent = new Intent(this, AdChartActivity.class);
 		intent.putExtra("se.flightplanner.user", getPreferences(MODE_PRIVATE).getString("user","")); 
 		intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password",""));
+    	Log.i("fplan.chart","Before calling put Serializable");
+		intent.putExtra("se.flightplanner.chart", airspace.getChart(name));
+    	Log.i("fplan.chart","After calling put Serializable");	
 		map.releaseMemory();
-		startActivityForResult(intent,VIEW_RECORDINGS);
+		startActivity(intent);
 	}
 	private Intent getSettingsIntent() {
 		Intent intent = new Intent(this, SetupInfo.class);
