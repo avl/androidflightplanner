@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
@@ -33,6 +35,7 @@ import se.flightplanner.vector.BoundingBox;
 
 import android.app.Activity;
 import android.content.Context;
+import android.location.Location;
 import android.os.Environment;
 import android.util.Log;
 
@@ -270,9 +273,19 @@ public class Airspace implements Serializable{
 	{
 		String airport;
 		String chart;
+		float dist;
 	}
-	public void getAdChartNames(ArrayList<String> chartName,ArrayList<String> airportName) {
+	public void getAdChartNames(ArrayList<String> chartName,ArrayList<String> airportName, LatLon location) {
 		ArrayList<Pair> tmp=new ArrayList<Airspace.Pair>();
+		ArrayList<Pair> closest=new ArrayList<Pair>();
+		Comparator<Pair> comp=new Comparator<Pair>(){
+			@Override
+			public int compare(Pair o1, Pair o2) {
+				if (o1.dist<o2.dist) return -1;
+				if (o1.dist>o2.dist) return +1;
+				return 0;
+			}					
+		};
 		for(SigPoint p:points)
 		{
 			if (p.chart!=null)
@@ -280,7 +293,18 @@ public class Airspace implements Serializable{
 				Pair pair=new Pair();
 				pair.airport=p.name;
 				pair.chart=p.chart.name;
+				if (location!=null)
+				{
+					pair.dist=(float) Project.exacter_distance(location, 
+							Project.merc2latlon(p.pos, 13));
+					if (closest.size()<2 || pair.dist<closest.get(1).dist)
+						closest.add(pair);
+					Collections.sort(closest, comp);
+					for(int i=closest.size()-1;i>=2;--i)
+						closest.remove(i);
+				}
 				tmp.add(pair);
+				
 			}
 		}
 		Collections.sort(tmp, new Comparator<Pair>() {
@@ -289,6 +313,16 @@ public class Airspace implements Serializable{
 				return object1.airport.compareTo(object2.airport);
 			}
 		});
+		if (location!=null && closest.size()>0)
+		{
+			for(Pair pair:closest)
+			{
+				chartName.add(pair.chart);
+				airportName.add(pair.airport);
+			}
+			chartName.add(null);
+			airportName.add("----");
+		}
 		for(Pair pair:tmp)
 		{
 			chartName.add(pair.chart);

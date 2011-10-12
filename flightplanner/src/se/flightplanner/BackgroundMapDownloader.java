@@ -302,7 +302,7 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 				DataOutputStream ds=new DataOutputStream(
 						new FileOutputStream(chartprojpath));
 				for(int i=0;i<6;++i)
-					ds.writeFloat(inp2.readFloat());
+					ds.writeDouble(inp2.readDouble());
 				Log.i("fplan.download","Created chart proj file");
 				ds.close();
 			}			

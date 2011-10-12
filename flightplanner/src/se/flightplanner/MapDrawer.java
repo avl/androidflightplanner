@@ -182,20 +182,40 @@ public class MapDrawer {
 		if (bitmaps != null) {
 			iMerc centertile = new iMerc((int) screen_center.x & (~255),
 					(int) screen_center.y & (~255));
-			int diagonal = (int) Math.sqrt((sizex / 2) * (sizex / 2)
-					+ (sizey * sizey * 3) / 5);
+			//int diagonal = (int) Math.sqrt((sizex / 2) * (sizey / 2))+1;
 			//Log.i("fplan.bitmap","Diagonal: "+diagonal+" sizex:"+sizex+" sizey: "+sizey);
-			int minus = (diagonal + 255) / 256;
+			//int minus = (diagonal + 255) / 256;
 			//minus=2;
-			int tot = 2 * minus + 1;
+			//int tot = 2 * minus + 1;
+			float xres=sizex;
+			float yres=sizey;
+			double diag_angle=Math.atan2(xres,yres);
+			double diag_length=Math.sqrt(xres*xres+yres*yres);
+			//double hdiag_length=diag_length/2.0;
+			final int tilesize=256;
+			float base=yres;
+			//b= 180 - 90 - diag_angle
+			double ba=Math.PI-Math.PI/2-diag_angle;
+			//maxh/base = sin(b)
+			//maxh = sin(b)*base
+			double maxh=Math.sin(ba)*base;
+			//print "diag_length:",diag_length
+			//print "max height:",maxh
+			int iu=(int)(Math.floor((diag_length)/tilesize))+2;
+			//print "diag tiles",u
+			int iv=(int)(Math.floor((maxh)/tilesize))+2;
+			int tot=iu*iv;
+			tot=(tot*5+1)/4; //because of how zoom past max zoomlevel works - it always keeps the max zoomlevel bitmaps in memory as well, needing on average 0.25 less detailed bitmaps per zoomed in bitmap
+			Log.i("fplan.drawmap","Total tiles needed:"+tot);
+			int minus=((int)diag_length+256)/256;
 			iMerc topleft = new iMerc(centertile.getX() - (256 * minus),
 					centertile.getY() - 256 * minus);
-			int cachesize = tot * tot+2*tot;
+			int cachesize = tot;
 			float hdg = (float) (tf.hdgrad * (180.0 / Math.PI));
+			int tilesused=0;
+			for (int j = 0; j < 2*minus; ++j) {
 
-			for (int j = 0; j < tot; ++j) {
-
-				for (int i = 0; i < tot; ++i) {
+				for (int i = 0; i < 2*minus; ++i) {
 					iMerc cur = new iMerc(topleft.getX() + 256 * i,
 							topleft.getY() + 256 * j);
 					if (cur.getX() < 0 || cur.getY() < 0)
@@ -206,6 +226,7 @@ public class MapDrawer {
 					BitmapRes b = null;
 					// Log.i("fplan","Bitmap for "+cur);
 					b = bitmaps.getBitmap(cur, zoomlevel);
+					tilesused+=1;
 					if (b != null && b.b != null) {
 						// float px=(float)(v.x+i*256);
 						// float py=(float)(v.y+j*256);
@@ -221,6 +242,7 @@ public class MapDrawer {
 					}
 				}
 			}
+			Log.i("fplan.drawmap","Tiles used:"+tilesused);
 			res.lastcachesize = cachesize;
 		}
 
@@ -915,7 +937,7 @@ public class MapDrawer {
 			for (int i = 0; i < 2; ++i) {
 				v.x = 256 * i;
 				v.y = 256 * j;				
-				Vector r = v.rot(tf.hdgrad);			
+				Vector r = v.rot(-tf.hdgrad);			
 				r.x += base.x;
 				r.y += base.y;
 				int idx=i;
@@ -924,16 +946,16 @@ public class MapDrawer {
 				tilecorners[idx]=r.copy();
 				int cursidex = 0;
 				int cursidey = 0;
-				if (v.x < 0)
+				if (r.x < 0)
 					cursidex = -1;
-				if (v.x > right)
+				if (r.x > right)
 					cursidex = 1;
-				if (v.y < 0)
+				if (r.y < 0)
 					cursidey = -1;
-				if (v.y > bottom)
+				if (r.y > bottom)
 					cursidey = 1;
 				if (cursidex == 0 && cursidey == 0)
-					return true;
+					return true; //corner is actually on screen
 				if (i == 0 && j == 0) {
 					sidex = cursidex;
 					sidey = cursidey;
@@ -952,6 +974,7 @@ public class MapDrawer {
 		//the screen corners has to be in the polygon.
 		//(Since the tile/polygon is known to be smaller than screen)
 		ConvexPolygon tilepol=new ConvexPolygon(tilecorners);
+		
 		if (tilepol.inside(new Vector(0,0))) return true;
 		if (tilepol.inside(new Vector(right,0))) return true;
 		if (tilepol.inside(new Vector(right,bottom))) return true;

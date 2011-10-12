@@ -37,7 +37,7 @@ import android.util.Log;
 
 public class DataDownloader {
 	public static boolean debugMode() {
-		return true;
+		return false;
 	}
 	
 	static private String get_addr()
@@ -49,10 +49,11 @@ public class DataDownloader {
 			//String addr="192.168.42.222:5000";
 			//String addr="http://192.168.1.150:5000";
 			//String addr="http://192.168.1.102:5000";
-			addr="http://192.168.1.94:5000";
-			//addr="http://192.168.1.102:5000";
+			//addr="http://192.168.1.94:5000";
+			//addr="http://192.168.1.101:5000";
 			//String addr="http://79.99.0.86:5000";
-			//addr="http://www.swflightplanner.se";
+			addr="http://www.swflightplanner.se";
+			
 		}
 		else
 		{

@@ -112,8 +112,6 @@ public class GetMapBitmap {
 		MapCache.Payload l = mapcache.query(m, zoomlevel,backgroundload);
 		if (l!=null)
 		{
-			long now=SystemClock.uptimeMillis();
-			l.lastuse=now;
 			return l.b;
 		}
 		return null;

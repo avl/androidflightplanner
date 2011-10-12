@@ -60,7 +60,7 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 		
 		if (chart!=null)
 		{
-			os.writeByte(2);
+			os.writeByte(1); //havechart=1 (true)
 			os.writeInt(chart.width);
 			os.writeInt(chart.height);
 			os.writeUTF(chart.name);

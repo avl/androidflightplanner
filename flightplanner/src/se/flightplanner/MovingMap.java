@@ -425,7 +425,8 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	}
 	public void releaseMemory()
 	{
-		bitmaps.releaseMemory();
+		if (bitmaps!=null)
+			bitmaps.releaseMemory();
 	}
 
 	public void update_detail(int det) {

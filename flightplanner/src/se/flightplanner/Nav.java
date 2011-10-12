@@ -10,6 +10,7 @@ import org.apache.http.message.BasicNameValuePair;
 
 import se.flightplanner.BackgroundMapDownloader.BackgroundMapDownloadOwner;
 import se.flightplanner.MovingMap.MovingMapOwner;
+import se.flightplanner.Project.LatLon;
 
 //import se.flightplanner.map3d.ElevationStore;
 //import se.flightplanner.map3d.TextureStore;
@@ -184,7 +185,9 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	}
 
 
-	private AsyncTask<Void, Void, String[]> loadtrips; 
+	private AsyncTask<Void, Void, String[]> loadtrips;
+	private Location last_location;
+	
 	private void loadTrip() {
 		final String user=getPreferences(MODE_PRIVATE).getString("user","user");
 		final String password=getPreferences(MODE_PRIVATE).getString("password","password");
@@ -354,7 +357,13 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	{
 		final ArrayList<String> ads=new ArrayList<String>();
 		final ArrayList<String> humanReadableNames=new ArrayList<String>();
-		airspace.getAdChartNames(ads,humanReadableNames);		
+		if (airspace!=null)
+		{
+			LatLon latlon=null;
+			if (last_location!=null)
+				latlon=new LatLon(last_location.getLatitude(),last_location.getLongitude());
+			airspace.getAdChartNames(ads,humanReadableNames,latlon);
+		}
 		
 		if (ads.size()==0)
 		{	    		
@@ -366,7 +375,11 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
 	    	builder.setTitle("Choose Aerodrome");
 	    	builder.setItems(humanReadableNames.toArray(new String[]{}), new DialogInterface.OnClickListener() {
-	    	    public void onClick(DialogInterface dialog, int item) {	    	        
+	    	    public void onClick(DialogInterface dialog, int item) {
+	    	    	if (ads.get(item)==null)
+	    	    	{ //clicked on the divider between close airports and alphabetically sorted airports.
+	    	    		return;
+	    	    	}
 			    	nav.loadSelectedAd(ads.get(item));
 	    	    }
 	    	});
@@ -470,10 +483,12 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    	try
 	    	{
 	    		airspace=Airspace.deserialize_from_file(this,"airspace.bin");
+	    		Log.i("fplan.nav","Deserialized data okay, now generating lookup");
 		        lookup=new AirspaceLookup(airspace);
 	    	}
 	    	catch (Throwable e)
 	    	{
+	    		Log.i("fplan.nav","Failed loading airspace data:"+e);
 	    		RookieHelper.showmsg(this, "You have no airspace data. Select Menu->Download Map!");
 	    		//RookieHelper.showmsg(this, e.toString());
 	    	}
@@ -503,6 +518,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	@Override
 	public void onLocationChanged(Location location) {
 		map.gps_update(location);
+		last_location=location;
 		//RookieHelper.showmsg(this, ""+location.getLatitude()+","+location.getLongitude());
 		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,5, this);
 	}

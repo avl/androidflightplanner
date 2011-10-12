@@ -47,7 +47,7 @@ public class MapCache {
 	}
 	static public class Payload
 	{
-		public long lastuse;
+		private long lastuse;
 		Bitmap b;
 		boolean fake;
 	}
@@ -118,13 +118,17 @@ public class MapCache {
 		for(Key key:keys)
 		{
 			boolean removed=queryhistory.remove(key);
+			//Remove any present fake value.
+			MapCache.Payload l=map.get(key);
+			if (l!=null && l.fake)
+				eject(key);
 			if (!removed)
 				throw new RuntimeException("query history remove failed: "+key);
 		}
 		return keys.toArray(new Key[]{});
 	}
 	synchronized public void eject(Key d) {
-		Log.i("fplan.bitmap","Ejecting bitmap "+d);
+		//Log.i("fplan.bitmap","Ejecting bitmap "+d);
 		MapCache.Payload p=map.get(d);
 		if (p!=null)
 		{
@@ -139,13 +143,13 @@ public class MapCache {
 	}	
 	synchronized public MapCache.Payload query(iMerc m, int zoomlevel, boolean backgroundload) {
 		Key key=new Key(m,zoomlevel);
-		Log.i("fplan.adchart","Queried: "+m.getX()+","+m.getY());
+		//Log.i("fplan.adchart","Queried: "+m.getX()+","+m.getY());
 		MapCache.Payload l=map.get(key);
 		if (l==null || l.fake)
 		{
 			if (backgroundload)
 			{
-				Log.i("fplan.adchart","Missing, adding to queryhistory");
+				//Log.i("fplan.adchart","Missing, adding to queryhistory: "+m.getX()+","+m.getY()+" zoom: "+zoomlevel+" curr size: "+map.size());
 				queryhistory.add(key);
 			}
 		}
@@ -155,30 +159,38 @@ public class MapCache {
 	}
 	synchronized public void garbageCollect(int cachesize) {
 		long now=SystemClock.uptimeMillis();		
-		ArrayList<Key> deletelist=new ArrayList<Key>();
-		long oldest_age=0;
-		Key oldest=null;
-		//Log.i("fplan.bitmap","garbageCollect, cache size: "+cachesize+" map: "+map.size());
-		for(Entry<Key, MapCache.Payload> e:map.entrySet())
+		while(map.size()>cachesize)
 		{
-			long age=now-e.getValue().lastuse;
-
-			if (age>30000)				
-				deletelist.add(e.getKey());
-			if (map.size()>cachesize)
+			ArrayList<Key> deletelist=new ArrayList<Key>();
+			long oldest_age=0;
+			Key oldest=null;
+			//Log.i("fplan.bitmap","garbageCollect, cache size: "+cachesize+" map: "+map.size());
+			for(Entry<Key, MapCache.Payload> e:map.entrySet())
 			{
-				if (age>oldest_age)
+				long age=now-e.getValue().lastuse;
+				if (e.getValue().fake)
+					age+=10000;
+				if (age>30000)				
+					deletelist.add(e.getKey());
+				if (map.size()>cachesize)
 				{
-					oldest_age=age;
-					oldest=e.getKey();
+					if (age>oldest_age)
+					{
+						oldest_age=age;
+						oldest=e.getKey();
+					}
 				}
 			}
-		}
-		if (oldest!=null)
-			deletelist.add(oldest);
-		for(Key d:deletelist)
-		{
-			eject(d);
+			if (oldest!=null)
+			{
+				//Log.i("fplan.drawmap","Oldest age:"+oldest_age);
+				deletelist.add(oldest);
+			}
+			for(Key d:deletelist)
+			{
+				//Log.i("fplan.drawmap","Ejecting:"+d);
+				eject(d);
+			}
 		}
 	}
 	public void forgetqueries() {
