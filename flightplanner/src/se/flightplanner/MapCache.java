@@ -120,8 +120,8 @@ public class MapCache {
 			boolean removed=queryhistory.remove(key);
 			//Remove any present fake value.
 			MapCache.Payload l=map.get(key);
-			if (l!=null && l.fake)
-				eject(key);
+			/*TODO: Do this: if (l!=null && l.fake)
+				eject(key);*/
 			if (!removed)
 				throw new RuntimeException("query history remove failed: "+key);
 		}
