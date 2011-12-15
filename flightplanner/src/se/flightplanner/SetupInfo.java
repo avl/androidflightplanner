@@ -9,6 +9,7 @@ import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
 
@@ -27,7 +28,10 @@ public class SetupInfo extends Activity {
         final EditText edpwd = (EditText) findViewById(R.id.editpass);
         edpwd.setText(getIntent().getExtras().getString("se.flightplanner.password"));
         detail=getIntent().getExtras().getInt("se.flightplanner.mapdetail",0)+1;
+        boolean startchecked=getIntent().getExtras().getBoolean("se.flightplanner.northup",false);
         final SetupInfo outer_this=this;
+        final CheckBox northup=(CheckBox)findViewById(R.id.northup_default);
+    	northup.setChecked(startchecked);
         
         button.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
@@ -35,11 +39,14 @@ public class SetupInfo extends Activity {
             	ret.putExtra("se.flightplanner.login",edtxt.getText().toString());
             	ret.putExtra("se.flightplanner.password",edpwd.getText().toString());
             	ret.putExtra("se.flightplanner.mapdetail",outer_this.detail-1);
+            	ret.putExtra("se.flightplanner.northup",northup.isChecked());
+            	
             	ret.putExtra("se.flightplanner.thenopen", getIntent().getExtras().getString("se.flightplanner.thenopen"));
             	setup.setResult(RESULT_OK,ret);
             	setup.finish();
             }
         });
+        
         
         Spinner spinner = (Spinner) findViewById(R.id.spinner);
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(

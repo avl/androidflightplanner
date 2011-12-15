@@ -29,6 +29,12 @@ public class GuiSituation
 	private ArrayList<GuiSituation.Clickable> clickables;
 	private TripState tripstate;
 	private InformationPanel currentInfo;
+	private boolean defnorthup;
+	
+	void setnorthup(boolean d)
+	{
+		defnorthup=d;
+	}
 
 	public class DragTimeout implements DoSomething
 	{
@@ -289,11 +295,14 @@ public class GuiSituation
 			}
 			else
 			{
+				
 				mypos=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),zoomlevel);
 				if (lastpos.hasBearing())
 				{
 					hdg=lastpos.getBearing();
-				}				
+				}
+				if (defnorthup)
+					hdg=0;
 			}
 			return new Transform(mypos,getArrow(),(float)hdg,zoomlevel);
 		}
@@ -378,6 +387,9 @@ public class GuiSituation
 	}
 	public InformationPanel getCurrentInfo() {
 		return currentInfo;
+	}
+	public boolean getnorthup() {		
+		return defnorthup;
 	}
 	
 }

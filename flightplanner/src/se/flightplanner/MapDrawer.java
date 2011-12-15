@@ -415,7 +415,10 @@ public class MapDrawer {
 			linepaint.setColor(Color.RED);
 		}
 
-		if (!isDragging) {
+		boolean northup=false;
+		if (gui!=null)
+			northup=gui.getnorthup();
+		if (!isDragging && !northup) {
 			arrowpaint.setColor(Color.BLACK);
 			Path path = new Path();
 			path.moveTo((int) arrow.x - 10, (int) arrow.y + 2);
@@ -837,20 +840,23 @@ public class MapDrawer {
 			});
 			int edge = tr1.left;
 
-			text = "Set North Up";
-			final Rect tr2 = drawButton(canvas, 0,topbutton_y, text,1,0,edge,false);
-			if (tr2!=null) {				
-				clickables.add(new GuiSituation.Clickable() {
-					@Override
-					public Rect getRect() {
-						return tr2;
-					}
-
-					@Override
-					public void onClick() {
-						gui.onNorthUp();
-					}
-				});
+			if (gui!=null && gui.getnorthup()==false)
+			{
+				text = "Set North Up";
+				final Rect tr2 = drawButton(canvas, 0,topbutton_y, text,1,0,edge,false);
+				if (tr2!=null) {				
+					clickables.add(new GuiSituation.Clickable() {
+						@Override
+						public Rect getRect() {
+							return tr2;
+						}
+	
+						@Override
+						public void onClick() {
+							gui.onNorthUp();
+						}
+					});
+				}
 			}
 
 		} else {

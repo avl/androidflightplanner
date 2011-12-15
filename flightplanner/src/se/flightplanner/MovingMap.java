@@ -47,6 +47,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	private BackgroundMapLoader loader;
 	private GetMapBitmap bitmaps;
 	private ArrayList<Blob> blobs;
+	private boolean defnorthup=false;
 	private float x_dpmm;
 	private float y_dpmm;
 	private FlightPathLogger fplog;
@@ -117,6 +118,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 
 			gui=new GuiSituation(this,drawer.getNumInfoLines(getBottom()-getTop()),lastpos,
 					getRight()-getLeft(),getBottom()-getTop(),tripstate,lookup);
+			gui.setnorthup(defnorthup);
 			
 		}
         canvas.drawColor(Color.BLACK);
@@ -229,13 +231,17 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		}
 		
 	}
-	public void update_airspace(Airspace pairspace, AirspaceLookup plookup,int newdetaillevel) {
+	
+	public void update_airspace(Airspace pairspace, AirspaceLookup plookup,int newdetaillevel,boolean northup) {
+		defnorthup=northup;
+		
 		lookup=plookup;
 		detaillevel=newdetaillevel;
 		if (gui!=null)
 		{
 			gui.updateLookup(lookup);
 			gui.updateTripState(tripstate);
+			gui.setnorthup(defnorthup);
 		}
 		invalidate();
 	}
@@ -429,8 +435,12 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			bitmaps.releaseMemory();
 	}
 
-	public void update_detail(int det) {
+	@Override
+	public void update_detail(int det,boolean northup) {
 		detaillevel=det;
+		this.defnorthup=northup;
+		if (gui!=null)
+			gui.setnorthup(defnorthup);		
 		invalidate();
 	}
 	@Override

@@ -155,16 +155,20 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			final String user=data.getStringExtra("se.flightplanner.login");
 			final String password=data.getStringExtra("se.flightplanner.password");
 			final int mapdetail=data.getIntExtra("se.flightplanner.mapdetail", 0);
+			final boolean northup=data.getBooleanExtra("se.flightplanner.northup", false);
 			//RookieHelper.showmsg(this,"mapdetail now:"+mapdetail);
 			SharedPreferences prefs=getPreferences(MODE_PRIVATE);
 			SharedPreferences.Editor pedit=prefs.edit();			
 			pedit.putString("user", user);
 			pedit.putString("password", password);
 			pedit.putInt("mapdetail", mapdetail);
+			pedit.putBoolean("northup", northup);
 			pedit.commit();
 			
+			
 			String then=data.getStringExtra("se.flightplanner.thenopen");
-			map.update_detail(getPreferences(MODE_PRIVATE).getInt("mapdetail", 0));
+			map.update_detail(getPreferences(MODE_PRIVATE).getInt("mapdetail", 0),
+					getPreferences(MODE_PRIVATE).getBoolean("northup", false));
 			if (then!=null && then.equals("loadterrain"))
 			{
 				loadTerrain();
@@ -403,6 +407,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password","password"));
 		int mapd=getPreferences(MODE_PRIVATE).getInt("mapdetail", 0);
 		intent.putExtra("se.flightplanner.mapdetail", mapd);
+		intent.putExtra("se.flightplanner.northup", getPreferences(MODE_PRIVATE).getBoolean("northup", false));
 		//RookieHelper.showmsg(this,"Got mapd"+mapd);
 		return intent;
 	}
@@ -499,7 +504,8 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 
         tripstate=new TripState(tripdata);
         map=new MovingMap(this,metrics,fplog,this,tripstate);
-        map.update_airspace(airspace,lookup,getPreferences(MODE_PRIVATE).getInt("mapdetail", 0));
+        map.update_airspace(airspace,lookup,getPreferences(MODE_PRIVATE).getInt("mapdetail", 0),
+        		getPreferences(MODE_PRIVATE).getBoolean("northup", false));
         map.update_tripdata(tripdata,tripstate);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
 		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,0, this);
@@ -576,7 +582,8 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		{
 			map.set_download_status("Complete",true);
 		}
-        map.update_airspace(airspace,lookup,getPreferences(MODE_PRIVATE).getInt("mapdetail", 0));
+        map.update_airspace(airspace,lookup,getPreferences(MODE_PRIVATE).getInt("mapdetail", 0),
+        		getPreferences(MODE_PRIVATE).getBoolean("northup", false));
 		map.enableTerrainMap(true);
 	}
 	@Override
