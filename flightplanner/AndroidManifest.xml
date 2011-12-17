@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="se.flightplanner"
-      android:versionCode="22"
+      android:versionCode="23"
       android:largeHeap="true"
-      android:versionName="2.7">
+      android:versionName="2.8">
       
 	<supports-screens android:anyDensity="true"/> 
     <uses-permission android:name="android.permission.INTERNET" />

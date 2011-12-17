@@ -314,7 +314,7 @@ public class GuiSituation
 	public Vector getArrow()
 	{
 		Vector v=new Vector(xsize/2,ysize/2);
-		if (drag_center13==null)
+		if (drag_center13==null && !defnorthup)
 			v.y+=ysize/4; //not dragging
 		return v;		
 	}
