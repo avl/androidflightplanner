@@ -64,7 +64,8 @@ public class MapCache {
 	synchronized public void inject(iMerc m, int zoomlevel, Bitmap out,boolean fake) {
 		if (isShutdown)
 		{
-			out.recycle();
+			if (out!=null)
+				out.recycle();
 			return;
 		}
 		Key k=new Key(m,zoomlevel);

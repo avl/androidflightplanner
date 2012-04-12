@@ -379,6 +379,10 @@ public class TripState implements InformationPanel {
 	public boolean getHasExtraInfo() {
 		return false;
 	}
+	@Override
+	public String[] getHasExtendedInfo() {	
+		return new String[]{};
+	}
 	
 		
 }

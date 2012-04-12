@@ -56,6 +56,8 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	interface MovingMapOwner
 	{
 		public void cancelMapDownload();
+
+		public void doShowExtended(String[] icaos);
 	}
 	public void doInvalidate()
 	{
@@ -446,6 +448,11 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	@Override
 	public void thisSetContentView(Activity nav) {
 		nav.setContentView(this);		
+	}
+	@Override
+	public void doShowExtended(String[] icaos) {
+		this.owner.doShowExtended(icaos);
+		
 	}
 	
 }

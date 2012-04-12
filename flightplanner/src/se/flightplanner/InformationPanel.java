@@ -26,5 +26,7 @@ public interface InformationPanel {
 
 	public abstract boolean getHasExtraInfo();
 
+	public abstract String[] getHasExtendedInfo();
+
 
 }

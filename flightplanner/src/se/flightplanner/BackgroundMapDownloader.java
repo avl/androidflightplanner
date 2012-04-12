@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
 
+import se.flightplanner.Airspace.AirspaceProgress;
 import se.flightplanner.BackgroundMapLoader.LoadedBitmap;
 import se.flightplanner.MapCache.Key;
 import android.os.AsyncTask;
@@ -22,7 +23,7 @@ import android.os.StatFs;
 import android.os.SystemClock;
 import android.util.Log;
 
-public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundMapDownloader.DownloadedAirspaceData> {
+public class BackgroundMapDownloader extends AsyncTask<Airspace, String, BackgroundMapDownloader.DownloadedAirspaceData> {
 	static public interface BackgroundMapDownloadOwner
 	{
 		public void onProgress(String prog);
@@ -104,12 +105,19 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 		String terrain;
 		public String error;
 	}
-	private DownloadedAirspaceData downloadAirspace()
+	private DownloadedAirspaceData downloadAirspace(Airspace previous)
 	{
     	try {
+    		publishProgress("Contacting server");
     		///RookieHelper.showmsg(this,"Airspace data for Sweden will now be downloaded. This can take several minutes, and your phone may become unresponsive. Turn on internet access, click ok, and have patience!");
     		DownloadedAirspaceData ad=new DownloadedAirspaceData();
-    		ad.airspace=Airspace.download();
+    		
+    		ad.airspace=Airspace.download(previous,new AirspaceProgress(){
+				@Override
+				public void report(int percent) {
+					publishProgress("Airspace "+percent+"%");					
+				}
+    		});
     		ad.airspace.serialize_to_file("airspace.bin");
 			
 			Log.i("fplan","Building BSP-trees");
@@ -117,6 +125,7 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 	    	//areaTree=new AirspaceAreaTree(airspace.getSpaces());
 	    	//sigPointTree=new AirspaceSigPointsTree(airspace.getPoints());
 			Log.i("fplan","BSP-trees finished");
+			publishProgress("Airspace 100%");
 	        return ad;
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -135,16 +144,17 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 		return bytesAvailable;
 	}
 	@Override
-	protected DownloadedAirspaceData doInBackground(Void... dummy) {
+	protected DownloadedAirspaceData doInBackground(Airspace... asp) {
 		try
 		{
-	
+			if (asp.length>1) throw new RuntimeException("Provide 1 or 0 preivous spaces");
+			Airspace previous=asp[0];
 			DownloadedAirspaceData res=null;
 			publishProgress("Starting");
 			checkspace(5000000);
 			try {
 				waitAvailable();
-				res=downloadAirspace();			
+				res=downloadAirspace(previous);			
 			} catch (InterruptedException e2) {
 				DownloadedAirspaceData  ret=new DownloadedAirspaceData();
 				ret.error="Cancelled";
@@ -218,6 +228,7 @@ public class BackgroundMapDownloader extends AsyncTask<Void, String, BackgroundM
 		{
 			DownloadedAirspaceData  ret=new DownloadedAirspaceData();
 			ret.error=e.what;
+			e.printStackTrace();
 			Log.i("fplan","Fatal background error:"+e.what);
 			return ret;			
 		}

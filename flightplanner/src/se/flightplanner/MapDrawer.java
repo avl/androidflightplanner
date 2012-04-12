@@ -140,6 +140,7 @@ public class MapDrawer {
 			InformationPanel panel) {
 		Transform tf = gui.getTransform();
 		boolean extrainfo = gui.getExtraInfo();
+		
 		int extrainfolineoffset = gui.getExtrainfolineoffset();
 		boolean isDragging = (gui.getDrag_center13() != null);
 		int zoomlevel = gui.getZoomlevel();
@@ -561,14 +562,17 @@ public class MapDrawer {
 			 * based on distance (or even based on position?)
 			 */
 			boolean extrainfo_available=we.getHasExtraInfo();
+			
 			String[] details;
 			if (extrainfo)
 				details = we.getExtraDetails();
 			else
 				details = we.getDetails();
+			
+			final String[] extended_available=we.getHasExtendedInfo();
 
 			int actuallines = details.length;
-			Log.i("fplan", "details.length 1 : " + details.length);
+			//Log.i("fplan", "details.length 1 : " + details.length);
 			if (extrainfolineoffset >= actuallines)
 				extrainfolineoffset = actuallines - 1;
 			if (extrainfolineoffset < 0)
@@ -586,7 +590,23 @@ public class MapDrawer {
 			
 			float topy1=y - tsy * actuallines - 4;
 			
+			
 			final Rect tr3 = drawButton(canvas, right-5,topy1-tsy*1.4f, "Close",-1,left,right,false);
+			if (extended_available.length>0)
+			{
+				final Rect tr4 = drawButton(canvas, left+5,topy1-tsy*1.4f, "More",1,left,right,false);
+				
+				clickables.add(new GuiSituation.Clickable() {
+					@Override
+					public Rect getRect() {
+						return tr4;
+					}
+					@Override
+					public void onClick() {
+						gui.onShowExtended(extended_available);
+					}
+				});
+			}
 			clickables.add(new GuiSituation.Clickable() {
 				@Override
 				public Rect getRect() {
@@ -613,9 +633,9 @@ public class MapDrawer {
 			addTextIfFits(canvas, null, r, we.getTitle(), y1, bigtextpaint);
 			// canvas.drawText(we.getTitle(), 140,y1,bigtextpaint);
 			for (int i = 0; i < actuallines - 1; ++i) {
-				Log.i("fplan", "Actuallines:" + actuallines + " offset: "
+				/*Log.i("fplan", "Actuallines:" + actuallines + " offset: "
 						+ extrainfolineoffset + " details length:"
-						+ details.length);
+						+ details.length);*/
 				if (extrainfolineoffset + i < details.length)
 					canvas.drawText(details[extrainfolineoffset + i], 2, y1
 							+ tsy + i * tsy, bigtextpaint);
@@ -917,7 +937,7 @@ public class MapDrawer {
 		if (maxlines <= 1)
 			throw new RuntimeException(
 					"The screen is too small for this program");
-		Log.i("fplan", "numinfolines:" + maxlines);
+		//Log.i("fplan", "numinfolines:" + maxlines);
 		return maxlines;
 	}
 

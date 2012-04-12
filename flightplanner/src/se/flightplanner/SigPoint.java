@@ -31,7 +31,13 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 	public String name;
 	public String kind; //interned
 	public double alt;
+
 	public LatLon latlon;
+	public String[] notams;
+	public String metar;
+	public String icao;
+	public String taf;
+	
 	/*!
 	 * Some points have charts associated with them.
 	 * So far, only airports though.
@@ -55,6 +61,40 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 			os.writeUTF(kind);
 		else
 			os.writeUTF("");
+		
+		os.writeInt(notams.length); //0 notams
+		for(int i=0;i<notams.length;++i)
+			os.writeUTF(notams[i]);
+		if (icao!=null)
+		{
+			os.writeByte(1);
+			os.writeUTF(icao);
+		}
+		else
+		{
+			os.writeByte(0);
+		}
+		if (taf!=null)
+		{
+			os.writeByte(1);
+			os.writeUTF(taf);
+		}
+		else
+		{
+			os.writeByte(0); //0 taf
+		}
+		if (metar!=null)
+		{		
+			os.writeByte(1); 
+			os.writeUTF(metar);
+		}
+		else
+		{
+			os.writeByte(0);
+		}
+
+		
+		
 		os.writeFloat((float) alt);
 		latlon.serialize(os);
 		
@@ -83,7 +123,7 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 		SigPoint p=new SigPoint();
 		p.name=is.readUTF();
 		p.kind=is.readUTF().intern();
-		if (p.kind=="airport")
+		if (p.kind=="airport") //this won't happen with any new data.
 		{
 			if (p.name.endsWith("*"))
 			{
@@ -94,7 +134,27 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 			{
 				p.kind="field";
 			}
+			
 		}
+		p.metar=null;
+		p.taf=null;
+		p.icao=null;
+		p.notams=new String[0];
+		if (version>=5)
+		{
+			int num_notams=is.readInt();
+			p.notams=new String[num_notams];
+			for(int i=0;i<num_notams;++i)
+				p.notams[i]=is.readUTF();
+			
+			if (is.readByte()!=0)
+				p.icao=is.readUTF();//icao
+			if (is.readByte()!=0)
+				p.taf=is.readUTF();//TAF
+			if (is.readByte()!=0)
+				p.metar=is.readUTF();//Metar						
+		}
+		
 		p.alt=is.readFloat();		
 		p.latlon=LatLon.deserialize(is);
 		if (version>=3)

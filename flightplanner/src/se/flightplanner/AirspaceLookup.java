@@ -1,6 +1,7 @@
 package se.flightplanner;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import android.util.Log;
 
@@ -9,10 +10,17 @@ import se.flightplanner.vector.Vector;
 import se.flightplanner.vector.Polygon.InsideResult;
 
 public class AirspaceLookup {
-	public boolean get_airspace_details(double abit,
+	static public class AirspaceDetails
+	{
+		boolean hasextra;
+		String[] extended_icaos;
+	}
+	public AirspaceDetails get_airspace_details(double abit,long marker_size,
 		Vector just_a_bit_in,ArrayList<String> details,ArrayList<String> extradetails) {
 		boolean hasextra=false;
-		for(AirspaceArea inarea:areas.get_areas(BoundingBox.aroundpoint(just_a_bit_in, abit)))
+		ArrayList<String> extended=new ArrayList<String>();
+		BoundingBox bb=BoundingBox.aroundpoint(just_a_bit_in, abit);
+		for(AirspaceArea inarea:areas.get_areas(bb))
 		{
 			
 			InsideResult r=inarea.poly.inside(just_a_bit_in);
@@ -29,16 +37,31 @@ public class AirspaceLookup {
 						//Log.i("fplan","Adding airspace detail "+fre);
 						extradetails.add(fre);
 						hasextra=true;
-					}
+					}					
 				}
 			}
-		}
+		}					
 		if (details.size()==0)
 		{
 			details.add("0 ft-FL 095: Uncontrolled Airspace");
 			extradetails.add("0 ft-FL 095: Uncontrolled Airspace");
 		}
-		return hasextra;
+	
+		//bb.
+		BoundingBox bb2=BoundingBox.aroundpoint(just_a_bit_in, marker_size);
+		for(SigPoint sp:majorAirports.findall(bb2))
+		{
+			if (sp.icao!=null && (sp.notams.length>0 || sp.metar!=null || sp.taf!=null))
+			{
+				//details.add(sp.name);
+				//extradetails.add(sp.name);
+				extended.add(sp.icao);
+			}
+		}
+		AirspaceDetails ret=new AirspaceDetails();
+		ret.extended_icaos=extended.toArray(new String[]{});
+		ret.hasextra=hasextra;
+		return ret;
 	}
 
 	public AirspaceLookup(Airspace airspace) {
@@ -86,13 +109,23 @@ public class AirspaceLookup {
 		allOthers=new AirspaceSigPointsTree(others);
 		allCities=new AirspaceSigPointsTree(cities);
 		allTowns=new AirspaceSigPointsTree(towns);
+		by_icao=new HashMap<String, SigPoint>();
+		for(SigPoint sp:major_airports)
+		{
+			if (sp.icao!=null && sp.icao.length()>0)
+				by_icao.put(sp.icao,sp);	
+		}
 		// TODO Auto-generated constructor stub
 	}
 	public AirspaceAreaTree areas;
+	public HashMap<String,SigPoint> by_icao;
 	public AirspaceSigPointsTree minorAirfields;
 	public AirspaceSigPointsTree majorAirports;
 	public AirspaceSigPointsTree allObst;
 	public AirspaceSigPointsTree allOthers;
 	public AirspaceSigPointsTree allCities;
 	public AirspaceSigPointsTree allTowns;
+	public SigPoint getByIcao(String icao) {
+		return by_icao.get(icao);
+	}
 }

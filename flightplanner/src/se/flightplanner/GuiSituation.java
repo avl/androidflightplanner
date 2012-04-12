@@ -53,7 +53,8 @@ public class GuiSituation
 	public interface GuiClientInterface
 	{
 		void doInvalidate();	
-		void cancelMapDownload();				
+		void cancelMapDownload();
+		void doShowExtended(String[] icaos);				
 	}
 	public interface Clickable
 	{
@@ -144,7 +145,9 @@ public class GuiSituation
 			Transform tf = getTransform();
 			Merc m=tf.screen2merc(new Vector(x,y));
 			LatLon point=Project.merc2latlon(m,zoomlevel);
-			showInfo(point);
+			double marker_size_pixels=x_dpmm*7;
+			double marker_size_merc13=Math.pow(2, 13-zoomlevel)*marker_size_pixels;
+			showInfo(point,(long)(marker_size_merc13));
 			movingMap.doInvalidate();
 		}
 	}
@@ -380,9 +383,9 @@ public class GuiSituation
 	{
 		this.lookup=lookup;
 	}
-	private void showInfo(LatLon about) {
+	private void showInfo(LatLon about,long marker_size13) {
 		if (lookup!=null)
-			currentInfo=new AirspacePointInfo(about,lookup);
+			currentInfo=new AirspacePointInfo(about,lookup,marker_size13);
 		
 	}
 	public InformationPanel getCurrentInfo() {
@@ -390,6 +393,10 @@ public class GuiSituation
 	}
 	public boolean getnorthup() {		
 		return defnorthup;
+	}
+	public void onShowExtended(String[] icaos) {
+		
+		movingMap.doShowExtended(icaos);
 	}
 	
 }

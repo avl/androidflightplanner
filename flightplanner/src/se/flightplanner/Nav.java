@@ -4,6 +4,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
@@ -431,7 +432,8 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		int detail=getPreferences(MODE_PRIVATE).getInt("mapdetail",0);
 		
 		terraindownloader=new BackgroundMapDownloader(this,user,pass,detail);
-		terraindownloader.execute();
+		Log.i("fplan","Previous airspace: "+airspace);
+		terraindownloader.execute(airspace);
 	}
 	/*
 	protected Dialog onCreateDialog(int id)
@@ -493,6 +495,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    	}
 	    	catch (Throwable e)
 	    	{
+	    		e.printStackTrace();
 	    		Log.i("fplan.nav","Failed loading airspace data:"+e);
 	    		RookieHelper.showmsg(this, "You have no airspace data. Select Menu->Download Map!");
 	    		//RookieHelper.showmsg(this, e.toString());
@@ -582,7 +585,8 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		{
 			map.set_download_status("Complete",true);
 		}
-        map.update_airspace(airspace,lookup,getPreferences(MODE_PRIVATE).getInt("mapdetail", 0),
+		if (airspace!=null)
+			map.update_airspace(airspace,lookup,getPreferences(MODE_PRIVATE).getInt("mapdetail", 0),
         		getPreferences(MODE_PRIVATE).getBoolean("northup", false));
 		map.enableTerrainMap(true);
 	}
@@ -638,6 +642,66 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			
 		};
 		load_trip_task.execute((Void)null);
+	}
+	
+	private void showADInfo(final SigPoint sp) {
+    	StringBuilder sb=new StringBuilder();
+		
+		sb.append("<h1>"+sp.name+"</h1>");
+    	if (sp.icao!=null)
+    		sb.append("<p>("+sp.icao+")</p>");
+    	if (sp.metar!=null)
+    	{
+    		sb.append("<h2>METAR:</h2><p> "+sp.metar+"</p>");
+    	}
+    	if (sp.taf!=null)
+    	{
+    		sb.append("<h2>TAF:</h2><p> "+sp.taf+"</p>");
+    	}
+    	if (sp.notams.length>0)
+    	{
+	    	sb.append("<h2>NOTAMs:</h2>");
+    		for(String notam:sp.notams)
+    		{
+    	    	sb.append("<p><pre>"+notam+"</pre></p>");
+    		}
+
+    	}
+    	RookieHelper.showmsg(Nav.this, sb.toString());
+	}
+	
+	@Override
+	public void doShowExtended(String[] icaos) {
+		ArrayList<String> airports=new ArrayList<String>();
+		final ArrayList<SigPoint> sigs=new ArrayList<SigPoint>();
+		for(String icao:icaos)
+		{
+			SigPoint airport=lookup.getByIcao(icao);
+			if (airport==null) continue;
+			sigs.add(airport);
+			airports.add(airport.name);
+		}
+		if (airports.size()>0)
+		{
+	        if (airports.size()==1)
+	        {
+	        	showADInfo(sigs.get(0));
+	        }
+	        else
+	        {
+		    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		    	builder.setTitle("Choose Airport");
+		    	builder.setItems(airports.toArray(new String[]{}), new DialogInterface.OnClickListener() {
+		    	    public void onClick(DialogInterface dialog, int item) {
+		    	    	final SigPoint sp=sigs.get(item);
+		    	    	
+		    	    	showADInfo(sp);
+		    	    }	
+		    	});
+		    	AlertDialog diag=builder.create();
+		    	diag.show();			
+	        }
+		}
 	}
     
 
