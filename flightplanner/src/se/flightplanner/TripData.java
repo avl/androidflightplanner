@@ -98,6 +98,7 @@ public class TripData implements Serializable {
 		public double gs;
 		public double d;
 		public double tas;
+		public boolean land_at_end=false;
 	}
 	static TripData get_trip(String user,String pass,String trip) throws Exception
 	{
@@ -129,6 +130,7 @@ public class TripData implements Serializable {
 				wp.gs=wpobj.getDouble("gs");
 				wp.tas=wpobj.getDouble("tas");
 				wp.d=wpobj.getDouble("d");
+				wp.land_at_end=wpobj.optBoolean("land_at_end",false);
 				td.waypoints.add(wp);
 			}
 		}

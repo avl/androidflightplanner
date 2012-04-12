@@ -49,14 +49,14 @@ public class TripState implements InformationPanel {
 	public int get_time_to_destination() {
 		return time_to_destination;
 	}
-	public double get_distance_to_destination() {
+	/*public double get_distance_to_destination() {
 		return distance_to_destination;
-	}
+	}*/
 	public double get_actual_gs() {
 		return actual_gs;
 	}
 	private int time_to_destination;
-	private double distance_to_destination;
+	//private double distance_to_destination;
 	private double actual_gs;
 	
 	/**
@@ -70,7 +70,7 @@ public class TripState implements InformationPanel {
 	{		
 		actual_gs=0.0;
 		time_to_destination=0;
-		distance_to_destination=0.0;
+		//distance_to_destination=0.0;
 		Vector heading=Project.heading2vector(mylocation.getBearing());
 
 		LatLon myposlatlon=new LatLon(mylocation.getLatitude(),mylocation.getLongitude());
@@ -147,6 +147,8 @@ public class TripState implements InformationPanel {
 			}
 			//Log.i("fplan","New best target_wp: "+target_wp+" waypoints: "+tripdata.waypoints.size());
 			double accum_time=0;
+			double accum_time_to_destination=0;
+			boolean landed=false;
 			double accum_distance=0;
 			actual_gs=mylocation.getSpeed()*3.6/1.852;
 			/*
@@ -185,7 +187,11 @@ public class TripState implements InformationPanel {
 					ttimesec=(3600.0*tdistance)/used_gs;
 				else
 					ttimesec=3600*9999;
-				accum_time+=ttimesec;								
+				accum_time+=ttimesec;		
+				if (!landed)
+					accum_time_to_destination+=ttimesec;
+				if (wp.land_at_end)
+					landed=true;
 				//Log.i("fplan","accum_time:"+accum_time);
 				int timesec=(int)accum_time;
 				if (i>=waypointEvents.size())
@@ -194,8 +200,8 @@ public class TripState implements InformationPanel {
 				we.distance=(float)distance;
 				we.when=timesec;
 			}
-			time_to_destination=(int) accum_time;
-			distance_to_destination=accum_distance;
+			time_to_destination=(int)(accum_time_to_destination+0.5);
+			//distance_to_destination=accum_distance;
 		}
 		else
 		{
