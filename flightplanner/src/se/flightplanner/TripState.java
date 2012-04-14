@@ -105,15 +105,22 @@ public class TripState implements InformationPanel {
 				Vector dir=mv2.minus(mv1).normalized();
 				Line line=new Line(mv1,mv2);
 				double rightheading=dir.scalarprod(heading);
+				if (rightheading<0)
+					rightheading*=10; //big penalty in going backwards
 				double distance=line.distance(mypos);
 				
 				double tpoints=0;
 				tpoints-=(distance)/nm;
 				tpoints+=rightheading;
 				if (i+1==target_wp)
+				{
+					Log.i("fplan","rightheading bonus:"+rightheading+" distance penalty: "+distance/nm);
 					tpoints+=0.125; //get an extra point for the current waypoint
+				}
 				if (i+1==target_wp+1)
 					tpoints+=0.1875; //get even more extra points for the next waypoint.
+				if (i+1<target_wp)
+					tpoints-=0.1;//small penalty for going back
 				//Log.i("fplan","Item "+wp.name+" head: "+rightheading+" dist: "+distance+" points: "+tpoints);
 				if (tpoints>best_points || best_points_i==-1)
 				{

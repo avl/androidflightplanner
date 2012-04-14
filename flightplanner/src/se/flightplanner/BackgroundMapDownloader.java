@@ -169,7 +169,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			
 			try {
 				waitAvailable();
-				downloadAdCharts();
+				downloadAdCharts(res);
 			} catch (InterruptedException e2) {			
 				res.error="Cancelled";
 				return res;
@@ -235,12 +235,14 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		
 	}
 
-	private void downloadAdCharts() throws Exception {
+	private void downloadAdCharts(DownloadedAirspaceData res) throws Exception {
 		
 		
 		File extpath = Environment.getExternalStorageDirectory();
 		File metapath = new File(extpath,
 				"/Android/data/se.flightplanner/files/chartmeta.dat");
+		File chartlistpath = new File(extpath,
+				"/Android/data/se.flightplanner/files/chartlist.dat");
 		long stamp=0;
 		long lateststamp=0;
 		if (metapath.exists())
@@ -252,23 +254,36 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			
 			Log.i("fplan.download","adchart metadata stamp:"+stamp);
 		}
+		if (!chartlistpath.exists())
+		{
+			stamp=0;			
+		}
+		//stamp=0;
 		
 		final class AD
 		{
 			String chartname;
 			String humanreadable;
+			String icao;
+			String cksum;
 		}
+		try{
+			res.airspace.load_chart_list(chartlistpath);
+		}catch(Throwable e) {
+			e.printStackTrace();			
+		}
+		
 		ArrayList<AD> newcharts=new ArrayList<AD>();
 		{
 			ArrayList<NameValuePair> nvps = new ArrayList<NameValuePair>();
-			nvps.add(new BasicNameValuePair("version", "1"));
+			nvps.add(new BasicNameValuePair("version", "2"));
 			nvps.add(new BasicNameValuePair("stamp", "" + stamp));
 			InputStream inp = DataDownloader.postRaw("/api/getnewadchart", user,pass, nvps,false);
 			DataInputStream inp2 = new DataInputStream(inp);
 			if (inp2.readInt()!=0xf00d1011)
 				throw new RuntimeException("Bad magic");
 			int version=inp2.readInt();
-			if (version!=1) throw new RuntimeException("Bad version number");
+			if (version!=1 && version!=2) throw new RuntimeException("Bad version number");
 			lateststamp=inp2.readLong();
 			int numcharts=inp2.readInt();
 			publishProgress("Listing Aerodromes, charts:"+numcharts);
@@ -277,7 +292,9 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				AD ad=new AD();
 				ad.chartname=inp2.readUTF();
 				ad.humanreadable=inp2.readUTF();
-				Log.i("fplan.download","Queing chart "+ad.chartname);
+				ad.icao=inp2.readUTF();
+				ad.cksum=inp2.readUTF();
+				Log.i("fplan.download","Queing chart icao:"+ad.icao+"/chartname:"+ad.chartname+" human:"+ad.humanreadable);
 				newcharts.add(ad);
 			}
 			if (inp2.readInt()!=0xaabbccda) throw new FatalBackgroundException("Bad magic 5");
@@ -290,9 +307,11 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			File chartprojpath = new File(extpath,
 					"/Android/data/se.flightplanner/files/"+chart.chartname+".proj");
 			publishProgress(chart.humanreadable);
+			
 			ArrayList<NameValuePair> nvps = new ArrayList<NameValuePair>();
-			nvps.add(new BasicNameValuePair("version", "1"));
+			nvps.add(new BasicNameValuePair("version", "2"));
 			nvps.add(new BasicNameValuePair("chart", chart.chartname));
+			nvps.add(new BasicNameValuePair("cksum", chart.cksum));
 			InputStream inp = DataDownloader.postRaw("/api/getadchart", user,pass, nvps,false);
 			DataInputStream inp2=new DataInputStream(inp);
 			if (inp2.readInt()!=0xaabb1234)
@@ -307,14 +326,19 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 
 			int version=inp2.readInt();
 			int numlevels=inp2.readInt();
-			if (version!=1) throw new RuntimeException("Bad version number");
+			if (version!=1 && version!=2) throw new RuntimeException("Bad version number");
 
 			{			
 				DataOutputStream ds=new DataOutputStream(
 						new FileOutputStream(chartprojpath));
 				for(int i=0;i<6;++i)
 					ds.writeDouble(inp2.readDouble());
-				Log.i("fplan.download","Created chart proj file");
+				int w=inp2.readInt();
+				int h=inp2.readInt();
+				
+				ds.writeInt(w); //width
+				ds.writeInt(h); //height
+				Log.i("fplan.download","Created chart proj file, width: "+w+" height: "+h);
 				ds.close();
 			}			
 			
@@ -334,7 +358,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 					if (!master_cksum.equals(cksum))
 					{
 						Log.i("fplan.download","Chart:"+chart.chartname+" master ck:"+master_cksum+" ck:"+cksum);
-						throw new RuntimeException("Chart changed mid download. Please retry.");
+						throw new BackgroundException("Chart changed mid download. Please retry.");
 					}
 				int blobsize=inp2.readInt();
 				
@@ -360,7 +384,11 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			}		
 			if (inp2.readInt()!=0xf111) throw new FatalBackgroundException("Bad magic 4");
 			
+			res.airspace.report_new_chart(chart.humanreadable,chart.chartname,chart.icao);			
+			
 		}
+		
+		res.airspace.save_chart_list(chartlistpath);
 		DataOutputStream ds=new DataOutputStream(
 				new FileOutputStream(metapath));
 		ds.writeLong(lateststamp);

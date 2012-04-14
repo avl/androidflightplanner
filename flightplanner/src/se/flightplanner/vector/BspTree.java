@@ -44,6 +44,21 @@ public class BspTree implements Serializable {
 	private BspTree b;
 	private Item pivot;
 	private int axis;
+	
+	public ArrayList<Item> getall() {
+		ArrayList<Item> items=new ArrayList<BspTree.Item>();
+		getall_impl(items);
+		return items;
+	}
+	public void getall_impl(ArrayList<Item> items) {
+		if (pivot!=null)
+			items.add(pivot);
+		if (a!=null)
+			a.getall_impl(items);
+		if (b!=null)
+			b.getall_impl(items);
+	}
+	
 	public BspTree(Item[] items)
 	{
 		init(items,0,items.length,0);

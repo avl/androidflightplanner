@@ -12,7 +12,6 @@ import se.flightplanner.BackgroundMapLoader.UpdatableUI;
 import se.flightplanner.GetMapBitmap.BitmapRes;
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.iMerc;
-import se.flightplanner.SigPoint.Chart;
 import se.flightplanner.vector.Vector;
 
 import android.content.Context;
@@ -36,8 +35,9 @@ public class AdChartView extends View implements UpdatableUI {
 	private MapCache mapcache;
 	private BackgroundMapLoader loader;
 	private ArrayList<Blob> blobs;
+	public double[][] A; //2x2 matrix with airport chart projection scale/rotation latlon -> image pixels
+	public double[] T; //2 vector with airport chart projection translation
 	private GetMapBitmap bitmaps;
-	private Chart chart;
 	private int level;
 	
 	private enum State
@@ -53,7 +53,7 @@ public class AdChartView extends View implements UpdatableUI {
 	private int start_scroll_y;
 	private int scroll_x;
 	private int scroll_y;
-
+	
 	private int chart_width;
 	private int chart_height;
 	private Runnable curLostSignalRunnable;
@@ -63,9 +63,11 @@ public class AdChartView extends View implements UpdatableUI {
 	private int last_height;  //last screen height
 	
 	private Paint pospaint;
-	private Vector userPosition;
+	private Vector userPosition=null;
 	private Float userHdgRad;
 	
+	public int get_chart_width(){return chart_width;}
+	public int get_chart_height(){return chart_height;}
 	
 	@Override
 	public boolean onTouchEvent(MotionEvent ev)
@@ -149,19 +151,22 @@ public class AdChartView extends View implements UpdatableUI {
 	}
 
 	private void clamp_scroll() {
-		int maxx=(chart_width>>level)-last_width+50;
-		int maxy=(chart_height>>level)-last_height+50;
+		int maxx=(chart_width>>level)-last_width;
+		int maxy=(chart_height>>level)-last_height;
 		if (scroll_x>maxx) scroll_x=maxx;
 		if (scroll_y>maxy) scroll_y=maxy;
 		if (scroll_x<0) scroll_x=0;
 		if (scroll_y<0) scroll_y=0;
 	}
 	private BearingSpeedCalc calc;
-
-	public AdChartView(Context context,Chart chart) throws IOException {
+	private boolean fail_get_width=true;
+	public boolean failed_to_get_width()
+	{
+		return fail_get_width;
+	}
+	public AdChartView(Context context,String chartname) throws IOException {
 		super(context);
 		loader=null;
-		this.chart=chart;
 		mapcache=new MapCache();
 		level=2;
 		blobs=new ArrayList<Blob>();
@@ -169,8 +174,6 @@ public class AdChartView extends View implements UpdatableUI {
 		File extpath = Environment.getExternalStorageDirectory();
 		curLostSignalRunnable=null;
 		lostSignalTimer=new Handler();
-		chart_width=chart.width;
-		chart_height=chart.height;
 		calc=new BearingSpeedCalc();
 		pospaint=new Paint();
 		pospaint.setStyle(Style.FILL_AND_STROKE);		
@@ -178,40 +181,54 @@ public class AdChartView extends View implements UpdatableUI {
 		pospaint.setStrokeWidth(2.0f);
 		
 		File chartprojpath = new File(extpath,
-				"/Android/data/se.flightplanner/files/"+chart.name+".proj");
+				"/Android/data/se.flightplanner/files/"+chartname+".proj");
 		DataInputStream ds=new DataInputStream(
 				new FileInputStream(chartprojpath));
-		chart.A=new double[2][2];
-		chart.T=new double[2];
+		A=new double[2][2];
+		T=new double[2];
 		boolean isfloat=(chartprojpath.length()==6*4);
 		if (isfloat)
 		{
-			chart.A[0][0]=ds.readFloat();
-			chart.A[1][0]=ds.readFloat();
-			chart.A[0][1]=ds.readFloat();
-			chart.A[1][1]=ds.readFloat();
-			chart.T[0]=ds.readFloat();
-			chart.T[1]=ds.readFloat();
+			A[0][0]=ds.readFloat();
+			A[1][0]=ds.readFloat();
+			A[0][1]=ds.readFloat();
+			A[1][1]=ds.readFloat();
+			T[0]=ds.readFloat();
+			T[1]=ds.readFloat();
+			chart_width=3000; //this won't happen
+			chart_height=3000;
 		}
 		else
 		{
-			chart.A[0][0]=ds.readDouble();
-			chart.A[1][0]=ds.readDouble();
-			chart.A[0][1]=ds.readDouble();
-			chart.A[1][1]=ds.readDouble();
-			chart.T[0]=ds.readDouble();
-			chart.T[1]=ds.readDouble();			
+			A[0][0]=ds.readDouble();
+			A[1][0]=ds.readDouble();
+			A[0][1]=ds.readDouble();
+			A[1][1]=ds.readDouble();
+			T[0]=ds.readDouble();
+			T[1]=ds.readDouble();		
+			chart_width=3000;
+			chart_height=3000;
+			try{
+				chart_width=ds.readInt();
+				chart_height=ds.readInt();
+				fail_get_width=false;
+			}catch(Throwable e)
+			{
+				Log.i("fplan.adchart","Failed to get real width/height");
+				e.printStackTrace();
+			}
+			
 		}
 		ds.close();
-		Log.i("fplan.adchart","loaded matrix:"+chart.A[0][0]+","+chart.A[1][0]+","+chart.A[0][1]+","+chart.A[1][1]);
-		Log.i("fplan.adchart","loaded vector:"+chart.T[0]+", "+chart.T[1]);
+		Log.i("fplan.adchart","loaded matrix:"+A[0][0]+","+A[1][0]+","+A[0][1]+","+A[1][1]);
+		Log.i("fplan.adchart","loaded vector:"+T[0]+", "+T[1]);
 		
 		for(int i=0;i<5;++i)
 		{
 			Integer is=new Integer(i);
 
 			File chartpath = new File(extpath,
-					"/Android/data/se.flightplanner/files/"+chart.name+"-"+is.toString()+".bin");
+					"/Android/data/se.flightplanner/files/"+chartname+"-"+is.toString()+".bin");
 			Blob blob=new Blob(chartpath.getAbsolutePath(),256);
 			blobs.add(blob);
 			Log.i("fplan.adchart","Dimensions of level "+i+" "+
@@ -226,8 +243,8 @@ public class AdChartView extends View implements UpdatableUI {
 	@Override
 	protected void onDraw(Canvas canvas) {
 		
-		int width=canvas.getWidth();		
-		int height=canvas.getHeight();
+		int width=getRight()-getLeft();		
+		int height=getBottom()-getTop();
 		last_width=width;
 		last_height=height;
 		int required_cachesize=((width+255+255)/256)*((height+255+255)/256);
@@ -235,8 +252,12 @@ public class AdChartView extends View implements UpdatableUI {
 				
 		Log.i("fplan.adchart","Re-drawing chart!");
 		mapcache.forgetqueries();
+		Paint white=new Paint();
+		white.setColor(Color.WHITE);
+		white.setStyle(Style.FILL_AND_STROKE);		
+
 		
-		
+		///canvas.drawColor(Color.BLACK);
 		
 		for(int x=0;x<chart_width>>level;x+=256)
 		{
@@ -250,7 +271,11 @@ public class AdChartView extends View implements UpdatableUI {
 					BitmapRes b = bitmaps.getBitmap(pos, level);
 					if (b!=null)
 					{
-						canvas.drawBitmap(b.b, tx,ty,null);					
+						canvas.drawBitmap(b.b, getLeft()+tx,getTop()+ty,null);					
+					}
+					else
+					{
+						canvas.drawRect(getLeft()+tx, getTop()+ty, tx+256, ty+256, white);
 					}
 				}
 			}
@@ -272,8 +297,8 @@ public class AdChartView extends View implements UpdatableUI {
 		
 		if (userPosition!=null)
 		{
-			float px=((int)userPosition.x>>level)-scroll_x;
-			float py=((int)userPosition.y>>level)-scroll_y;
+			float px=((int)userPosition.x>>level)-scroll_x+getLeft();
+			float py=((int)userPosition.y>>level)-scroll_y+getTop();
 			if (userHdgRad!=null)
 			{
 				float rad=userHdgRad;
@@ -282,9 +307,11 @@ public class AdChartView extends View implements UpdatableUI {
 				RectF r=new RectF(px-40,py-40,px+40,py+40);
 				canvas.drawArc(r,rad*(float)(180.0/Math.PI)+180.0f-20f,40,true,pospaint);
 				//canvas.drawText("Hdg:"+rad*180/Math.PI, px+50, py+50, pospaint);
+				Log.i("fplan.adchart","Drawing arc at "+px+" "+py);
 			}
 			else
 			{
+				Log.i("fplan.adchart","Drawing circle at "+px+" "+py);
 				canvas.drawCircle(px,py, 15, pospaint);
 			}
 		}
@@ -305,7 +332,7 @@ public class AdChartView extends View implements UpdatableUI {
 		
 		double lat=location.getLatitude();
 		double lon=location.getLongitude();
-		if (DataDownloader.debugMode())
+		if (DataDownloader.chartGpsDebugMode())
 		{
 			//Forcefully move us to middle of Arlanda airport,
 			//So that we can easily test moving around there without
@@ -325,30 +352,31 @@ public class AdChartView extends View implements UpdatableUI {
 		//Px = A[0][0]*lat + A[0][1]*lon
 		//Py = A[1][0]*lat + A[1][1]*lon
 		{
-			double mlat=lat-chart.T[0];
-			double mlon=lon-chart.T[1];
-			double px=chart.A[0][0]*mlat + chart.A[0][1]*mlon; 
-			double py=chart.A[1][0]*mlat + chart.A[1][1]*mlon;
+			double mlat=lat-T[0];
+			double mlon=lon-T[1];
+			double px=A[0][0]*mlat + A[0][1]*mlon; 
+			double py=A[1][0]*mlat + A[1][1]*mlon;
 			userPosition=new Vector(px,py);
+			Log.i("fplan.adchart","Lat lon "+lat+","+lon+" mlat: "+mlat+" mlon: "+mlon+" converted to: "+px+","+py);
 		}
 		userHdgRad=null;
 		if (location.hasBearing())
 		{
-			Log.i("fplan.adchart","Has bearing:"+location.getBearing());
+//			Log.i("fplan.adchart","Has bearing:"+location.getBearing());
 			float hdg=location.getBearing();
 			double aimlat=lat+1e-3*Math.cos(hdg/(180.0/Math.PI));
 			double aimlon=lon+1e-3*Math.sin(hdg/(180.0/Math.PI));
-			double aimmlat=aimlat-chart.T[0];
-			double aimmlon=aimlon-chart.T[1];
-			double aimpx=chart.A[0][0]*aimmlat + chart.A[0][1]*aimmlon; 
-			double aimpy=chart.A[1][0]*aimmlat + chart.A[1][1]*aimmlon;
+			double aimmlat=aimlat-T[0];
+			double aimmlon=aimlon-T[1];
+			double aimpx=A[0][0]*aimmlat + A[0][1]*aimmlon; 
+			double aimpy=A[1][0]*aimmlat + A[1][1]*aimmlon;
 			double dx=aimpx-userPosition.x;
 			double dy=aimpy-userPosition.y;
 			userHdgRad=(float)Math.atan2(dy,dx);
 			
 		}
-		Log.i("fplan.adchart","Position: "+lat+", "+lon);
-		Log.i("fplan.adchart","Pixels: "+userPosition.x+", "+userPosition.y);
+		//Log.i("fplan.adchart","Position: "+lat+", "+lon);
+		//Log.i("fplan.adchart","Pixels: "+userPosition.x+", "+userPosition.y);
 		if (curLostSignalRunnable!=null)
 			lostSignalTimer.removeCallbacks(curLostSignalRunnable);
 		
@@ -368,6 +396,15 @@ public class AdChartView extends View implements UpdatableUI {
 		// TODO Auto-generated method stub
 		userPosition=null;
 		invalidate();
+	}
+	public boolean haveGeoLocation() {
+		if (A[0][0]==0 &&
+			A[1][0]==0 &&
+			A[0][1]==0 &&
+			A[1][1]==0)
+			return false;
+			
+		return true;
 	}
 		
 

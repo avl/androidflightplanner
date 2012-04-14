@@ -37,7 +37,7 @@ import android.util.Log;
 
 public class DataDownloader {
 	public static boolean debugMode() {
-		return false;
+		return true;
 	}
 	
 	
@@ -259,6 +259,11 @@ public class DataDownloader {
 		
 		}
 		return req;
+	}
+
+
+	public static boolean chartGpsDebugMode() {
+		return false;
 	}
 
 

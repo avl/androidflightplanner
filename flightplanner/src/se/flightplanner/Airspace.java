@@ -8,6 +8,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -24,6 +25,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.zip.DeflaterInputStream;
@@ -89,7 +92,7 @@ public class Airspace implements Serializable{
 		int version=is.readInt();
 		if (magic!=0x8A31CDA)
 			throw new RuntimeException("Couldn't load airspace data, bad header magic. Was: "+magic+" should be: "+0x8A31CDA);
-		if (version!=1 && version!=2 && version!=3 && version!=4 && version!=5)
+		if (version!=1 && version!=2 && version!=3 && version!=4 && version!=5 && version!=6)
 			throw new RuntimeException("Couldn't load airspace data, bad version");
 		if (version>=5)
 		{
@@ -161,7 +164,7 @@ public class Airspace implements Serializable{
 		
 		if (previous!=null)
 		{
-			Log.i("fplan","Previous A: "+previous.spaces.size());
+			//Log.i("fplan","Previous A: "+previous.spaces.size());
 			Collections.sort(pointkills);
 			Collections.sort(spacekills);
 			ArrayList<SigPoint> prevpoints=(ArrayList<SigPoint>)(previous.points.clone());
@@ -176,7 +179,7 @@ public class Airspace implements Serializable{
 					else pk=-1;
 					if (pk!=src)
 					{
-						Log.i("fplan","Copying element "+src+" -> "+trg);
+						//Log.i("fplan","Copying element "+src+" -> "+trg);
 						if (src!=trg)
 							prevpoints.set(trg,prevpoints.get(src));
 						++src;
@@ -184,8 +187,8 @@ public class Airspace implements Serializable{
 					}
 					else
 					{//pk==src
-						Log.i("fplan","Implementing points kill of idx: "+src);						
-						Log.i("fplan","Not copying element "+src+" -> anywhere");
+						//Log.i("fplan","Implementing points kill of idx: "+src);						
+						//Log.i("fplan","Not copying element "+src+" -> anywhere");
 						++i;
 						++src;
 					}						
@@ -193,7 +196,7 @@ public class Airspace implements Serializable{
 				int newsize=prevpoints.size()-pointkills.size();
 				for(int i=prevpoints.size()-1;i>=newsize;--i)
 				{
-					Log.i("fplan","Removing element "+i);
+					//Log.i("fplan","Removing element "+i);
 					prevpoints.remove(i);
 				}
 			}
@@ -207,7 +210,7 @@ public class Airspace implements Serializable{
 					else pk=-1;
 					if (pk!=src)
 					{
-						Log.i("fplan","Copying element "+src+" -> "+trg);
+						//Log.i("fplan","Copying element "+src+" -> "+trg);
 						if (src!=trg)
 							prevspaces.set(trg,prevspaces.get(src));
 						++src;
@@ -215,8 +218,8 @@ public class Airspace implements Serializable{
 					}
 					else
 					{//pk==src
-						Log.i("fplan","Implementing spaces kill of idx: "+src);						
-						Log.i("fplan","Not copying element "+src+" -> anywhere");
+						//Log.i("fplan","Implementing spaces kill of idx: "+src);						
+						//Log.i("fplan","Not copying element "+src+" -> anywhere");
 						++i;
 						++src;
 					}						
@@ -224,7 +227,7 @@ public class Airspace implements Serializable{
 				int newsize=prevspaces.size()-spacekills.size();
 				for(int i=prevspaces.size()-1;i>=newsize;--i)
 				{
-					Log.i("fplan","Removing element "+i);
+					//Log.i("fplan","Removing element "+i);
 					prevspaces.remove(i);
 				}
 			}
@@ -240,9 +243,9 @@ public class Airspace implements Serializable{
 		a.namedigest=null;
 		if (version>=5)
 		{
-			Log.i("fplan","Checksumming all points and spaces");
+			//Log.i("fplan","Checksumming all points and spaces");
 			int magic2=is.readInt();
-			Log.i("fplan","Magic: "+magic2+" correct:"+(magic2==0x1eedbaa5));
+			//Log.i("fplan","Magic: "+magic2+" correct:"+(magic2==0x1eedbaa5));
 			
 			String checksum=is.readUTF();
 			MessageDigest md=null;
@@ -284,7 +287,7 @@ public class Airspace implements Serializable{
 			Log.i("fplan","namedigest:"+a.namedigest);
 			if (!checksum.toLowerCase().equals(a.namedigest.toLowerCase()))
 			{
-				Log.i("fplan","Bad checksum hex digest. Was: "+a.namedigest+" Expected: "+checksum);
+				//Log.i("fplan","Bad checksum hex digest. Was: "+a.namedigest+" Expected: "+checksum);
 				throw new RuntimeException("Bad checksum on downloaded data");
 			}
 			if (magic2!=0x1eedbaa5)
@@ -302,7 +305,7 @@ public class Airspace implements Serializable{
 		Log.i("fplan","Serializing airspace");
 		int numspaces=spaces.size();
 		os.writeInt(0x8A31CDA);
-		os.writeInt(5); //version 5
+		os.writeInt(6); //version 6
 		os.writeUTF(aipgen);
 		os.writeByte(1); //from scratch
 		os.writeInt(numspaces);
@@ -362,7 +365,7 @@ public class Airspace implements Serializable{
 		else
 		{
 			ArrayList<NameValuePair> nvps=new ArrayList<NameValuePair>();
-			nvps.add(new BasicNameValuePair("version","5"));
+			nvps.add(new BasicNameValuePair("version","6"));
 			if (previous==null)
 				nvps.add(new BasicNameValuePair("aipgen",""));
 			else
@@ -510,6 +513,17 @@ public class Airspace implements Serializable{
 		{
 			ofstream.close();			
 		}
+		
+		try
+		{
+			File chartlistpath = new File(extpath,
+					"/Android/data/se.flightplanner/files/chartlist.dat");			
+			data.load_chart_list(chartlistpath);
+		} catch(Throwable e)
+		{
+			e.printStackTrace();
+			Log.i("fplan","Failed loading chart list");
+		}
 		return data;
 	}
 	public ArrayList<AirspaceArea> getSpaces() {
@@ -518,74 +532,51 @@ public class Airspace implements Serializable{
 	public ArrayList<SigPoint> getPoints() {
 		return points;
 	}
-	static private class Pair
+	static public class ChartInfo
 	{
-		String airport;
-		String chart;
-		float dist;
+		String humanreadable;
+		String chartname;		
+		public ChartInfo(String chartname,String human)
+		{
+			this.chartname=chartname;
+			this.humanreadable=human;
+		}
 	}
-	public void getAdChartNames(ArrayList<String> chartName,ArrayList<String> airportName, LatLon location) {
-		ArrayList<Pair> tmp=new ArrayList<Airspace.Pair>();
-		ArrayList<Pair> closest=new ArrayList<Pair>();
-		Comparator<Pair> comp=new Comparator<Pair>(){
-			@Override
-			public int compare(Pair o1, Pair o2) {
-				if (o1.dist<o2.dist) return -1;
-				if (o1.dist>o2.dist) return +1;
-				return 0;
-			}					
-		};
-		for(SigPoint p:points)
-		{
-			if (p.chart!=null)
-			{
-				Pair pair=new Pair();
-				pair.airport=p.name;
-				pair.chart=p.chart.name;
-				if (location!=null)
-				{
-					pair.dist=(float) Project.exacter_distance(location, 
-							Project.merc2latlon(p.pos, 13));
-					if (closest.size()<2 || pair.dist<closest.get(1).dist)
-						closest.add(pair);
-					Collections.sort(closest, comp);
-					for(int i=closest.size()-1;i>=2;--i)
-						closest.remove(i);
-				}
-				tmp.add(pair);
-				
-			}
-		}
-		Collections.sort(tmp, new Comparator<Pair>() {
-			@Override
-			public int compare(Pair object1, Pair object2) {
-				return object1.airport.compareTo(object2.airport);
-			}
-		});
-		if (location!=null && closest.size()>0)
-		{
-			for(Pair pair:closest)
-			{
-				chartName.add(pair.chart);
-				airportName.add(pair.airport);
-			}
-			chartName.add(null);
-			airportName.add("----");
-		}
-		for(Pair pair:tmp)
-		{
-			chartName.add(pair.chart);
-			airportName.add(pair.airport);
-		}
-
+	HashMap<String,ChartInfo> charts=new HashMap<String, ChartInfo>();
+	
+	ChartInfo getChart(String icao)
+	{
+		return charts.get(icao);
 	}
-	public Chart getChart(String name) {
-		for(SigPoint p:points)
+	public void load_chart_list(File chartlistpath) throws IOException {
+		DataInputStream ds=new DataInputStream(
+				new FileInputStream(chartlistpath));
+		charts.clear();
+		int len=ds.readInt();
+		for(int i=0;i<len;++i)
 		{
-			if (p.chart!=null && p.chart.name==name)
-				return p.chart;
+			String n=ds.readUTF(); //icao
+			ChartInfo ci=new ChartInfo(ds.readUTF(),ds.readUTF());
+			charts.put(n,ci);
 		}
-		return null;
+		ds.close();					
+	}
+	public void report_new_chart(String humanreadable, String chartname,String icao) {
+		charts.put(icao,new ChartInfo(chartname,humanreadable));
+		
+	}
+	public void save_chart_list(File chartlistpath) throws IOException {
+		DataOutputStream ds=new DataOutputStream(
+				new FileOutputStream(chartlistpath));
+		ds.writeInt(charts.size());
+		for(Entry<String,ChartInfo> e:charts.entrySet())
+		{
+			ds.writeUTF(e.getKey()); //icao
+			ds.writeUTF(e.getValue().chartname);
+			ds.writeUTF(e.getValue().humanreadable);
+		}
+		ds.close();			
+		
 	}
 	
 }

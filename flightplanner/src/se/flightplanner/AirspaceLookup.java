@@ -1,10 +1,15 @@
 package se.flightplanner;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 
 import android.util.Log;
 
+import se.flightplanner.Airspace.ChartInfo;
+import se.flightplanner.Project.LatLon;
+import se.flightplanner.SigPoint.Chart;
 import se.flightplanner.vector.BoundingBox;
 import se.flightplanner.vector.Vector;
 import se.flightplanner.vector.Polygon.InsideResult;
@@ -66,6 +71,7 @@ public class AirspaceLookup {
 
 	public AirspaceLookup(Airspace airspace) {
 		
+		this.airspace=airspace;
 		ArrayList<AirspaceArea> areaarr;
 		if (airspace==null)
 			areaarr=new ArrayList<AirspaceArea>();
@@ -125,7 +131,82 @@ public class AirspaceLookup {
 	public AirspaceSigPointsTree allOthers;
 	public AirspaceSigPointsTree allCities;
 	public AirspaceSigPointsTree allTowns;
+	public Airspace airspace;
+	
+	
 	public SigPoint getByIcao(String icao) {
 		return by_icao.get(icao);
 	}
+	static private class Pair
+	{
+		String human;
+		String chart;
+		float dist;
+	}
+
+	public void getAdChartNames(ArrayList<String> chartName,ArrayList<String> humanNames, LatLon location) {
+		
+		ArrayList<Pair> tmp=new ArrayList<Pair>();
+		ArrayList<Pair> closest=new ArrayList<Pair>();
+		Comparator<Pair> comp=new Comparator<Pair>(){
+			@Override
+			public int compare(Pair o1, Pair o2) {
+				if (o1.dist<o2.dist) return -1;
+				if (o1.dist>o2.dist) return +1;
+				return 0;
+			}					
+		};
+		for(SigPoint p:majorAirports.getall())
+		{
+			if (p.icao!=null && !p.icao.equals(""))
+			{
+				ChartInfo ci=airspace.getChart(p.icao);
+				if (ci==null) continue;
+				Pair pair=new Pair();
+				pair.human=ci.humanreadable;
+				pair.chart=ci.chartname;
+				if (location!=null)
+				{
+					pair.dist=(float) Project.exacter_distance(location, 
+							Project.merc2latlon(p.pos, 13));
+					if (closest.size()<2 || pair.dist<closest.get(1).dist)
+						closest.add(pair);
+					Collections.sort(closest, comp);
+					for(int i=closest.size()-1;i>=2;--i)
+						closest.remove(i);
+				}
+				tmp.add(pair);
+				
+			}
+		}
+		Collections.sort(tmp, new Comparator<Pair>() {
+			@Override
+			public int compare(Pair object1, Pair object2) {
+				return object1.human.compareTo(object2.human);
+			}
+		});
+		if (location!=null && closest.size()>0)
+		{
+			for(Pair pair:closest)
+			{
+				chartName.add(pair.chart);
+				humanNames.add(pair.human);
+			}
+			chartName.add(null);
+			humanNames.add("----");
+		}
+		for(Pair pair:tmp)
+		{
+			chartName.add(pair.chart);
+			humanNames.add(pair.human);
+		}
+
+	}
+
+	public Chart getChartObj(String chartname) {
+		
+		return null;
+	}
+	
+	
 }

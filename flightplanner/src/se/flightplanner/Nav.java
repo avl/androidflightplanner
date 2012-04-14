@@ -360,17 +360,17 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 
 	private void viewAdChart()
 	{
-		final ArrayList<String> ads=new ArrayList<String>();
+		final ArrayList<String> chartnames=new ArrayList<String>();
 		final ArrayList<String> humanReadableNames=new ArrayList<String>();
 		if (airspace!=null)
 		{
 			LatLon latlon=null;
 			if (last_location!=null)
 				latlon=new LatLon(last_location.getLatitude(),last_location.getLongitude());
-			airspace.getAdChartNames(ads,humanReadableNames,latlon);
+			lookup.getAdChartNames(chartnames,humanReadableNames,latlon);
 		}
 		
-		if (ads.size()==0)
+		if (chartnames.size()==0)
 		{	    		
 			RookieHelper.showmsg(this,"No aerodrome charts downloaded. Go to Settings, select High Detail maps, then go back and Download Map again.");
 		}
@@ -381,23 +381,25 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    	builder.setTitle("Choose Aerodrome");
 	    	builder.setItems(humanReadableNames.toArray(new String[]{}), new DialogInterface.OnClickListener() {
 	    	    public void onClick(DialogInterface dialog, int item) {
-	    	    	if (ads.get(item)==null)
+	    	    	if (chartnames.get(item)==null)
 	    	    	{ //clicked on the divider between close airports and alphabetically sorted airports.
 	    	    		return;
 	    	    	}
-			    	nav.loadSelectedAd(ads.get(item));
+			    	nav.loadSelectedAd(chartnames.get(item));
 	    	    }
 	    	});
 	    	AlertDialog diag=builder.create();
 	    	diag.show();
 		}
 	}
-	protected void loadSelectedAd(String name) {
+	protected void loadSelectedAd(String chartname) {
 		Intent intent = new Intent(this, AdChartActivity.class);
 		intent.putExtra("se.flightplanner.user", getPreferences(MODE_PRIVATE).getString("user","")); 
 		intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password",""));
     	Log.i("fplan.chart","Before calling put Serializable");
-		intent.putExtra("se.flightplanner.chart", airspace.getChart(name));
+    	
+    	
+		intent.putExtra("se.flightplanner.chartname", chartname);
     	Log.i("fplan.chart","After calling put Serializable");	
 		map.releaseMemory();
 		startActivity(intent);
@@ -511,7 +513,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
         		getPreferences(MODE_PRIVATE).getBoolean("northup", false));
         map.update_tripdata(tripdata,tripstate);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
-		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,0, this);
+		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000,0, this);
         
 		map.thisSetContentView(this);
 		map.gps_update(null);

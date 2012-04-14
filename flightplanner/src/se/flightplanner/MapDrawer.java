@@ -3,6 +3,7 @@ package se.flightplanner;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.TimeZone;
 
 import se.flightplanner.GetMapBitmap.BitmapRes;
 import se.flightplanner.GuiSituation.Clickable;
@@ -42,6 +43,8 @@ public class MapDrawer {
 	private boolean zoom_buttons;
 
 	public MapDrawer(float x_dpmm, float y_dpmm) {
+		 formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+
 		this.x_dpmm = x_dpmm;
 		this.y_dpmm = y_dpmm;
 		int foreground = Color.WHITE;

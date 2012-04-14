@@ -42,7 +42,7 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 	 * Some points have charts associated with them.
 	 * So far, only airports though.
 	 */
-	public Chart chart; 
+	//public Chart chart; 
 	@Override
 	public int compareTo(SigPoint o) {
 		if (pos.x<o.pos.x) return -1;
@@ -97,7 +97,7 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 		
 		os.writeFloat((float) alt);
 		latlon.serialize(os);
-		
+		/*
 		if (chart!=null)
 		{
 			os.writeByte(1); //havechart=1 (true)
@@ -117,6 +117,7 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 		{
 			os.writeByte(0);			
 		}
+		*/
 		
 	}
 	public static SigPoint deserialize(DataInputStream is,int version) throws IOException {
@@ -157,7 +158,9 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 		
 		p.alt=is.readFloat();		
 		p.latlon=LatLon.deserialize(is);
-		if (version>=3)
+		
+		
+		if (version>=3 && version<=5)
 		{
 			byte havechart=is.readByte();
 			if (havechart!=0 && havechart!=1)
@@ -184,7 +187,7 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 				c.A[0][1]=matrix[2];
 				c.A[1][1]=matrix[3];
 				c.T=new double[]{matrix[4],matrix[5]};	
-				p.chart=c;
+				//p.chart=c;
 			}
 			
 		}

@@ -1,7 +1,6 @@
 package se.flightplanner;
 
 
-import se.flightplanner.SigPoint.Chart;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
@@ -35,21 +34,22 @@ public class AdChartActivity extends Activity implements LocationListener {
         super.onCreate(savedInstanceState);
     	Log.i("fplan.chart","Before calling getSerializable");
     	
-    	
-    	
-    	Chart chart=(Chart)getIntent().getExtras().getSerializable("se.flightplanner.chart");
+    
+    	String chartname=getIntent().getExtras().getString("se.flightplanner.chartname");
     	/*this.chart=new Chart();
     	this.chart.width=1000;
     	this.chart.height=1000;
     	this.chart.name="ESSA";*/
-    	if (chart.width>chart.height)
-    		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-    	else
-    		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
     	Log.i("fplan.chart","After calling getSerializable");
     	try
     	{
-    		view=new AdChartView(this,chart);
+    		view=new AdChartView(this,chartname);
+    		if (view.failed_to_get_width())
+    		{
+    			Log.i("fplan.chart","Failed get chart width");
+    			finish();
+    			return;
+    		}
 		}
 		catch(Exception e)
 		{
@@ -57,13 +57,27 @@ public class AdChartActivity extends Activity implements LocationListener {
 			finish();
 			return;
 		}
+    	if (view.get_chart_width()>view.get_chart_height())
+    		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+    	else
+    		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         
         setContentView(view);
 
-        locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
-		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,0, this);
+        if (view.haveGeoLocation())
+        {
+	        locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
+			locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000,0, this);
+        }
 
         
+	}
+	@Override
+	public void onDestroy()
+	{
+		if (locman!=null)
+			locman.removeUpdates(this);
+		super.onDestroy();
 	}
 	@Override
 	public void onLocationChanged(Location location) {

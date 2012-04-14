@@ -53,4 +53,10 @@ public class AirspaceSigPointsTree {
 		bsp.verify(null);
 		
 	}
+	public ArrayList<SigPoint> getall() {
+		ArrayList<SigPoint> ret=new ArrayList<SigPoint>();
+		for(Item item:bsp.getall())
+			ret.add((SigPoint)item.payload());
+		return ret;
+	}
 }
