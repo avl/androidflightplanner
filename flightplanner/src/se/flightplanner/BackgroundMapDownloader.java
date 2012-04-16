@@ -241,6 +241,8 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		File extpath = Environment.getExternalStorageDirectory();
 		File metapath = new File(extpath,
 				"/Android/data/se.flightplanner/files/chartmeta.dat");
+		File newstyle = new File(extpath,
+				"/Android/data/se.flightplanner/files/newstyle.dat");
 		File chartlistpath = new File(extpath,
 				"/Android/data/se.flightplanner/files/chartlist.dat");
 		long stamp=0;
@@ -254,7 +256,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			
 			Log.i("fplan.download","adchart metadata stamp:"+stamp);
 		}
-		if (!chartlistpath.exists())
+		if (!newstyle.exists())
 		{
 			stamp=0;			
 		}
@@ -389,11 +391,21 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		}
 		
 		res.airspace.save_chart_list(chartlistpath);
-		DataOutputStream ds=new DataOutputStream(
-				new FileOutputStream(metapath));
-		ds.writeLong(lateststamp);
-		Log.i("fplan.download","Wrote chart metadata file, stamp:"+lateststamp);
-		ds.close();	
+		{
+			DataOutputStream ds=new DataOutputStream(
+					new FileOutputStream(metapath));
+			ds.writeLong(lateststamp);
+			Log.i("fplan.download","Wrote chart metadata file, stamp:"+lateststamp);
+			ds.close();
+		}
+		{
+			DataOutputStream ds=new DataOutputStream(
+					new FileOutputStream(newstyle));
+			ds.writeInt(1);
+			Log.i("fplan.download","Wrote newstyle signalling file, stamp.");
+			ds.close();
+		}
+		
 		
 	}
 	private long downloadLevel(long totprog, int level, int maxlevel)
