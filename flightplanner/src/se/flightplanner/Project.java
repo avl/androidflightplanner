@@ -6,6 +6,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 
+import android.location.Location;
 import android.util.Log;
 
 import se.flightplanner.Project.LatLon;
@@ -39,6 +40,10 @@ public class Project {
 		{
 			lat=plat;
 			lon=plon;
+		}
+		public LatLon(Location location) {
+			lat=location.getLatitude();
+			lon=location.getLongitude();
 		}
 		public static LatLon deserialize(DataInputStream is) throws IOException {
 			return new LatLon(is.readFloat(),is.readFloat());
@@ -246,6 +251,18 @@ public class Project {
 	    //merc_length=256*factor*((double)(length_in_nautical_miles)/(360*60.0))/scale_diff;
 	    float length_in_nautical_miles=merc_length*scale_diff*360.0f*60.0f/(256.0f*factor);
 	    return length_in_nautical_miles;
+	}
+	public static float bearing(LatLon p1,LatLon p2)
+	{
+		Merc m1=latlon2merc(p1, 17);
+		Merc m2=latlon2merc(p2, 17);
+		double dx=(double)(m2.x-m1.x);
+		double dy=(double)(m2.y-m1.y);
+		if (dx>(256<<17)/2)
+			dx-=(256<<17);
+		float tt=90f-(float)(Math.atan2(-dy,dx)*180.0/Math.PI);
+		if (tt<0) tt+=360.0;
+		return tt;		
 	}
 	public static double vector2heading(double dx, double dy) {
 		double tt=90-(Math.atan2(-dy,dx)*180.0/Math.PI);

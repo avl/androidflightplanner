@@ -69,7 +69,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 	@Override
     protected void onPostExecute(DownloadedAirspaceData result)
 	{
-		Log.i("fplan.download","onPostExecute:"+result);
+		//Log.i("fplan.download","onPostExecute:"+result);
 		if (result!=null)
 			owner.onFinish(result.airspace,result.lookup,result.error);
 		else
@@ -108,7 +108,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 	private DownloadedAirspaceData downloadAirspace(Airspace previous)
 	{
     	try {
-    		publishProgress("Contacting server");
+    		publishProgress("Searching Updates");
     		///RookieHelper.showmsg(this,"Airspace data for Sweden will now be downloaded. This can take several minutes, and your phone may become unresponsive. Turn on internet access, click ok, and have patience!");
     		DownloadedAirspaceData ad=new DownloadedAirspaceData();
     		
@@ -117,7 +117,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				public void report(int percent) {
 					publishProgress("Airspace "+percent+"%");					
 				}
-    		});
+    		},user,DataDownloader.hashpass(pass));
     		ad.airspace.serialize_to_file("airspace.bin");
 			
 			Log.i("fplan","Building BSP-trees");
@@ -268,6 +268,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			String humanreadable;
 			String icao;
 			String cksum;
+			String variant;
 		}
 		try{
 			res.airspace.load_chart_list(chartlistpath);
@@ -278,14 +279,14 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		ArrayList<AD> newcharts=new ArrayList<AD>();
 		{
 			ArrayList<NameValuePair> nvps = new ArrayList<NameValuePair>();
-			nvps.add(new BasicNameValuePair("version", "2"));
+			nvps.add(new BasicNameValuePair("version", "3"));
 			nvps.add(new BasicNameValuePair("stamp", "" + stamp));
 			InputStream inp = DataDownloader.postRaw("/api/getnewadchart", user,pass, nvps,false);
 			DataInputStream inp2 = new DataInputStream(inp);
 			if (inp2.readInt()!=0xf00d1011)
 				throw new RuntimeException("Bad magic");
 			int version=inp2.readInt();
-			if (version!=1 && version!=2) throw new RuntimeException("Bad version number");
+			if (version!=1 && version!=2 && version!=3) throw new RuntimeException("Bad version number");
 			lateststamp=inp2.readLong();
 			int numcharts=inp2.readInt();
 			publishProgress("Listing Aerodromes, charts:"+numcharts);
@@ -296,7 +297,8 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				ad.humanreadable=inp2.readUTF();
 				ad.icao=inp2.readUTF();
 				ad.cksum=inp2.readUTF();
-				Log.i("fplan.download","Queing chart icao:"+ad.icao+"/chartname:"+ad.chartname+" human:"+ad.humanreadable);
+				ad.variant=inp2.readUTF();
+				Log.i("fplan.download","Queing chart icao:"+ad.icao+"/chartname:"+ad.chartname+" human:"+ad.humanreadable+" variant: "+ad.variant);
 				newcharts.add(ad);
 			}
 			if (inp2.readInt()!=0xaabbccda) throw new FatalBackgroundException("Bad magic 5");
@@ -306,6 +308,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		
 		for(AD chart:newcharts)
 		{
+			checkspace(2000000);
 			File chartprojpath = new File(extpath,
 					"/Android/data/se.flightplanner/files/"+chart.chartname+".proj");
 			publishProgress(chart.humanreadable);
@@ -386,7 +389,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			}		
 			if (inp2.readInt()!=0xf111) throw new FatalBackgroundException("Bad magic 4");
 			
-			res.airspace.report_new_chart(chart.humanreadable,chart.chartname,chart.icao);			
+			res.airspace.report_new_chart(chart.humanreadable,chart.chartname,chart.icao,chart.variant);			
 			
 		}
 		

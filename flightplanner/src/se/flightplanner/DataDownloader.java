@@ -46,14 +46,16 @@ public class DataDownloader {
 		String addr;
 		if (debugMode())
 		{
-			//String addr="http://10.0.2.3:5000";
+			//addr="http://10.0.2.3:5000";
 			//String addr="192.168.42.222:5000";
 			//String addr="http://192.168.1.150:5000";
+			
 			//String addr="http://192.168.1.102:5000";
-			addr="http://192.168.1.160:5000";
+			//addr="http://192.168.1.160:5000";
 			//addr="http://192.168.1.101:5000";
 			//String addr="http://79.99.0.86:5000";
-			//addr="http://www.swflightplanner.se";
+			addr="http://192.168.1.160:5000";
+			//addr="http://192.168.43.251:5000";
 			
 		}
 		else
@@ -234,16 +236,8 @@ public class DataDownloader {
 		{
 			if (pass!=null)
 			{
-				byte[] md5pass=MessageDigest.getInstance("MD5").
-				digest(pass.getBytes());
-				StringBuilder hd=new StringBuilder();
-				for(int i=0;i<md5pass.length;++i)
-				{
-					byte b=md5pass[i];
-					hd.append(Character.forDigit((b>>4)&15,16));
-					hd.append(Character.forDigit(b&15,16));
-				}
-				nvps.add(new BasicNameValuePair("password",hd.toString()));
+				String hd = hashpass(pass);
+				nvps.add(new BasicNameValuePair("password",hd));
 			}
 			if (zip)
 			{
@@ -262,8 +256,23 @@ public class DataDownloader {
 	}
 
 
+	public static String hashpass(String pass)
+			throws NoSuchAlgorithmException {
+		byte[] md5pass=MessageDigest.getInstance("MD5").
+		digest(pass.getBytes());
+		StringBuilder hd=new StringBuilder();
+		for(int i=0;i<md5pass.length;++i)
+		{
+			byte b=md5pass[i];
+			hd.append(Character.forDigit((b>>4)&15,16));
+			hd.append(Character.forDigit(b&15,16));
+		}
+		return hd.toString();
+	}
+
+
 	public static boolean chartGpsDebugMode() {
-		return false;
+		return false && debugMode();
 	}
 
 

@@ -79,9 +79,12 @@ public class AdChartActivity extends Activity implements LocationListener {
 			locman.removeUpdates(this);
 		super.onDestroy();
 	}
+	private BearingSpeedCalc bearingspeed=new BearingSpeedCalc();
+	
 	@Override
 	public void onLocationChanged(Location location) {
-		view.update_location(location);
+		Location loc=bearingspeed.calcBearingSpeed(location);				
+		view.update_location(loc);
 	}
 	@Override
 	public void onProviderDisabled(String provider) {

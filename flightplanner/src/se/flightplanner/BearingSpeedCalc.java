@@ -18,7 +18,7 @@ public class BearingSpeedCalc {
 			loc.setSpeed(50);
 		}
 		Location mylocation=loc;
-		Log.i("fplan.bs","myloc has speed:"+mylocation.hasSpeed()+" lastpos: "+lastpos);
+		//Log.i("fplan.bs","myloc has speed:"+mylocation.hasSpeed()+" lastpos: "+lastpos);
 		if (lastpos!=null && (!mylocation.hasSpeed() || !mylocation.hasBearing()))
 		{
 			Merc prev=Project.latlon2merc(new LatLon(lastpos.getLatitude(),lastpos.getLongitude()),13);
@@ -28,7 +28,7 @@ public class BearingSpeedCalc {
 			double mercs_per_nm=Project.approx_scale(mid, 13, 1.0);
 			double dx=cur.x-prev.x;
 			double dy=cur.y-prev.y;
-			Log.i("fplan.bs","myloc has speed (2):"+mylocation.hasSpeed()+" lastpos: "+lastpos);
+			//Log.i("fplan.bs","myloc has speed (2):"+mylocation.hasSpeed()+" lastpos: "+lastpos);
 			
 			if (!mylocation.hasSpeed())
 			{
@@ -36,7 +36,7 @@ public class BearingSpeedCalc {
 				double dist_nm=diffmercs/mercs_per_nm;
 				double dist_m=dist_nm*1852.0;
 				double speed=0;
-				Log.i("fplan.bs","dist_m:"+dist_m+" time:"+time_passed);
+				//Log.i("fplan.bs","dist_m:"+dist_m+" time:"+time_passed);
 				if (time_passed!=0 && time_passed<5.0f) //don't calculate speed after a too long interruption.
 				{				
 					speed=dist_m/time_passed;
@@ -64,6 +64,7 @@ public class BearingSpeedCalc {
 					else
 						mylocation.setBearing(0.0f);
 				}
+				Log.i("fplan.bs","bearing:"+mylocation.getBearing());
 			}
 				
 		}

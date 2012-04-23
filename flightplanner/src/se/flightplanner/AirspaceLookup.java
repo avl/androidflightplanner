@@ -1,5 +1,6 @@
 package se.flightplanner;
 
+import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -9,7 +10,6 @@ import android.util.Log;
 
 import se.flightplanner.Airspace.ChartInfo;
 import se.flightplanner.Project.LatLon;
-import se.flightplanner.SigPoint.Chart;
 import se.flightplanner.vector.BoundingBox;
 import se.flightplanner.vector.Vector;
 import se.flightplanner.vector.Polygon.InsideResult;
@@ -56,11 +56,14 @@ public class AirspaceLookup {
 		BoundingBox bb2=BoundingBox.aroundpoint(just_a_bit_in, marker_size);
 		for(SigPoint sp:majorAirports.findall(bb2))
 		{
-			if (sp.icao!=null && (sp.notams.length>0 || sp.metar!=null || sp.taf!=null))
+			if (sp.extra!=null)
 			{
-				//details.add(sp.name);
-				//extradetails.add(sp.name);
-				extended.add(sp.icao);
+				if (sp.extra.icao!=null && (sp.extra.notams.length>0 || sp.extra.metar!=null || sp.extra.taf!=null))
+				{
+					//details.add(sp.name);
+					//extradetails.add(sp.name);
+					extended.add(sp.extra.icao);
+				}
 			}
 		}
 		AirspaceDetails ret=new AirspaceDetails();
@@ -68,10 +71,30 @@ public class AirspaceLookup {
 		ret.hasextra=hasextra;
 		return ret;
 	}
-
+	public ArrayList<AipText> getAipText(String icao)
+	{
+		return icao2aiptext.get(icao);
+	}
 	public AirspaceLookup(Airspace airspace) {
 		
 		this.airspace=airspace;
+		
+		for(AipText apt:airspace.aiptexts)
+		{
+			ArrayList<AipText> item=icao2aiptext.get(apt.icao);
+			if (item==null)
+			{
+				ArrayList<AipText> t =new ArrayList<AipText>();
+				t.add(apt);
+				icao2aiptext.put(apt.icao, t);			
+			}
+			else
+			{
+				item.add(apt);
+			}
+		}
+		
+		
 		ArrayList<AirspaceArea> areaarr;
 		if (airspace==null)
 			areaarr=new ArrayList<AirspaceArea>();
@@ -118,8 +141,8 @@ public class AirspaceLookup {
 		by_icao=new HashMap<String, SigPoint>();
 		for(SigPoint sp:major_airports)
 		{
-			if (sp.icao!=null && sp.icao.length()>0)
-				by_icao.put(sp.icao,sp);	
+			if (sp.extra!=null && sp.extra.icao!=null && sp.extra.icao.length()>0)
+				by_icao.put(sp.extra.icao,sp);	
 		}
 		// TODO Auto-generated constructor stub
 	}
@@ -132,6 +155,7 @@ public class AirspaceLookup {
 	public AirspaceSigPointsTree allCities;
 	public AirspaceSigPointsTree allTowns;
 	public Airspace airspace;
+	public HashMap<String,ArrayList<AipText> > icao2aiptext=new HashMap<String, ArrayList<AipText>>();
 	
 	
 	public SigPoint getByIcao(String icao) {
@@ -140,11 +164,14 @@ public class AirspaceLookup {
 	static private class Pair
 	{
 		String human;
-		String chart;
+		String icao;
 		float dist;
 	}
-
-	public void getAdChartNames(ArrayList<String> chartName,ArrayList<String> humanNames, LatLon location) {
+	public ChartInfo getChartInfo(String icao)
+	{
+		return airspace.getChart(icao);		
+	}
+	public void getAdChartNames(ArrayList<String> icaos,ArrayList<String> humanNames, LatLon location) {
 		
 		ArrayList<Pair> tmp=new ArrayList<Pair>();
 		ArrayList<Pair> closest=new ArrayList<Pair>();
@@ -158,13 +185,17 @@ public class AirspaceLookup {
 		};
 		for(SigPoint p:majorAirports.getall())
 		{
-			if (p.icao!=null && !p.icao.equals(""))
+			if (p.extra!=null && p.extra.icao!=null && !p.extra.icao.equals(""))
 			{
-				ChartInfo ci=airspace.getChart(p.icao);
-				if (ci==null) continue;
+				ChartInfo ci=airspace.getChart(p.extra.icao);
+				if (ci==null &&
+					(p.extra.metar==null || p.extra.metar.equals("")) &&
+					(p.extra.taf==null || p.extra.taf.equals("")) &&
+					(p.extra.notams==null || p.extra.notams.length==0)
+						) continue;
 				Pair pair=new Pair();
-				pair.human=ci.humanreadable;
-				pair.chart=ci.chartname;
+				pair.human=p.name;
+				pair.icao=p.extra.icao;
 				if (location!=null)
 				{
 					pair.dist=(float) Project.exacter_distance(location, 
@@ -179,34 +210,31 @@ public class AirspaceLookup {
 				
 			}
 		}
+		final Collator myCollator = Collator.getInstance();
 		Collections.sort(tmp, new Comparator<Pair>() {
 			@Override
 			public int compare(Pair object1, Pair object2) {
-				return object1.human.compareTo(object2.human);
+				return myCollator.compare(object1.human,object2.human);
 			}
 		});
 		if (location!=null && closest.size()>0)
 		{
 			for(Pair pair:closest)
 			{
-				chartName.add(pair.chart);
+				icaos.add(pair.icao);
 				humanNames.add(pair.human);
 			}
-			chartName.add(null);
+			icaos.add(null);
 			humanNames.add("----");
 		}
 		for(Pair pair:tmp)
 		{
-			chartName.add(pair.chart);
+			icaos.add(pair.icao);
 			humanNames.add(pair.human);
 		}
 
 	}
 
-	public Chart getChartObj(String chartname) {
-		
-		return null;
-	}
 	
 	
 }

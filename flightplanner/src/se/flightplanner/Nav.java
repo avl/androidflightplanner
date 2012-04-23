@@ -32,8 +32,12 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.SystemClock;
+import android.text.Html;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -41,6 +45,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class Nav extends Activity implements LocationListener,BackgroundMapDownloadOwner,MovingMapOwner {
     /** Called when the activity is first created. */
@@ -64,6 +69,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	final static int MENU_SETTINGS=5;
 	final static int MENU_VIEW_RECORDINGS=6;
 	final static int MENU_VIEW_CHARTS=7;
+	final static int MENU_HELP=8;
 	private LocationManager locman;
 	BackgroundMapDownloader terraindownloader;
 	private FlightPathLogger fplog;
@@ -84,6 +90,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    data.tripdata=tripdata;
 	    data.airspace=airspace;
 	    data.lookup=lookup;
+	    GlobalLookup.lookup=lookup;
 	    data.state=tripstate;
 	    //data.estore=estore;
 	    //data.tstore=tstore;
@@ -128,12 +135,13 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
          return false;
     }
 	public boolean onCreateOptionsMenu(Menu menu) {
-	    menu.add(0, MENU_LOGIN, 0, "Load Trip");
-	    menu.add(0, MENU_DOWNLOAD_TERRAIN, 0, "Download Map");
-	    menu.add(0, MENU_SETTINGS, 0, "Settings");
-	    menu.add(0, MENU_VIEW_RECORDINGS, 0, "Recorded Trips");
-	    menu.add(0, MENU_VIEW_CHARTS, 0, "Charts");
+	    menu.add(0, MENU_LOGIN, 0, "Select Trip");
+	    menu.add(0, MENU_DOWNLOAD_TERRAIN, 0, "Sync");
+	    menu.add(0, MENU_VIEW_CHARTS, 0, "Airports");
 	    menu.add(0, MENU_FINISH, 0, "Exit");
+	    menu.add(0, MENU_SETTINGS, 0, "Settings");
+	    menu.add(0, MENU_HELP, 0, "Help");
+	    menu.add(0, MENU_VIEW_RECORDINGS, 0, "Recorded Trips");
 	    return true;
 	}
 	@Override
@@ -175,12 +183,6 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 				loadTerrain();
 				return;
 			}
-			else if (then!=null && then.equals("loadtrip"))
-			{
-		    	//final CharSequence[] trips= {"Red", "Green", "Blue"};
-		    	loadTrip();
-		    	return;
-			}
 			else if (then!=null && then.equals("viewrec"))
 			{
 				viewRecordings();
@@ -190,76 +192,81 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	}
 
 
-	private AsyncTask<Void, Void, String[]> loadtrips;
 	private Location last_location;
 	
-	private void loadTrip() {
-		final String user=getPreferences(MODE_PRIVATE).getString("user","user");
-		final String password=getPreferences(MODE_PRIVATE).getString("password","password");
-		final Nav nav=this;
-		if (loadtrips!=null || load_trip_task!=null)
-		{
-			
-			RookieHelper.showmsg(this,"Trip list is loading! Have patience!");
-			return;
-		}
-		loadtrips=new AsyncTask<Void, Void, String[]>()
-		{
-			@Override
-			protected String[] doInBackground(
-					Void... params) {
-				try {
-					String[] ttrips = TripData.get_trips(
-							user,password);
-					return ttrips;
-				} catch (Throwable e) {				
-					return null;		    	
-				}								
-			}
-			@Override
-			protected void onPostExecute(String[] result) {
-				super.onPostExecute(result);
-				if (result==null)
-				{
-					RookieHelper.showmsg(nav, "Load failed. Check internet connection.");
-					return;
-				}
-				loadtrips=null;
-				selectTrip(user, password, result);
-			}
-			@Override
-			protected void onCancelled() {
-				super.onCancelled();
-				loadtrips=null;
-			}
-		};
-		loadtrips.execute((Void)null);
-		
-		
+	private boolean isNetworkAvailable() {
+	    ConnectivityManager connectivityManager 
+	          = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+	    NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+	    return activeNetworkInfo != null;
 	}
-	private void selectTrip(final String user, final String password,
-			String[] ttrips) {
-		if (ttrips!=null)
+	private boolean do_load_trips=false;
+	
+	private void loadTrip() {		
+		if (true)
 		{
-			final String[] trips=ttrips;
-				
-			if (trips.length==0)
-			{	    		
-				RookieHelper.showmsg(this,"You have no trips! Go to www.flightplanner.se and create some!");
+			if (isNetworkAvailable() && (SystemClock.elapsedRealtime()-last_load_terrain>60*15*1000 || last_load_terrain==0))
+			{
+				AlertDialog.Builder builder = new AlertDialog.Builder(this);
+				builder.setMessage(Html.fromHtml("It has been some time since you ran sync. Sync data before displaying trip list? If you choose not to, you won't see any changes to trips since last sync.",null,null))
+				.setCancelable(true)
+				.setPositiveButton("Sync first", new DialogInterface.OnClickListener() {
+				    public void onClick(DialogInterface dialog, int id) {
+				         dialog.dismiss();
+						do_load_trips=true;
+						loadTerrain();			
+				    }
+				})
+				.setNegativeButton("Select trip", new DialogInterface.OnClickListener() {
+				    public void onClick(DialogInterface dialog, int id) {
+			         dialog.dismiss();
+						selectTrip();				
+				    }
+				});
+				AlertDialog diag=builder.create();
+				diag.show();
 			}
 			else
 			{
-		        final Nav nav=this;		        
-		    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		    	builder.setTitle("Choose Trip");
-		    	builder.setItems(trips, new DialogInterface.OnClickListener() {
-		    	    public void onClick(DialogInterface dialog, int item) {	    	        
-				    	nav.loadSelectedTrip(user, password, trips[item]);
-		    	    }
-		    	});
-		    	AlertDialog diag=builder.create();
-		    	diag.show();
+				long ago=SystemClock.elapsedRealtime()-last_load_terrain;
+				Toast toast = Toast.makeText(this, String.format("Last sync: %d minutes ago",(int)(ago/60000)), Toast.LENGTH_SHORT);
+				toast.show();
+				do_load_trips=false;
+				selectTrip();				
 			}
+		}
+		/*else
+		{
+			do_load_trips=true;
+			loadTerrain();			
+		}*/		
+	}
+	private void selectTrip() {
+		do_load_trips=false;
+		if (airspace==null)
+		{
+			RookieHelper.showmsg(this, "You have no airspace or trip data. Select Menu->Sync to download the latest data!");
+			return;			
+		}
+							
+		final String[] trips=airspace.getTripList();
+			
+		if (trips.length==0)
+		{	    		
+			RookieHelper.showmsg(this,"You have no trips! Go to www.flightplanner.se and create some!");
+		}
+		else
+		{
+	        final Nav nav=this;		        
+	    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
+	    	builder.setTitle("Choose Trip");
+	    	builder.setItems(trips, new DialogInterface.OnClickListener() {
+	    	    public void onClick(DialogInterface dialog, int item) {	    	        
+			    	nav.loadSelectedTrip(trips[item]);
+	    	    }
+	    	});
+	    	AlertDialog diag=builder.create();
+	    	diag.show();
 		}
 	}
 	@Override 
@@ -267,7 +274,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	{
 		super.onResume();
 		if (locman!=null)
-			locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,5, this);
+			locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000,5, this);
 	}
 	public boolean onOptionsItemSelected(MenuItem item) {
 	    switch (item.getItemId()) {
@@ -321,27 +328,30 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    }
     case MENU_DOWNLOAD_TERRAIN:
     	try {
-    		if (terraindownloader!=null)
-    		{
-    			RookieHelper.showmsg(this,"Already in progress!");
-    		}
-    		else
-    		{
-    			if (!haveUserAndPass())
-    			{
-			    	Intent intent = getSettingsIntent();
-	    	    	intent.putExtra("se.flightplanner.thenopen", "loadterrain");
-	    	    	startActivityForResult(intent,SETUP_INFO);
-    			}
-    			else	    			
-    				loadTerrain();
-    		}    				        
+    		do_load_terrain();    				        
 		} catch (Exception e) {
 			RookieHelper.showmsg(this,e.toString());
 		}
     	return true;
     }
 	    return false;
+	}
+	private void do_load_terrain() {
+		if (terraindownloader!=null)
+		{
+			RookieHelper.showmsg(this,"Already in progress!");
+		}
+		else
+		{
+			if (!haveUserAndPass())
+			{
+		    	Intent intent = getSettingsIntent();
+		    	intent.putExtra("se.flightplanner.thenopen", "loadterrain");
+		    	startActivityForResult(intent,SETUP_INFO);
+			}
+			else	    			
+				loadTerrain();
+		}
 	}
 	private void viewRecordings() {
     	try
@@ -360,46 +370,41 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 
 	private void viewAdChart()
 	{
-		final ArrayList<String> chartnames=new ArrayList<String>();
+		final ArrayList<String> icaos=new ArrayList<String>();
 		final ArrayList<String> humanReadableNames=new ArrayList<String>();
 		if (airspace!=null)
 		{
 			LatLon latlon=null;
 			if (last_location!=null)
 				latlon=new LatLon(last_location.getLatitude(),last_location.getLongitude());
-			lookup.getAdChartNames(chartnames,humanReadableNames,latlon);
+			lookup.getAdChartNames(icaos,humanReadableNames,latlon);
 		}
 		
-		if (chartnames.size()==0)
+		if (icaos.size()==0)
 		{	    		
-			RookieHelper.showmsg(this,"No aerodrome charts downloaded. Go to Settings, select High Detail maps, then go back and Download Map again.");
+			RookieHelper.showmsg(this,"No aerodromes found. Run 'Sync' again.");
 		}
 		else
 		{
 	        final Nav nav=this;		        
 	    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
-	    	builder.setTitle("Choose Aerodrome");
+	    	builder.setTitle("Choose Airport");
 	    	builder.setItems(humanReadableNames.toArray(new String[]{}), new DialogInterface.OnClickListener() {
 	    	    public void onClick(DialogInterface dialog, int item) {
-	    	    	if (chartnames.get(item)==null)
+	    	    	if (icaos.get(item)==null)
 	    	    	{ //clicked on the divider between close airports and alphabetically sorted airports.
 	    	    		return;
 	    	    	}
-			    	nav.loadSelectedAd(chartnames.get(item));
+			    	nav.loadSelectedAd(icaos.get(item));
 	    	    }
 	    	});
 	    	AlertDialog diag=builder.create();
 	    	diag.show();
 		}
 	}
-	protected void loadSelectedAd(String chartname) {
-		Intent intent = new Intent(this, AdChartActivity.class);
-		intent.putExtra("se.flightplanner.user", getPreferences(MODE_PRIVATE).getString("user","")); 
-		intent.putExtra("se.flightplanner.password", getPreferences(MODE_PRIVATE).getString("password",""));
-    	Log.i("fplan.chart","Before calling put Serializable");
-    	
-    	
-		intent.putExtra("se.flightplanner.chartname", chartname);
+	protected void loadSelectedAd(String icao) {
+		Intent intent = new Intent(this, ViewAdInfo.class);		
+		intent.putExtra("se.flightplanner.icao", icao);
     	Log.i("fplan.chart","After calling put Serializable");	
 		map.releaseMemory();
 		startActivity(intent);
@@ -474,6 +479,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
         	tripdata=data.tripdata;
         	airspace=data.airspace;
         	lookup=data.lookup;
+    	    GlobalLookup.lookup=lookup;        	
         	//estore=data.estore;
         	//tstore=data.tstore;
         }
@@ -494,12 +500,13 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    		airspace=Airspace.deserialize_from_file(this,"airspace.bin");
 	    		Log.i("fplan.nav","Deserialized data okay, now generating lookup");
 		        lookup=new AirspaceLookup(airspace);
+			    GlobalLookup.lookup=lookup;		        
 	    	}
 	    	catch (Throwable e)
 	    	{
 	    		e.printStackTrace();
 	    		Log.i("fplan.nav","Failed loading airspace data:"+e);
-	    		RookieHelper.showmsg(this, "You have no airspace data. Select Menu->Download Map!");
+	    		RookieHelper.showmsg(this, "You have no airspace data. Select Menu->Sync!");
 	    		//RookieHelper.showmsg(this, e.toString());
 	    	}
 
@@ -513,7 +520,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
         		getPreferences(MODE_PRIVATE).getBoolean("northup", false));
         map.update_tripdata(tripdata,tripstate);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
-		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000,0, this);
+		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000,5, this);
         
 		map.thisSetContentView(this);
 		map.gps_update(null);
@@ -525,13 +532,37 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     	map.invalidate();
     }
     
-    
+	private double offlat=0;
+	private double offlon=0;
+	private BearingSpeedCalc bearingspeed=new BearingSpeedCalc();
 	@Override
-	public void onLocationChanged(Location location) {
+	public void onLocationChanged(Location loc) {
+		Log.i("fplan","Location changed");
+		if (loc!=null && DataDownloader.chartGpsDebugMode())
+		{
+			double lat=loc.getLatitude();
+			double lon=loc.getLongitude();
+		
+			//Forcefully move us to middle of Arlanda airport,
+			//So that we can easily test moving around there without
+			//actually being there :-).
+			if (offlat==0)
+			{
+				offlat=lat;
+				offlon=lon;
+			}
+			lat=lat-offlat+59.652011;
+			lon=lon-offlon+17.918701;
+			loc.removeBearing();
+			loc.setLatitude(lat);
+			loc.setLongitude(lon);
+		}
+		
+		Location location=bearingspeed.calcBearingSpeed(loc);		
 		map.gps_update(location);
 		last_location=location;
 		//RookieHelper.showmsg(this, ""+location.getLatitude()+","+location.getLongitude());
-		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,5, this);
+		//locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,5, this);
 	}
 	public void onProviderDisabled(String provider) {
 		map.gps_disabled();
@@ -558,6 +589,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	{
 		try {
 			fplog.saveCurrent(lookup);
+		    GlobalLookup.lookup=null;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -570,6 +602,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	}
 
 
+	private long last_load_terrain=0;
 	@Override
 	public void onFinish(Airspace airspace,AirspaceLookup lookup,String error) {
 		terraindownloader=null;
@@ -577,6 +610,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		{
 			this.airspace=airspace;
 			this.lookup=lookup;
+		    GlobalLookup.lookup=lookup;			
 		}
 		Log.i("fplan","Finish:"+error);
 		if (error!=null)
@@ -591,6 +625,11 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			map.update_airspace(airspace,lookup,getPreferences(MODE_PRIVATE).getInt("mapdetail", 0),
         		getPreferences(MODE_PRIVATE).getBoolean("northup", false));
 		map.enableTerrainMap(true);
+		last_load_terrain=SystemClock.elapsedRealtime();
+		if (do_load_trips)
+		{
+			selectTrip();
+		}
 	}
 	@Override
 	public void cancelMapDownload() {
@@ -601,55 +640,55 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		}
 	}
 	AsyncTask<Void,Void,TripData> load_trip_task;
-	private void loadSelectedTrip(final String user, final String password,
-			final String trip) {
+	private void loadSelectedTrip(final String trip) {
 		final Nav nav=this;
-		if (load_trip_task!=null)
-			return;
-		load_trip_task=new AsyncTask<Void,Void,TripData>()
-		{
-			protected TripData doInBackground(Void... params) {
-				try {			
-					return TripData.get_trip(user,password,trip);			
-				} catch (Throwable e) {
-					e.printStackTrace();
-					return null;
+		if (airspace!=null)
+			try
+			{
+				TripData td=airspace.getTrip(trip);
+				if (td==null) throw new RuntimeException("No trip with that name.");
+				if (td.waypoints.size()==0)
+				{
+					RookieHelper.showmsg(this, "This trip has no waypoints. Go to www.swflightplanner.se and create some!");
 				}
+				nav.tripdata=td;
+				nav.tripdata.serialize_to_file(nav,"tripdata.bin");
+				tripstate=new TripState(nav.tripdata);
+				map.update_tripdata(nav.tripdata,tripstate);
+				tripstate.reupdate();
+			} 
+			catch(Throwable e) 
+			{
+				RookieHelper.showmsg(nav, e.toString());
 			}
-			protected void onCancelled() {
-				load_trip_task=null;
-			};
-			@Override
-			protected void onPostExecute(TripData result) {
-				// TODO Auto-generated method stub
-				super.onPostExecute(result);
-				load_trip_task=null;
-				if (result==null)
-				{
-					RookieHelper.showmsg(nav,"Failed to load trip. Check internet connection.");
-					return;
-				}
-				try
-				{
-					nav.tripdata=result;
-					nav.tripdata.serialize_to_file(nav,"tripdata.bin");
-					tripstate=new TripState(nav.tripdata);
-					map.update_tripdata(nav.tripdata,tripstate);				
-				} 
-				catch(Throwable e) 
-				{
-					RookieHelper.showmsg(nav, e.toString());
-				}					
-			}
-			
-		};
-		load_trip_task.execute((Void)null);
 	}
+
 	
-	private void showADInfo(final SigPoint sp) {
+	private void showADInfo(final Place place) {
+		
+		if (place.getAerodrome()!=null)
+		{
+			map.releaseMemory();
+			SigPoint sp=place.getAerodrome();
+			if (sp.extra!=null && sp.extra.icao!=null && !sp.extra.icao.equals(""))
+				loadSelectedAd(sp.extra.icao);			
+		}
+		else if (place.getDetailedPlace()!=null)
+		{
+			map.releaseMemory();
+			Intent intent = new Intent(this, DetailedPlaceActivity.class);
+			GlobalDetailedPlace.detailedplace=place.getDetailedPlace();
+			Log.i("fplan","tripstate = "+GlobalDetailedPlace.detailedplace);
+			startActivity(intent);
+		}
+		
+		/*
+	}
     	StringBuilder sb=new StringBuilder();
 		
 		sb.append("<h1>"+sp.name+"</h1>");
+		if (sp.extra!=null)
+		{
     	if (sp.icao!=null)
     		sb.append("<p>("+sp.icao+")</p>");
     	if (sp.metar!=null)
@@ -670,23 +709,25 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 
     	}
     	RookieHelper.showmsg(Nav.this, sb.toString());
+    	*/
 	}
 	
+	
 	@Override
-	public void doShowExtended(String[] icaos) {
+	public void doShowExtended(Place[] places) {
 		ArrayList<String> airports=new ArrayList<String>();
-		final ArrayList<SigPoint> sigs=new ArrayList<SigPoint>();
-		for(String icao:icaos)
+		final ArrayList<Place> sigs=new ArrayList<Place>();
+		for(Place place:places)
 		{
-			SigPoint airport=lookup.getByIcao(icao);
-			if (airport==null) continue;
-			sigs.add(airport);
-			airports.add(airport.name);
+			//SigPoint airport=lookup.getByIcao(icao);
+			//if (airport==null) continue;
+			sigs.add(place);
+			airports.add(place.getHumanName());
 		}
 		if (airports.size()>0)
 		{
 	        if (airports.size()==1)
-	        {
+	        {	        	
 	        	showADInfo(sigs.get(0));
 	        }
 	        else
@@ -694,10 +735,8 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		    	builder.setTitle("Choose Airport");
 		    	builder.setItems(airports.toArray(new String[]{}), new DialogInterface.OnClickListener() {
-		    	    public void onClick(DialogInterface dialog, int item) {
-		    	    	final SigPoint sp=sigs.get(item);
-		    	    	
-		    	    	showADInfo(sp);
+		    	    public void onClick(DialogInterface dialog, int item) {		    	    	
+		    	    	showADInfo(sigs.get(item));
 		    	    }	
 		    	});
 		    	AlertDialog diag=builder.create();

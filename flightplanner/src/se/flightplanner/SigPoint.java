@@ -15,6 +15,8 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 {
 	private static final long serialVersionUID = 1939452363561911490L;
 	
+	/*
+	
 	public static class Chart implements Serializable
 	{
 		private static final long serialVersionUID = 6324069623768703289L;
@@ -25,7 +27,7 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 		public String url;
 		public double[][] A; //2x2 matrix with airport chart projection scale/rotation latlon -> image pixels
 		public double[] T; //2 vector with airport chart projection translation
-	}
+	}*/
 	
 	public Merc pos;
 	public String name;
@@ -33,10 +35,25 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 	public double alt;
 
 	public LatLon latlon;
-	public String[] notams;
-	public String metar;
-	public String icao;
-	public String taf;
+	
+	static public class End
+	{
+		public String name;
+		public LatLon pos;
+	}
+	static public class Runway
+	{
+		public End[] ends;
+	}
+	static public class ExtraData
+	{
+		public String[] notams;
+		public String metar;
+		public String icao;
+		public String taf;
+		public Runway[] runways;
+	}
+	public ExtraData extra;
 	
 	/*!
 	 * Some points have charts associated with them.
@@ -62,35 +79,61 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 		else
 			os.writeUTF("");
 		
-		os.writeInt(notams.length); //0 notams
-		for(int i=0;i<notams.length;++i)
-			os.writeUTF(notams[i]);
-		if (icao!=null)
+		if (extra==null)
 		{
-			os.writeByte(1);
-			os.writeUTF(icao);
-		}
-		else
-		{
-			os.writeByte(0);
-		}
-		if (taf!=null)
-		{
-			os.writeByte(1);
-			os.writeUTF(taf);
-		}
-		else
-		{
+			 //don't forget to update below (extra!=null case)
+			os.writeInt(0); //0 notams
+			os.writeByte(0); //no icao
 			os.writeByte(0); //0 taf
-		}
-		if (metar!=null)
-		{		
-			os.writeByte(1); 
-			os.writeUTF(metar);
+			os.writeByte(0); //0 metar
+			os.writeByte(0); //0 runways
 		}
 		else
 		{
-			os.writeByte(0);
+			//Don't forget to update above
+			os.writeInt(extra.notams.length); //0 notams
+			for(int i=0;i<extra.notams.length;++i)
+				os.writeUTF(extra.notams[i]);
+			if (extra.icao!=null)
+			{
+				os.writeByte(1);
+				os.writeUTF(extra.icao);
+			}
+			else
+			{
+				os.writeByte(0);
+			}
+			if (extra.taf!=null)
+			{
+				os.writeByte(1);
+				os.writeUTF(extra.taf);
+			}
+			else
+			{
+				os.writeByte(0); //0 taf
+			}
+			if (extra.metar!=null)
+			{		
+				os.writeByte(1); 
+				os.writeUTF(extra.metar);
+			}
+			else
+			{
+				os.writeByte(0);
+			}
+			if (extra.runways!=null)
+			{
+				os.writeByte(extra.runways.length);
+				for(Runway runway:extra.runways)
+				{
+					for(int i=0;i<2;++i)
+					{
+						End end=runway.ends[i];
+						os.writeUTF(end.name);
+						end.pos.serialize(os);
+					}
+				}
+			}
 		}
 
 		
@@ -137,23 +180,52 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 			}
 			
 		}
-		p.metar=null;
-		p.taf=null;
-		p.icao=null;
-		p.notams=new String[0];
+		String metar=null;
+		String taf=null;
+		String icao=null;
+		String[] notams=null;
+		Runway[] runways=null;
 		if (version>=5)
 		{
 			int num_notams=is.readInt();
-			p.notams=new String[num_notams];
+			notams=new String[num_notams];
 			for(int i=0;i<num_notams;++i)
-				p.notams[i]=is.readUTF();
+				notams[i]=is.readUTF();
 			
 			if (is.readByte()!=0)
-				p.icao=is.readUTF();//icao
+				icao=is.readUTF();//icao
 			if (is.readByte()!=0)
-				p.taf=is.readUTF();//TAF
+				taf=is.readUTF();//TAF
 			if (is.readByte()!=0)
-				p.metar=is.readUTF();//Metar						
+				metar=is.readUTF();//Metar
+			
+			if (version>=7)
+			{
+				int nrunways=is.readByte();
+				runways=new Runway[nrunways];
+				for(int j=0;j<nrunways;++j)
+				{
+					Runway runway=new Runway();
+					End[] ends=new End[]{new End(),new End()};
+					for(int i=0;i<2;++i)
+					{
+						ends[i].name=is.readUTF();
+						ends[i].pos=LatLon.deserialize(is);
+					}
+					runway.ends=ends;
+					runways[j]=runway;
+				}
+			}
+			
+		}
+		if (metar!=null || taf!=null || icao!=null || (notams!=null && notams.length>0) || runways!=null)
+		{				
+			p.extra=new ExtraData();
+			p.extra.metar=metar;
+			p.extra.taf=taf;
+			p.extra.icao=icao;
+			p.extra.notams=notams;
+			p.extra.runways=runways;
 		}
 		
 		p.alt=is.readFloat();		
@@ -167,27 +239,20 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 				throw new RuntimeException("corrupt stream - havechart not 0 or 1.");
 			if (havechart==1)
 			{
-				Chart c=new Chart();
-				c.width=is.readInt();
-				c.height=is.readInt();
-				c.name=is.readUTF();
-				c.checksum=is.readUTF();
-				c.url=is.readUTF();
+				//Chart c=new Chart();
+				is.readInt();
+				is.readInt();
+				is.readUTF();
+				is.readUTF();
+				is.readUTF();
 				double [] matrix=new double[6];
 				for(int i=0;i<6;++i)
 				{
 					if (version>=4)
-						matrix[i]=is.readDouble();
+						is.readDouble();
 					else
-						matrix[i]=is.readFloat();
-				}
-				c.A=new double[][]{new double[2],new double[2]};
-				c.A[0][0]=matrix[0];
-				c.A[1][0]=matrix[1];
-				c.A[0][1]=matrix[2];
-				c.A[1][1]=matrix[3];
-				c.T=new double[]{matrix[4],matrix[5]};	
-				//p.chart=c;
+						is.readFloat();
+				}				
 			}
 			
 		}

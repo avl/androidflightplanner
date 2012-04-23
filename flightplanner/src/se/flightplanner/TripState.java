@@ -1,5 +1,6 @@
 package se.flightplanner;
 
+import java.security.acl.LastOwnerException;
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -15,11 +16,16 @@ public class TripState implements InformationPanel {
 
 	static private class WaypointInfo
 	{
-		public String title;
+		public String point_title;
+		public String leg_title;
 		public String[] details;
 		public float distance;
-		public long when;
+		public boolean skipped;
+		public Date passed;
+		public Date eta2;
+		
 	}
+	Location last_location;
 	private String[] extradummy;
 	private TripData tripdata;
 	/**
@@ -66,8 +72,12 @@ public class TripState implements InformationPanel {
 	 * It never goes to an already visited target, since that could
 	 * potentially send us flying in a loop until we run out of gas ... :-)
 	 */
-	public void update_target(Location mylocation)
-	{		
+	@Override
+	public void updatemypos(Location mylocation) {
+		if (mylocation==null)
+			return;
+		last_location=mylocation;		
+		///update_target(l);		
 		actual_gs=0.0;
 		time_to_destination=0;
 		//distance_to_destination=0.0;
@@ -87,7 +97,8 @@ public class TripState implements InformationPanel {
 				for(int i=0;i<tripdata.waypoints.size();++i)
 				{
 					WaypointInfo info=new WaypointInfo();
-					info.title=getTitleImpl(i);
+					info.point_title=getPointTitleImpl(i);
+					info.leg_title=getLegTitleImpl(i);
 					info.details=getDetailsImpl(i);
 					waypointEvents.add(info);
 					
@@ -114,7 +125,7 @@ public class TripState implements InformationPanel {
 				tpoints+=rightheading;
 				if (i+1==target_wp)
 				{
-					Log.i("fplan","rightheading bonus:"+rightheading+" distance penalty: "+distance/nm);
+					//Log.i("fplan","rightheading bonus:"+rightheading+" distance penalty: "+distance/nm);
 					tpoints+=0.125; //get an extra point for the current waypoint
 				}
 				if (i+1==target_wp+1)
@@ -141,11 +152,15 @@ public class TripState implements InformationPanel {
 					if (Project.latlon2mercvec(old_wp.latlon,13).minus(mypos).length()<
 							corridor_width*onenm)
 					{
-						we.when=new Date().getTime();					
+						we.eta2=null;
+						we.passed=new Date();
+						we.skipped=false;
 					}
 					else
 					{
-						we.when=0;
+						we.skipped=true;
+						we.eta2=null;
+						we.passed=null;
 					}
 				}
 				if (current_waypoint_idx<=target_wp)
@@ -205,7 +220,9 @@ public class TripState implements InformationPanel {
 					continue;
 				WaypointInfo we=waypointEvents.get(i);
 				we.distance=(float)distance;
-				we.when=timesec;
+				long now=new Date().getTime();
+				we.eta2=new Date(now+(long)timesec*1000);
+				we.skipped=false;
 			}
 			time_to_destination=(int)(accum_time_to_destination+0.5);
 			//distance_to_destination=accum_distance;
@@ -264,38 +281,85 @@ public class TripState implements InformationPanel {
 			current_waypoint_idx=waypointEvents.size()-1;
 	}
 	
-	public String getTitleImpl(int i) {
+	public String getPointTitleImpl(int i) {
 		if (tripdata==null || tripdata.waypoints.size()==0) 
 			return "No Waypoints!";
 		if (i>=tripdata.waypoints.size())
 			return "Unknown";
 		Waypoint wp=tripdata.waypoints.get(i);
-		String ttitle="Unknown";
 		if (i==0)
+			return wp.name;
+		Waypoint next=null;
+		if (i<tripdata.waypoints.size()-1)
+			next=tripdata.waypoints.get(i+1);		
+		if (next==null)
 		{
-			ttitle="Depart from "+wp.name;
-		}
-		else
-		if (i==tripdata.waypoints.size()-1)
-		{
-			ttitle="Arrive "+wp.name;
+			return wp.name;
 		}
 		else
 		if (wp.lastsub!=0)
 		{
-			ttitle=wp.name;
+			return wp.name;
 		}
 		else
 		{
-			ttitle="Enroute "+wp.name;					
-		}		
-		return ttitle;
+			if (wp.what.equals("descent"))
+				return "BOD "+wp.name;
+			else if (wp.what.equals("climb"))
+				return "TOC "+wp.name;
+			else
+			{
+				if (next.what.equals("descent"))
+					return "TOD "+wp.name;
+				else if (next.what.equals("climb"))
+					return "BOC "+wp.name;
+				else
+					return "Enroute "+wp.name;
+			}			
+		}
 	}
+	public String getLegTitleImpl(int i) {
+		if (tripdata==null || tripdata.waypoints.size()==0) 
+			return "";
+		if (i>=tripdata.waypoints.size())
+			return "";
+		Waypoint wp=tripdata.waypoints.get(i);
+		if (i<=0)
+			return "Start of journey";
+		Waypoint prev=tripdata.waypoints.get(i-1);
+		Waypoint next=null;
+		if (i<tripdata.waypoints.size()-1)
+			next=tripdata.waypoints.get(i+1);
+		boolean prevlanding=prev==null || prev.land_at_end;
+		boolean nowlanding=wp.land_at_end || i==tripdata.waypoints.size()-1;
+		if (wp.what.equals("climb"))
+		{
+			if (prevlanding) return "Takeoff & Climb to "+wp.altitude;
+			if (wp.lastsub!=0)
+				return "Climb to "+((next!=null) ? next.altitude : "?");
+			return "Climb to "+wp.altitude;
+			
+		}
+		else if (wp.what.equals("descent"))
+		{
+			if (nowlanding) return "Descend for landing";
+			if (wp.lastsub!=0)
+				return "Descend to "+((next!=null) ? next.altitude : "?");
+			return "Descend to "+wp.altitude;			
+		}
+		else
+		{ //cruise
+			return "Cruise at "+wp.altitude;
+		}
+		
+	}	
 	
 	public String[] getDetailsImpl(int i) {		
 		if (tripdata==null || i>=tripdata.waypoints.size())
 			return new String[]{};
-		
+		/*
+		  
+		 
 		Waypoint nextwp=null;
 		Waypoint wp=tripdata.waypoints.get(i);
 		if (i+1<tripdata.waypoints.size()) nextwp=tripdata.waypoints.get(i+1);		
@@ -323,7 +387,8 @@ public class TripState implements InformationPanel {
 					whatdesc=String.format("Level-out at %.0f ft",nextwp.endalt);
 			}
 		}
-		
+		*/
+		String whatdesc=getLegTitleImpl(i);
 		
 		final String[] details;
 		if (whatdesc.equals(""))
@@ -357,22 +422,68 @@ public class TripState implements InformationPanel {
 		return waypointEvents.get(i).distance;
 	}
 	@Override
-	public long getWhen() {
+	public Date getPassed() {
 		int i=current_waypoint_idx;
 		if (tripdata==null || i>=waypointEvents.size())
-			return 0;
-		return waypointEvents.get(i).when;
+			return null;
+		return waypointEvents.get(i).passed;
 	}
 	@Override
-	public String getTitle() {
+	public boolean getEmpty() {
+		return waypointEvents==null || waypointEvents.size()==0;
+	}
+	
+	@Override
+	public boolean getSkipped() {
+		int i=current_waypoint_idx;
+		if (tripdata==null || i>=waypointEvents.size())
+			return true;
+		return waypointEvents.get(i).skipped;
+	}
+
+	protected Date getETA() {
+		if (last_location==null) return null;
+		if (tripdata==null || current_waypoint_idx>=tripdata.waypoints.size())
+			return null;
+		float actual_gs=last_location.getSpeed()*3.6f/1.852f;
+		float d=(float) Project.exacter_distance(
+				new LatLon(last_location), 
+				tripdata.waypoints.get(current_waypoint_idx).latlon);
+		if (actual_gs<1.0)
+			return null;
+		float deltah=d/actual_gs;
+		long now=new Date().getTime();
+		return new Date((long)(now+deltah*1000l*3600l));
+	}
+	
+	@Override
+	public Date getETA2() {
+		int i=current_waypoint_idx;
+		if (tripdata==null || i>=waypointEvents.size())
+			return null;
+		return waypointEvents.get(i).eta2;
+	}
+	@Override
+	public String getPointTitle() {
 		int i=current_waypoint_idx;
 		if (tripdata==null || waypointEvents.size()==0)
 			return "No Waypoints!";
 		if (i>=waypointEvents.size())
 			return "Unknown";
 		if (i==target_wp)
-			return "*"+waypointEvents.get(i).title;
-		return waypointEvents.get(i).title;
+			return "*"+waypointEvents.get(i).point_title;
+		return waypointEvents.get(i).point_title;
+	}
+	@Override
+	public String getLegTitle() {
+		int i=current_waypoint_idx;
+		if (tripdata==null || waypointEvents.size()==0)
+			return "No Waypoints!";
+		if (i>=waypointEvents.size())
+			return "Unknown";
+		if (i==target_wp)
+			return "*"+waypointEvents.get(i).leg_title;
+		return waypointEvents.get(i).leg_title;
 	}
 	@Override
 	public String[] getDetails() {
@@ -382,19 +493,78 @@ public class TripState implements InformationPanel {
 		return waypointEvents.get(i).details;
 	}
 	@Override
-	public void updatemypos(Vector latlon2mercvec, double d) {
-		//Not needed, since TripState is updated through other means
-		//(it has to be, since it needs to be updated regardless of
-		//wether it is being shown as an InformationPanel or not)
-		
-	}
-	@Override
 	public boolean getHasExtraInfo() {
 		return false;
 	}
+	private Place place=new Place()
+	{
+		@Override
+		public SigPoint getAerodrome() {
+			return null;
+		}
+		@Override
+		public String getHumanName() {
+			int i=current_waypoint_idx;
+			if (tripdata==null || i>=tripdata.waypoints.size())
+				return "?";;
+			Waypoint wp=tripdata.waypoints.get(i);
+			return wp.name;
+		}
+		@Override
+		public DetailedPlace getDetailedPlace() {
+			return new DetailedPlace()
+			{
+				@Override
+				public double getDistance() {
+					return TripState.this.getDistance();
+				}
+				@Override
+				public Date getETA2() {					
+					return TripState.this.getETA2();
+				}
+				@Override
+				public Date getETA() {
+					return TripState.this.getETA();
+				}
+				@Override
+				public void update_pos(Location location) {
+					TripState.this.updatemypos(location);					
+				}
+				@Override
+				public String getName() {
+					return TripState.this.getPointTitle();
+				}
+				@Override
+				public boolean hasPlannedTime() {
+					return true;
+				}
+				@Override
+				public Date getPlanned() {
+					int i=current_waypoint_idx;
+					if (tripdata==null || i>=tripdata.waypoints.size())
+						return null;
+					Waypoint wp=tripdata.waypoints.get(i);
+					return new Date(wp.arrive_dt*1000);
+				}
+				@Override
+				public LatLon getPos() {
+					int i=current_waypoint_idx;
+					if (tripdata==null || i>=tripdata.waypoints.size())
+						return null;
+					Waypoint wp=tripdata.waypoints.get(i);
+					return wp.latlon;
+				}				
+			};
+		}
+	};
+	private Place[] places=new Place[]{place};
 	@Override
-	public String[] getHasExtendedInfo() {	
-		return new String[]{};
+	public Place[] getHasExtendedInfo() {	
+		return places;
+	}
+	public void reupdate() {
+		if (last_location!=null)
+			updatemypos(last_location);		
 	}
 	
 		

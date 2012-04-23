@@ -1,10 +1,15 @@
 package se.flightplanner;
 
+import java.util.Date;
+
+import android.location.Location;
+
 import se.flightplanner.vector.Vector;
 
 public interface InformationPanel {
 
-	public abstract String getTitle();
+	public abstract String getLegTitle();
+	public abstract String getPointTitle();
 
 	public abstract String[] getDetails();
 
@@ -14,7 +19,9 @@ public interface InformationPanel {
 
 	public abstract double getDistance();
 
-	public abstract long getWhen();
+	public abstract boolean getSkipped();
+	public abstract Date getPassed();
+	public abstract Date getETA2();
 
 	public abstract boolean hasLeft();
 	public abstract void left();
@@ -22,11 +29,18 @@ public interface InformationPanel {
 	public abstract boolean hasRight();
 	public abstract void right();
 
-	public abstract void updatemypos(Vector latlon2mercvec, double d);
+	/**
+	 */
+	public abstract void updatemypos(Location loc);
 
 	public abstract boolean getHasExtraInfo();
 
-	public abstract String[] getHasExtendedInfo();
+	public abstract Place[] getHasExtendedInfo();
+	/**
+	 * True if this represents an attempt to view waypoint data
+	 * when there are no waypoints. 
+	 */
+	boolean getEmpty();
 
 
 }

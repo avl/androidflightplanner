@@ -138,7 +138,7 @@ public class Blob {
 		if (data==null)
 			return null;
 		Bitmap bm=BitmapFactory.decodeByteArray(data,0,data.length);		
-		Log.i("fplan","Bitmap:"+bm);
+		//Log.i("fplan","Bitmap:"+bm);
 		return bm;
 	}
     void close() throws IOException

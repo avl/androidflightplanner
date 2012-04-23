@@ -19,6 +19,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.Paint.Style;
 import android.graphics.RectF;
 import android.location.Location;
@@ -26,6 +27,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -44,7 +46,10 @@ public class AdChartView extends View implements UpdatableUI {
 	{
 		IDLE,
 		BEGIN_DRAG,
-		DRAGGING
+		DRAGGING,
+		PINCHING,
+		DEAD,
+		STONEDEAD
 	}
 	private State state=State.IDLE;
 	private float downx;
@@ -65,6 +70,8 @@ public class AdChartView extends View implements UpdatableUI {
 	private Paint pospaint;
 	private Vector userPosition=null;
 	private Float userHdgRad;
+	private float beginPinchDist=1;
+	private SimpleOnGestureListener	gest=new SimpleOnGestureListener();
 	
 	public int get_chart_width(){return chart_width;}
 	public int get_chart_height(){return chart_height;}
@@ -72,42 +79,102 @@ public class AdChartView extends View implements UpdatableUI {
 	@Override
 	public boolean onTouchEvent(MotionEvent ev)
 	{
-		
 		float x=ev.getX();
 		float y=ev.getY();
-		Log.i("fplan.chart","Dragging"+x+" "+y+": "+ev.getAction());
+		Log.i("fplan.chart","Dragging"+x+" "+y+": "+ev.getAction()+"state:"+state);
 		if (ev.getAction()==MotionEvent.ACTION_MOVE || ev.getAction()==MotionEvent.ACTION_DOWN)
 		{
-			if (state==State.IDLE)
+			
+			if (ev.getPointerCount()>1)
 			{
-				state=State.BEGIN_DRAG;
-				downx=x;
-				downy=y;
-				start_scroll_x=scroll_x;
-				start_scroll_y=scroll_y;
-			}
-			else if (state==State.BEGIN_DRAG)
-			{
-				if ((x-downx)*(x-downx)+(y-downy)*(y-downy) > 20*20)
-					state=State.DRAGGING;										
+				
+				if (state!=State.STONEDEAD)
+				{
+					float dx=ev.getX(0)-ev.getX(1);
+					float dy=ev.getY(0)-ev.getY(1);
+					float dist=(float) Math.sqrt(dx*dx+dy*dy);
+					if (state!=State.PINCHING)
+					{
+						state=State.PINCHING;
+						beginPinchDist=dist;
+						if (beginPinchDist<1e-3)
+						{
+							state=State.DEAD;						
+						}
+					}
+					else
+					{
+						float delta=dist/beginPinchDist;
+						int nlevel=level;
+						if (delta<0.85)
+						{
+							nlevel-=1;
+							if (nlevel<2)
+								nlevel=2;
+						}
+						else
+						if (delta>1.15)
+						{
+							nlevel+=1;
+							if (nlevel>=maxzoomgui)
+								nlevel=maxzoomgui;
+						}
+						if (nlevel!=level)
+						{
+							float avgx=0.5f*(ev.getX(0)+ev.getX(1));
+							float avgy=0.5f*(ev.getY(0)+ev.getY(1));
+							zoom(scroll_x+(int)avgx,scroll_y+(int)avgy,nlevel);							
+							state=State.STONEDEAD;
+							invalidate();
+						}
+					}
+				}
+				
 			}
 			else
-			{				
-				scroll_x=(int)(start_scroll_x-(x-downx));
-				scroll_y=(int)(start_scroll_y-(y-downy));
-				clamp_scroll();
-				invalidate();
+			{
+				if (state==State.STONEDEAD)
+					state=State.DEAD;
+				if (state!=State.DEAD)
+				{
+					if (state==State.PINCHING)
+						state=State.DEAD;
+					else if (state==State.IDLE)
+					{
+						state=State.BEGIN_DRAG;
+						downx=x;
+						downy=y;
+						start_scroll_x=scroll_x;
+						start_scroll_y=scroll_y;
+					}
+					else if (state==State.BEGIN_DRAG)
+					{
+						if ((x-downx)*(x-downx)+(y-downy)*(y-downy) > 20*20)
+							state=State.DRAGGING;										
+					}
+					else
+					{				
+						scroll_x=(int)(start_scroll_x-(x-downx));
+						scroll_y=(int)(start_scroll_y-(y-downy));
+						clamp_scroll();
+						invalidate();
+					}
+				}
 			}
 		}
 		if (ev.getAction()==MotionEvent.ACTION_UP)
 		{
+			if (state==State.DEAD || state==State.PINCHING || state==State.STONEDEAD)
+				state=State.IDLE;
 			if (state==State.BEGIN_DRAG)
 			{
-				int nlevel=(level+2)%3;
+				int nlevel=(level+1);
+				if (nlevel>maxzoomgui)
+					nlevel=2;
 				zoom(scroll_x+(int)downx,scroll_y+(int)downy,nlevel);
 				state=State.IDLE;
 				invalidate();
-			}
+			}			
 			if (state==State.DRAGGING)
 			{
 				state=State.IDLE;
@@ -128,12 +195,12 @@ public class AdChartView extends View implements UpdatableUI {
 		if (newlevel<0) newlevel=0;
 		int delta=newlevel-level;
 		if (delta==0) return;
-		if (delta>0)
+		if (delta<0)
 		{
 			scroll_x+=last_width/2;
 			scroll_y+=last_height/2;
-			scroll_x>>=delta;
-			scroll_y>>=delta;
+			scroll_x>>=-delta;
+			scroll_y>>=-delta;
 			scroll_x-=last_width/2;
 			scroll_y-=last_height/2;
 		}
@@ -141,8 +208,8 @@ public class AdChartView extends View implements UpdatableUI {
 		{
 			scroll_x=x;
 			scroll_y=y;
-			scroll_x<<=-delta;
-			scroll_y<<=-delta;
+			scroll_x<<=delta;
+			scroll_y<<=delta;
 			scroll_x-=last_width/2;
 			scroll_y-=last_height/2;
 		}
@@ -151,8 +218,8 @@ public class AdChartView extends View implements UpdatableUI {
 	}
 
 	private void clamp_scroll() {
-		int maxx=(chart_width>>level)-last_width;
-		int maxy=(chart_height>>level)-last_height;
+		int maxx=(chart_width>>(maxzoomgui-level))-last_width;
+		int maxy=(chart_height>>(maxzoomgui-level))-last_height;
 		if (scroll_x>maxx) scroll_x=maxx;
 		if (scroll_y>maxy) scroll_y=maxy;
 		if (scroll_x<0) scroll_x=0;
@@ -164,13 +231,17 @@ public class AdChartView extends View implements UpdatableUI {
 	{
 		return fail_get_width;
 	}
+	int maxzoomdata;
+	int maxzoomgui;
 	public AdChartView(Context context,String chartname) throws IOException {
 		super(context);
 		loader=null;
 		mapcache=new MapCache();
 		level=2;
 		blobs=new ArrayList<Blob>();
-		bitmaps=new GetMapBitmap(mapcache,blobs.size()+1);
+		maxzoomdata=4;
+		maxzoomgui=6;
+		bitmaps=new GetMapBitmap(mapcache,maxzoomdata);
 		File extpath = Environment.getExternalStorageDirectory();
 		curLostSignalRunnable=null;
 		lostSignalTimer=new Handler();
@@ -219,19 +290,21 @@ public class AdChartView extends View implements UpdatableUI {
 			}
 			
 		}
+		chart_width<<=(maxzoomgui-maxzoomdata);
+		chart_height<<=(maxzoomgui-maxzoomdata);
 		ds.close();
 		Log.i("fplan.adchart","loaded matrix:"+A[0][0]+","+A[1][0]+","+A[0][1]+","+A[1][1]);
 		Log.i("fplan.adchart","loaded vector:"+T[0]+", "+T[1]);
 		
 		for(int i=0;i<5;++i)
 		{
-			Integer is=new Integer(i);
+			Integer is=new Integer(5-i-1);
 
 			File chartpath = new File(extpath,
 					"/Android/data/se.flightplanner/files/"+chartname+"-"+is.toString()+".bin");
 			Blob blob=new Blob(chartpath.getAbsolutePath(),256);
 			blobs.add(blob);
-			Log.i("fplan.adchart","Dimensions of level "+i+" "+
+			Log.i("fplan.adchart","Dimensions of level "+is+" "+
 					"x1:"+blob.getX1()+
 					"y1:"+blob.getY1()+
 					"x2:"+blob.getX2()+
@@ -259,9 +332,9 @@ public class AdChartView extends View implements UpdatableUI {
 		
 		///canvas.drawColor(Color.BLACK);
 		
-		for(int x=0;x<chart_width>>level;x+=256)
+		for(int x=0;x<chart_width>>(maxzoomgui-level);x+=256)
 		{
-			for(int y=0;y<chart_height>>level;y+=256)
+			for(int y=0;y<chart_height>>(maxzoomgui-level);y+=256)
 			{
 				int tx=x-scroll_x;
 				int ty=y-scroll_y;
@@ -271,7 +344,10 @@ public class AdChartView extends View implements UpdatableUI {
 					BitmapRes b = bitmaps.getBitmap(pos, level);
 					if (b!=null)
 					{
-						canvas.drawBitmap(b.b, getLeft()+tx,getTop()+ty,null);					
+						RectF trg = new RectF(tx+getLeft(),ty+getTop(),
+								tx+256+getLeft(),ty+256+getTop());
+						Rect src = b.rect;
+						canvas.drawBitmap(b.b, src, trg, null);
 					}
 					else
 					{
@@ -297,8 +373,9 @@ public class AdChartView extends View implements UpdatableUI {
 		
 		if (userPosition!=null)
 		{
-			float px=((int)userPosition.x>>level)-scroll_x+getLeft();
-			float py=((int)userPosition.y>>level)-scroll_y+getTop();
+			int zoomgap=maxzoomgui-maxzoomdata;
+			float px=((int)(userPosition.x*Math.pow(2, zoomgap))>>(maxzoomgui-level))-scroll_x+getLeft();
+			float py=((int)(userPosition.y*Math.pow(2, zoomgap))>>(maxzoomgui-level))-scroll_y+getTop();
 			if (userHdgRad!=null)
 			{
 				float rad=userHdgRad;
@@ -342,8 +419,8 @@ public class AdChartView extends View implements UpdatableUI {
 				offlat=lat;
 				offlon=lon;
 			}
-			lat=lat-offlat+59.649583;
-			lon=lon-offlon+17.935867;
+			lat=lat-offlat+59.652011;
+			lon=lon-offlon+17.918701;
 		}
 		//        (lat)
 		//P = A * (   )

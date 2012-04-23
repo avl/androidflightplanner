@@ -3,6 +3,8 @@ package se.flightplanner;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 
 import se.flightplanner.FlightPathLogger.Chunk;
 import se.flightplanner.FlightPathUploader.HandleUpload;
@@ -205,7 +207,9 @@ public class ViewRecordings extends Activity implements HandleUpload {
 		adapter.clear();
 		if (tripdirpath.exists())
         {
-        	for(String fname : tripdirpath.list())
+			String[] list=tripdirpath.list();
+			Arrays.sort(list,Collections.reverseOrder());
+        	for(String fname : list)
         	{
         		String human_readable;
         		try

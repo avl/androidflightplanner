@@ -60,7 +60,7 @@ public class FlightPathLogger {
 	{
 		if (gps_timestamp_ms<86400*10)
 		{
-			Log.i("fplan.fplog","gps timestamp is 0");
+			//Log.i("fplan.fplog","gps timestamp is 0");
 			return;
 		}
 		boolean splitup=false;
@@ -88,7 +88,7 @@ public class FlightPathLogger {
 				active=true;
 			}
 			chunk.log(merc17,gps_timestamp_ms,speedHint,altitude);
-			Log.i("fplan.fplog","Merc:"+merc17+" stamp:"+gps_timestamp_ms);
+			//Log.i("fplan.fplog","Merc:"+merc17+" stamp:"+gps_timestamp_ms);
 		}
 		else
 		{

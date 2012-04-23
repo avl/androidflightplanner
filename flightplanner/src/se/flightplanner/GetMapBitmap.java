@@ -41,8 +41,19 @@ public class GetMapBitmap {
 			iMerc curm=Project.imerc2imerc(m,desiredzoomlevel,zoomlevel);
 			curm=new iMerc(curm.getX() & (~255),curm.getY() & (~255));
 			boolean should_be_there=false;
-			if (zoomlevel==desiredzoomlevel || desiredzoomlevel>maxzoomlevel && zoomlevel==maxzoomlevel)
-				should_be_there=true;
+			if (desiredzoomlevel>maxzoomlevel)
+			{
+				if (zoomlevel==maxzoomlevel)
+					should_be_there=true;
+			}
+			else
+			{
+				if (zoomlevel==desiredzoomlevel)
+					should_be_there=true;
+			}
+			//if (zoomlevel==desiredzoomlevel || desiredzoomlevel>maxzoomlevel && zoomlevel==maxzoomlevel)
+			//	should_be_there=true;
+			//Log.i("fplan","Request for tile at "+desiredzoomlevel+" now at "+zoomlevel+" should be there: "+should_be_there);
 			Bitmap b=getBitmapImpl(curm,zoomlevel,should_be_there);
 			if (b!=null)
 			{

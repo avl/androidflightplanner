@@ -17,12 +17,15 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.StringBufferInputStream;
 import java.io.StringReader;
+import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -40,7 +43,6 @@ import org.json.JSONObject;
 
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
-import se.flightplanner.SigPoint.Chart;
 import se.flightplanner.vector.BoundingBox;
 
 import android.app.Activity;
@@ -55,9 +57,11 @@ public class Airspace implements Serializable{
 		public void report(int percent); 
 	}
 	public String aipgen;
-	public ArrayList<AirspaceArea> spaces;
+	public ArrayList<AirspaceArea> spaces;	
 	public ArrayList<SigPoint> points;
 	public String namedigest;
+	public ArrayList<AipText> aiptexts;
+	public ArrayList<TripData> trips;
 	
 	public static String toHex(byte[] bytes) {
 	    BigInteger bi = new BigInteger(1, bytes);
@@ -82,6 +86,7 @@ public class Airspace implements Serializable{
 		return compare(a1,b1);
 	}
 
+	@SuppressWarnings("unchecked")
 	public static Airspace deserialize(DataInputStream is,Airspace previous,AirspaceProgress prog) throws IOException {
 		Airspace a=new Airspace();
 		
@@ -89,10 +94,14 @@ public class Airspace implements Serializable{
 		if (previous!=null)
 			Log.i("fplan","Previous: "+previous.spaces.size());
 		int magic=is.readInt();
-		int version=is.readInt();
 		if (magic!=0x8A31CDA)
 			throw new RuntimeException("Couldn't load airspace data, bad header magic. Was: "+magic+" should be: "+0x8A31CDA);
-		if (version!=1 && version!=2 && version!=3 && version!=4 && version!=5 && version!=6)
+		int version=is.readInt();
+		int corrpass=is.readByte();
+		Log.i("fplan","Reading corrpass: "+corrpass);
+		if (corrpass!=1)
+			throw new RuntimeException("Wrong password");
+		if (version<1 || version>7)
 			throw new RuntimeException("Couldn't load airspace data, bad version");
 		if (version>=5)
 		{
@@ -113,36 +122,24 @@ public class Airspace implements Serializable{
 			previous=null;
 			a.aipgen="";
 		}
-		int numspaces=is.readInt();
-		if (numspaces>2000)
-			throw new RuntimeException("Too many airspace definitions: "+numspaces);
-		a.spaces=new ArrayList<AirspaceArea>();
-		ArrayList<Integer> spacekills=new ArrayList<Integer>();
-		ArrayList<Integer> pointkills=new ArrayList<Integer>();
-		for(int i=0;i<numspaces;++i)
-		{
-			if (prog!=null && (i%10==0 || i==numspaces-1))
-				prog.report((50*i)/numspaces);
-			if (version>=5)
-			{
-				if (is.readByte()==0)
-				{ //"kill"
-					int idx=is.readInt();
-					Log.i("fplan","Kill space with idx: "+idx);
-					spacekills.add(idx);
-					continue;
-				}
-			}
-			//Log.i("fplan","Deserialize space: ");
-			a.spaces.add(AirspaceArea.deserialize(is,version));
-			Log.i("fplan","Deser space: "+a.spaces.get(a.spaces.size()-1).name);
-			
-		}
+		//ArrayList<Integer> spacekills=new ArrayList<Integer>();		
+		a.spaces=read_sub(AirspaceArea.class,is, prog, 0,15,version, "spaces",
+				previous!=null ? (ArrayList<AirspaceArea>)previous.spaces.clone() : null);
 
-		int numpoints=is.readInt();
-		if (numpoints>15000)
-			throw new RuntimeException("Too many points: "+numpoints);
-		a.points=new ArrayList<SigPoint>();
+		//a.points=new ArrayList<SigPoint>();
+		//ArrayList<Integer> pointkills=new ArrayList<Integer>();
+		a.points=read_sub(SigPoint.class,is,prog,15,30,version,"points",
+				previous!=null ? (ArrayList<SigPoint>)previous.points.clone() : null);
+
+		a.aiptexts=read_sub(AipText.class,is,prog,30,80,version,"aiptext",
+				previous!=null ? (ArrayList<AipText>)previous.aiptexts.clone() : null);
+		
+		a.trips=read_sub(TripData.class,is,prog,80,95,version,"aiptext",
+				previous!=null ? (ArrayList<TripData>)previous.trips.clone() : null);
+		
+		//a.aiptexts=read_sub(AipText.class,is,prog,66,99,version,numpoints,pointkills);
+		
+		/*
 		for(int i=0;i<numpoints;++i)
 		{
 			if (prog!=null && (i%10==0 || i==numpoints-1))
@@ -157,12 +154,12 @@ public class Airspace implements Serializable{
 					continue;
 				}
 			}
-			//Log.i("fplan","Deserialize point: ");
 			a.points.add(SigPoint.deserialize(is,version));
 		}
+		*/
 		
 		
-		if (previous!=null)
+		/*if (previous!=null)
 		{
 			//Log.i("fplan","Previous A: "+previous.spaces.size());
 			Collections.sort(pointkills);
@@ -240,12 +237,19 @@ public class Airspace implements Serializable{
 			//previous.points=null;
 		
 		}
+		*/
 		a.namedigest=null;
 		if (version>=5)
 		{
 			//Log.i("fplan","Checksumming all points and spaces");
 			int magic2=is.readInt();
-			//Log.i("fplan","Magic: "+magic2+" correct:"+(magic2==0x1eedbaa5));
+			
+			if (magic2!=0x1eedbaa5)
+			{
+				Log.i("fplan","Magic: "+magic2+" correct:"+(magic2==0x1eedbaa5));
+				throw new RuntimeException("Bad magic in downloaded data");
+			}
+			
 			
 			String checksum=is.readUTF();
 			MessageDigest md=null;
@@ -271,17 +275,29 @@ public class Airspace implements Serializable{
 						return comp(object1.name,object2.name);
 					}
 				});
+				Collections.sort(a.aiptexts,new Comparator<AipText>(){
+					@Override
+					public int compare(AipText object1,
+							AipText object2) {
+						return comp(object1.name,object2.name);
+					}
+				});
+				Collections.sort(a.trips,new Comparator<TripData>(){
+					@Override
+					public int compare(TripData object1,
+							TripData object2) {
+						return comp(object1.trip,object2.trip);
+					}
+				});
 				
+				for(AipText apt:a.aiptexts)
+					md.update(apt.name.getBytes());
 				for(AirspaceArea aa:a.spaces)
-				{
-					//Log.i("fplan","csumming aa: "+aa.name);
 					md.update(aa.name.getBytes());
-				}				
 				for(SigPoint sp:a.points)
-				{
-					//Log.i("fplan","csumming sp: "+sp.name);					
 					md.update(sp.name.getBytes());
-				}
+				for(TripData apt:a.trips)
+					md.update(apt.trip.getBytes());
 			}								
 			a.namedigest=toHex(md.digest());
 			Log.i("fplan","namedigest:"+a.namedigest);
@@ -290,22 +306,107 @@ public class Airspace implements Serializable{
 				//Log.i("fplan","Bad checksum hex digest. Was: "+a.namedigest+" Expected: "+checksum);
 				throw new RuntimeException("Bad checksum on downloaded data");
 			}
-			if (magic2!=0x1eedbaa5)
-			{
-				throw new RuntimeException("Bad magic in downloaded data");
-			}
 			
 		}
 
 			
 		return a;
 	}
+	private static<T> ArrayList<T> read_sub(Class Tclass,DataInputStream is, AirspaceProgress prog,int start,int end,
+			int version, String what,ArrayList<T> prevspaces) throws IOException {
+		//ArrayList<AirspaceArea> prevspaces=(ArrayList<AirspaceArea>)(previous.spaces.clone());
+		int numspaces=is.readInt();
+		if (numspaces>15000)
+			throw new RuntimeException("Too many "+what+": "+numspaces);		
+		ArrayList<Integer> spacekills=new ArrayList<Integer>();
+		ArrayList<T> nspaces=new ArrayList<T>(); 
+		for(int i=0;i<numspaces;++i)
+		{
+			if (prog!=null && (i%10==0 || i==numspaces-1))
+				prog.report((int)(start+((end-start)*i)/numspaces));
+			if (version>=5)
+			{
+				if (is.readByte()==0)
+				{ //"kill"
+					int idx=is.readInt();
+					Log.i("fplan","Kill space with idx: "+idx);
+					spacekills.add(idx);
+					continue;
+				}
+			}
+			
+		    
+		    T t;
+			try {
+				Class params[] = new Class[2];
+				params[0]=DataInputStream.class;
+				params[1]=Integer.TYPE;
+				Method deser = Tclass.getDeclaredMethod("deserialize",params);
+		  	    //Object[] mainArgs = new Object[]{is,version};
+			    t=(T)deser.invoke(null, is,version);
+			}catch(Exception e)
+			{
+				throw new RuntimeException(e);
+			}		    		    
+			//Log.i("fplan","Deserialize space: ");
+			nspaces.add(t);
+			//Log.i("fplan","Deser "+what);			
+		}
+		
+		
+		if (prevspaces!=null)
+		{
+			Collections.sort(spacekills);
+			
+			{
+				int src=0;
+				int trg=0;
+				for(int i=0;src<prevspaces.size();)
+				{
+					int pk;
+					if (i<spacekills.size()) pk=spacekills.get(i);
+					else pk=-1;
+					if (pk!=src)
+					{
+						//Log.i("fplan","Copying element "+src+" -> "+trg);
+						if (src!=trg)
+							prevspaces.set(trg,prevspaces.get(src));
+						++src;
+						++trg;
+					}
+					else
+					{//pk==src
+						//Log.i("fplan","Implementing spaces kill of idx: "+src);						
+						//Log.i("fplan","Not copying element "+src+" -> anywhere");
+						++i;
+						++src;
+					}						
+				}
+				int newsize=prevspaces.size()-spacekills.size();
+				for(int i=prevspaces.size()-1;i>=newsize;--i)
+				{
+					//Log.i("fplan","Removing element "+i);
+					prevspaces.remove(i);
+				}
+			}
+			prevspaces.addAll(nspaces);
+			return prevspaces;
+		}
+		else
+		{
+			return nspaces;
+		}		
+		
+	}
 	public void serialize(DataOutputStream os) throws IOException {
 		
 		Log.i("fplan","Serializing airspace");
 		int numspaces=spaces.size();
 		os.writeInt(0x8A31CDA);
-		os.writeInt(6); //version 6
+		
+		int version=7;
+		os.writeInt(version); //version 7
+		os.writeByte(1); //correct password
 		os.writeUTF(aipgen);
 		os.writeByte(1); //from scratch
 		os.writeInt(numspaces);
@@ -320,6 +421,19 @@ public class Airspace implements Serializable{
 		{
 			os.writeByte(1);//don't kill
 			points.get(i).serialize(os);
+		}
+		os.writeInt(aiptexts.size());
+		for(int i=0;i<aiptexts.size();++i)
+		{
+			os.writeByte(1);//don't kill
+			aiptexts.get(i).serialize(os);
+		}
+		
+		os.writeInt(trips.size());
+		for(int i=0;i<trips.size();++i)
+		{
+			os.writeByte(1);//don't kill
+			trips.get(i).serialize(os);
 		}
 		
 		os.writeInt(0x1eedbaa5); //magic
@@ -348,13 +462,13 @@ public class Airspace implements Serializable{
 		spaces=pspaces;
 	}
 	
-	public static Airspace download(Airspace previous,AirspaceProgress prog) throws Exception
+	public static Airspace download(Airspace previous,AirspaceProgress prog,String user,String pass) throws Exception
 	{
-		return download(null,previous,prog);
+		return download(null,previous,prog,user,pass);
 	}
-	public static Airspace download(InputStream fakeDataForTest,Airspace previous,AirspaceProgress prog) throws Exception
+	public static Airspace download(InputStream fakeDataForTest,Airspace previous,AirspaceProgress prog,String user,String pass) throws Exception
 	{
-
+		
 		System.out.println("Start download operation");
 		InputStream inp;
 		
@@ -365,7 +479,9 @@ public class Airspace implements Serializable{
 		else
 		{
 			ArrayList<NameValuePair> nvps=new ArrayList<NameValuePair>();
-			nvps.add(new BasicNameValuePair("version","6"));
+			nvps.add(new BasicNameValuePair("version","7"));
+			nvps.add(new BasicNameValuePair("user",user));
+			nvps.add(new BasicNameValuePair("password",pass));
 			if (previous==null)
 				nvps.add(new BasicNameValuePair("aipgen",""));
 			else
@@ -532,14 +648,31 @@ public class Airspace implements Serializable{
 	public ArrayList<SigPoint> getPoints() {
 		return points;
 	}
-	static public class ChartInfo
+	static public class VariantInfo
 	{
-		String humanreadable;
-		String chartname;		
-		public ChartInfo(String chartname,String human)
+		String chartname;
+		String variant;
+		public VariantInfo(String chartname,String variant)
 		{
 			this.chartname=chartname;
-			this.humanreadable=human;
+			this.variant=variant;
+		}
+	}
+	static public class ChartInfo
+	{
+		private String icao;
+		private HashMap<String,VariantInfo> variants=new HashMap<String,VariantInfo>();
+		public ChartInfo(String icao,String chartname,String variant)
+		{
+			this.icao=icao;			
+			this.variants.put(variant,new VariantInfo(chartname,variant));
+		}
+		public Collection<VariantInfo> getVariants()
+		{
+			return variants.values();
+		}
+		public void put(VariantInfo variantInfo) {
+			variants.put(variantInfo.variant,variantInfo);			
 		}
 	}
 	HashMap<String,ChartInfo> charts=new HashMap<String, ChartInfo>();
@@ -553,30 +686,103 @@ public class Airspace implements Serializable{
 				new FileInputStream(chartlistpath));
 		charts.clear();
 		int len=ds.readInt();
+		int version=1;
+		if (len<10000000)
+			version=1;
+		else
+		{
+			version=ds.readInt();
+			len=ds.readInt();
+		}
 		for(int i=0;i<len;++i)
 		{
-			String n=ds.readUTF(); //icao
-			ChartInfo ci=new ChartInfo(ds.readUTF(),ds.readUTF());
-			charts.put(n,ci);
+			String icao=ds.readUTF(); //icao
+			String chartname=ds.readUTF();
+			String variant="";
+			if (version>=2)
+				variant=ds.readUTF();
+			else
+				/*human=*/ds.readUTF();
+				
+			ChartInfo prev=charts.get(icao);
+			if (prev==null)
+			{
+				ChartInfo ci=new ChartInfo(icao,chartname,variant);
+				charts.put(icao,ci);
+			}
+			else
+			{
+				prev.put(new VariantInfo(chartname,variant));
+			}
 		}
 		ds.close();					
 	}
-	public void report_new_chart(String humanreadable, String chartname,String icao) {
-		charts.put(icao,new ChartInfo(chartname,humanreadable));
+	public void report_new_chart(String humanreadable, String chartname,String icao,String variant) {
+		ChartInfo prev=charts.get(icao);
+		if (prev==null)
+		{
+			ChartInfo ci=new ChartInfo(icao,chartname,variant);
+			charts.put(icao,ci);
+		}
+		else
+		{
+			prev.put(new VariantInfo(chartname,variant));
+		}
 		
 	}
 	public void save_chart_list(File chartlistpath) throws IOException {
 		DataOutputStream ds=new DataOutputStream(
 				new FileOutputStream(chartlistpath));
-		ds.writeInt(charts.size());
+		ds.writeInt(0x7fffffff);
+		ds.writeInt(2); //version
+		int len=0;
 		for(Entry<String,ChartInfo> e:charts.entrySet())
 		{
-			ds.writeUTF(e.getKey()); //icao
-			ds.writeUTF(e.getValue().chartname);
-			ds.writeUTF(e.getValue().humanreadable);
+			for(VariantInfo variant:e.getValue().getVariants())
+			{
+				++len;
+			}
+		}
+		
+		ds.writeInt(len);
+		for(Entry<String,ChartInfo> e:charts.entrySet())
+		{
+			for(VariantInfo variant:e.getValue().getVariants())
+			{
+				ds.writeUTF(e.getKey()); //icao
+				ds.writeUTF(variant.chartname);
+				ds.writeUTF(variant.variant);
+				
+			}
 		}
 		ds.close();			
 		
+	}
+	public String[] getTripList() {
+		ArrayList<String> ts=new ArrayList<String>();
+		for(TripData t:trips)
+		{
+			ts.add(t.trip);
+		}
+		
+		final Collator myCollator = Collator.getInstance();
+		Collections.sort(ts, new Comparator<String>() {
+			@Override
+			public int compare(String object1, String object2) {
+				return myCollator.compare(object1, object2);
+			}
+			
+		});
+
+		return ts.toArray(new String[]{});
+	}
+	public TripData getTrip(String trip) {
+		for(TripData t:trips)
+		{
+			if (t.trip.equals(trip))
+				return t;
+		}
+		return null;
 	}
 	
 }

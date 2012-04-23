@@ -54,7 +54,7 @@ public class GuiSituation
 	{
 		void doInvalidate();	
 		void cancelMapDownload();
-		void doShowExtended(String[] icaos);				
+		void doShowExtended(Place[] places);				
 	}
 	public interface Clickable
 	{
@@ -343,9 +343,7 @@ public class GuiSituation
 	public void updatePos(Location pos) {
 		this.lastpos=pos;
 		if (currentInfo!=null)
-			currentInfo.updatemypos(Project.latlon2mercvec(
-				new LatLon(lastpos.getLatitude(),lastpos.getLongitude()), 13)
-					, lastpos.getSpeed() * 3.6 / 1.852);
+			currentInfo.updatemypos(lastpos);
 		
 	}
 	public void cancelMapDownload() {
@@ -394,9 +392,9 @@ public class GuiSituation
 	public boolean getnorthup() {		
 		return defnorthup;
 	}
-	public void onShowExtended(String[] icaos) {
+	public void onShowExtended(Place[] places) {
 		
-		movingMap.doShowExtended(icaos);
+		movingMap.doShowExtended(places);
 	}
 	
 }

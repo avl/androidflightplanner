@@ -2,6 +2,8 @@ package se.flightplanner;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.TimeZone;
 
@@ -10,6 +12,7 @@ import se.flightplanner.GuiSituation.Clickable;
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
 import se.flightplanner.Project.iMerc;
+import se.flightplanner.SigPoint.Runway;
 import se.flightplanner.TripData.Waypoint;
 import se.flightplanner.vector.BoundingBox;
 import se.flightplanner.vector.ConvexPolygon;
@@ -84,7 +87,7 @@ public class MapDrawer {
 		trippaint = new Paint();
 		trippaint.setAntiAlias(true);
 		trippaint.setStrokeWidth(5);
-		trippaint.setColor(Color.YELLOW);
+		trippaint.setColor(Color.rgb(0xb0,0xb0,0xff));
 		trippaint.setStrokeCap(Paint.Cap.ROUND);
 
 		seltrippaint = new Paint();
@@ -210,7 +213,7 @@ public class MapDrawer {
 			int iv=(int)(Math.floor((maxh)/tilesize))+2;
 			int tot=iu*iv;
 			tot=(tot*5+1)/4; //because of how zoom past max zoomlevel works - it always keeps the max zoomlevel bitmaps in memory as well, needing on average 0.25 less detailed bitmaps per zoomed in bitmap
-			Log.i("fplan.drawmap","Total tiles needed:"+tot);
+			//Log.i("fplan.drawmap","Total tiles needed:"+tot);
 			int minus=((int)diag_length+256)/256;
 			iMerc topleft = new iMerc(centertile.getX() - (256 * minus),
 					centertile.getY() - 256 * minus);
@@ -246,14 +249,45 @@ public class MapDrawer {
 					}
 				}
 			}
-			Log.i("fplan.drawmap","Tiles used:"+tilesused);
+			//Log.i("fplan.drawmap","Tiles used:"+tilesused);
 			res.lastcachesize = cachesize;
 		}
 
+		ArrayList<SigPoint> major_airfields=null;
+		if (zoomlevel >= 9 && lookup != null)
+		{
+			major_airfields=lookup.majorAirports.findall(bb13);
+			for (SigPoint sp : major_airfields) {
+				if (sp.extra!=null && sp.extra.runways!=null)
+				{
+					for(Runway runway:sp.extra.runways)
+					{
+						Merc m1 = Project.latlon2merc(runway.ends[0].pos, zoomlevel);
+						Merc m2 = Project.latlon2merc(runway.ends[1].pos, zoomlevel);
+						Vector p1 = tf.merc2screen(m1);
+						Vector p2 = tf.merc2screen(m2);
+						//linepaint.setStrokeWidth(10);
+						linepaint.setColor(Color.BLACK);
+						canvas.drawLine((float)p1.x,(float)p1.y,(float)p2.x,(float)p2.y,linepaint);
+					}
+				}
+			}
+		}
 		
 		// sigPointTree.verify();
 		if (zoomlevel >= 8 && lookup != null) {
-			for (AirspaceArea as : lookup.areas.get_areas(bb13)) {
+			ArrayList<AirspaceArea> areas=lookup.areas.get_areas(bb13);
+			Collections.sort(areas,new Comparator<AirspaceArea>() {
+				@Override
+				public int compare(AirspaceArea object1, AirspaceArea object2) {
+					if ((object1.r&0xff)>(object2.r&0xff)) return -1;
+					if ((object1.r&0xff)<(object2.r&0xff)) return 1;
+					if ((object1.g&0xff)<(object2.g&0xff)) return 1;
+					if ((object1.g&0xff)>(object2.g&0xff)) return -1;
+					return 0;
+				}
+			});
+			for (AirspaceArea as : areas) {
 				ArrayList<Vector> vs = new ArrayList<Vector>();
 				for (LatLon latlon : as.points) {
 					Merc m = Project.latlon2merc(latlon, zoomlevel);
@@ -263,6 +297,8 @@ public class MapDrawer {
 				for (int i = 0; i < vs.size(); ++i) {
 					Vector a = vs.get(i);
 					Vector b = vs.get((i + 1) % vs.size());
+					
+					linepaint.setColor(Color.rgb(as.r,as.g,as.b));
 					canvas.drawLine((float) a.getx(), (float) a.gety(),
 							(float) b.getx(), (float) b.gety(), linepaint);
 				}
@@ -279,11 +315,16 @@ public class MapDrawer {
 			last_zoomlevel=zoomlevel;
 		}*/
 		if (zoomlevel >= 7 && lookup != null) {
-			for (SigPoint sp : lookup.majorAirports.findall(bb13)) {
+			if (major_airfields==null)		
+				major_airfields=lookup.majorAirports.findall(bb13);
+						
+			for (SigPoint sp : major_airfields) {
 				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
 				Vector p = tf.merc2screen(m);
 				String text;
 				text = sp.name;
+								
+				
 				textpaint.setColor(Color.GREEN);
 				linepaint.setColor(Color.GREEN);
 				renderText(canvas, p, text, declutter);
@@ -323,7 +364,7 @@ public class MapDrawer {
 			}			
 		}
 		
-		if (zoomlevel >= 9 && lookup != null) {
+		if (zoomlevel >= 10 && lookup != null) {
 			for (SigPoint sp : lookup.allOthers.findall(bb13)) {
 				// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
 				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
@@ -534,28 +575,42 @@ public class MapDrawer {
 			thinlinepaint.setColor(Color.WHITE);
 			float y = bottom - 3.0f * y_dpmm;//
 			bigtextpaint.setColor(Color.WHITE);
-			long when = we.getWhen();
+			//long when = we.getWhen();
 			double dist=we.getDistance();
+			boolean skipped=we.getSkipped();
+			boolean empty=we.getEmpty();
 			String whenstr;
 			String whentempl;
 			// Log.i("fplan","When: "+when);
-			if (dist>=0)
+			Date passed=we.getPassed();
+			Date eta2=we.getETA2();
+			if (eta2!=null)
 			{
+				int when=(int)((eta2.getTime()-new Date().getTime())/1000l);
 				whenstr = fmttime((int)when);
-				whentempl="T:22:22";
+				//whenstr="T:"+formatter.format(eta2)+"Z";
+				whentempl="T:WW:WW ";
 			}
 			else
 			{
-				if (when<3600*24*10)
+				if (empty)
+				{
+					whenstr="";
+					whentempl="";					
+				}
+				else if (skipped)
 				{
 					whenstr="Skipped";
+					whentempl=whenstr;
 				}
 				else
 				{
-					Date d=new Date(when);
-					whenstr="Passed "+formatter.format(d)+"Z";
+					if (passed!=null)
+						whenstr="Passed "+formatter.format(passed)+"Z";
+					else
+						whenstr="--:--";
+					whentempl="Passed WW:WWZ";
 				}			
-				whentempl="Passed 222222Z";				
 			}
 
 			/*
@@ -572,7 +627,7 @@ public class MapDrawer {
 			else
 				details = we.getDetails();
 			
-			final String[] extended_available=we.getHasExtendedInfo();
+			final Place[] extended_available=we.getHasExtendedInfo();
 
 			int actuallines = details.length;
 			//Log.i("fplan", "details.length 1 : " + details.length);
@@ -633,7 +688,7 @@ public class MapDrawer {
 			addTextIfFits(canvas, whentempl, r, whenstr, y1, bigtextpaint);
 			// canvas.drawText(String.format("T:%s",whenstr),
 			// 70,y1,bigtextpaint);
-			addTextIfFits(canvas, null, r, we.getTitle(), y1, bigtextpaint);
+			addTextIfFits(canvas, null, r, we.getPointTitle(), y1, bigtextpaint);
 			// canvas.drawText(we.getTitle(), 140,y1,bigtextpaint);
 			for (int i = 0; i < actuallines - 1; ++i) {
 				/*Log.i("fplan", "Actuallines:" + actuallines + " offset: "
@@ -1038,7 +1093,7 @@ public class MapDrawer {
 		r.bottom += howmuch;
 	}
 
-	static String fmttime(int when) {
+	public static String fmttime(int when) {
 		if (when == 0 || when > 3600 * 24 * 10)
 			return "--:--";
 		return String.format("%d:%02d", when / 60, when % 60);

@@ -57,7 +57,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	{
 		public void cancelMapDownload();
 
-		public void doShowExtended(String[] icaos);
+		public void doShowExtended(Place[] places);
 	}
 	public void doInvalidate()
 	{
@@ -101,7 +101,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		tripdata=ptripdata;
 		tripstate=newstate;//new TripState(tripdata);
 		if (lastpos!=null)
-			tripstate.update_target(lastpos);
+			tripstate.updatemypos(lastpos);
 		if (gui!=null)
 			gui.updateTripState(tripstate);
 		invalidate();
@@ -188,13 +188,14 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	
 	public void gps_update(Location loc)
 	{
-		 
+		if (loc==null) return;
 		
-		lastpos=bearingspeed.calcBearingSpeed(loc);
+		//lastpos=bearingspeed.calcBearingSpeed(loc);
+		lastpos=loc;
 		if (gui!=null)
 			gui.updatePos(lastpos);
 		last_real_position=SystemClock.uptimeMillis();
-		tripstate.update_target(lastpos);
+		tripstate.updatemypos(lastpos);
 		LatLon latlon=new LatLon(lastpos.getLatitude(),lastpos.getLongitude());
 		iMerc merc17=Project.latlon2imerc(latlon,17);
 		try {
@@ -270,13 +271,13 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	 */
 	@Override
 	public void updateUI(boolean done) {
-		Log.i("fplan.bitmap","updateUI: done="+done);
+		//Log.i("fplan.bitmap","updateUI: done="+done);
 		if (done)
 		{
 			this.loader=null;
 			if (mapcache!=null && mapcache.haveUnsatisfiedQueries())
 			{
-				Log.i("fplan.bitmap","Restart background task in updateUI");
+				//Log.i("fplan.bitmap","Restart background task in updateUI");
 				loader=new BackgroundMapLoader(blobs,mapcache,this,lastcachesize);
 				loader.run();
 			}
@@ -450,8 +451,8 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		nav.setContentView(this);		
 	}
 	@Override
-	public void doShowExtended(String[] icaos) {
-		this.owner.doShowExtended(icaos);
+	public void doShowExtended(Place[] places) {
+		this.owner.doShowExtended(places);
 		
 	}
 	

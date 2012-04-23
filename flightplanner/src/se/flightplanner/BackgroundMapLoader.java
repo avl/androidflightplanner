@@ -61,13 +61,13 @@ public class BackgroundMapLoader extends AsyncTask<Key,BackgroundMapLoader.Loade
 				break;
 			if (key.getZoomlevel()<0 || key.getZoomlevel()>=blobs.size())
 			{
-				Log.i("fplan.bitmap","Publish a fake bitmap (1):"+key.getPos());
+				//Log.i("fplan.bitmap","Publish a fake bitmap (1):"+key.getPos());
 				publishProgress(new LoadedBitmap(key,null));
 			}
 			else
 			{
 				try {
-					Log.i("fplan.bitmap","Publish a real bitmap:"+key.getPos());
+					//Log.i("fplan.bitmap","Publish a real bitmap:"+key.getPos());
 					publishProgress(new LoadedBitmap(key,blobs.get(key.getZoomlevel()).get_bitmap(key.getPos())));
 				} catch (Throwable e) {
 					Log.e("fplan","Background loading of tile "+key.getPos()+" failed."+e);
@@ -95,7 +95,7 @@ public class BackgroundMapLoader extends AsyncTask<Key,BackgroundMapLoader.Loade
 		if (change)
 		{
 			long now=SystemClock.uptimeMillis();
-			if (now-prev>1000)
+			if (now-prev>1000 && running)
 			{
 				ui.updateUI(false);
 				change=false;
@@ -107,7 +107,7 @@ public class BackgroundMapLoader extends AsyncTask<Key,BackgroundMapLoader.Loade
 	@Override
     protected void onPostExecute(Void result) 
     {
-		Log.i("fplan.bitmap","onPostExecute");
+		//Log.i("fplan.bitmap","onPostExecute");
 		if (running)
 			ui.updateUI(true);
 		running=false;
@@ -119,7 +119,7 @@ public class BackgroundMapLoader extends AsyncTask<Key,BackgroundMapLoader.Loade
 		Log.i("fplan.bitmap","onCancelled");
 		if (running)
 			ui.updateUI(true);
-			running=false;
+		running=false;
 		change=false;
     }
 }
