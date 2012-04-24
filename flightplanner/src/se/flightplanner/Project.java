@@ -36,6 +36,34 @@ public class Project {
 		{
 			return "LatLon("+lat+","+lon+")";
 		}
+		private int[] getDegMinSec(double val)
+		{
+			int negative=1;
+			if (val<0) 
+			{
+				val=-val;
+				negative=-1;
+			}
+			int t=(int)(val*3600.0);
+			int deg=t/3600;
+			t-=3600*deg;
+			int min=t/60;
+			int sec=t%60;
+			return new int[]{negative,deg,min,sec};										
+		}
+		/*!
+		 * To string in deg,min,sec format
+		 */
+		public String toString2()
+		{
+			int[] tlat=getDegMinSec(lat);
+			int[] tlon=getDegMinSec(lon);
+			StringBuilder sb=new StringBuilder();			
+			sb.append(String.format("%02d°%02d'%02d%s\"",tlat[1],tlat[2],tlat[3],tlat[0]<0 ? "S" : "N"));
+			sb.append(" ");
+			sb.append(String.format("%03d°%02d'%02d%s\"",tlon[1],tlon[2],tlon[3],tlon[0]<0 ? "W" : "E"));			
+			return sb.toString();
+		}
 		public LatLon(double plat,double plon)
 		{
 			lat=plat;
@@ -58,6 +86,7 @@ public class Project {
 		private static final long serialVersionUID = -790641290695521623L;
 		public double x;
 		public double y;
+		
 		public Merc(Vector v)
 		{
 			x=v.x;
@@ -75,7 +104,11 @@ public class Project {
 			os.writeFloat((float)x);
 			os.writeFloat((float)y);
 		}
-	}
+		public Vector toVector()
+		{
+			return new Vector(x,y);
+		}
+}
 	static public class iMerc
 	{
 		private int x;

@@ -7,6 +7,9 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 import se.flightplanner.Project.LatLon;
 import se.flightplanner.Project.Merc;
@@ -29,7 +32,7 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 		public double[] T; //2 vector with airport chart projection translation
 	}*/
 	
-	public Merc pos;
+	public Merc pos; //merc 13
 	public String name;
 	public String kind; //interned
 	public double alt;
@@ -263,5 +266,18 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 		// TODO Auto-generated method stub
 		Merc merc=Project.latlon2merc(latlon, 13);
 		pos=merc;		
+	}
+	public static void sort_nearest(ArrayList<SigPoint> airfs, final LatLon mypos) {
+		Collections.sort(airfs,new Comparator<SigPoint>()
+				{
+					@Override
+					public int compare(SigPoint o1, SigPoint o2) {
+						double d1=Project.exacter_distance(o1.latlon, mypos);
+						double d2=Project.exacter_distance(o2.latlon, mypos);
+						if (d1<d2)return -1; 
+						if (d1>d2)return 1; 
+						return 0;
+					}			
+				});		
 	}
 }

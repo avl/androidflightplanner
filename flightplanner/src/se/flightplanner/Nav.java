@@ -3,6 +3,7 @@ package se.flightplanner;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -70,6 +71,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	final static int MENU_VIEW_RECORDINGS=6;
 	final static int MENU_VIEW_CHARTS=7;
 	final static int MENU_HELP=8;
+	final static int MENU_DESCPOS=9;
 	private LocationManager locman;
 	BackgroundMapDownloader terraindownloader;
 	private FlightPathLogger fplog;
@@ -142,6 +144,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    menu.add(0, MENU_SETTINGS, 0, "Settings");
 	    menu.add(0, MENU_HELP, 0, "Help");
 	    menu.add(0, MENU_VIEW_RECORDINGS, 0, "Recorded Trips");
+	    menu.add(0, MENU_DESCPOS, 0, "Describe My Position");
 	    return true;
 	}
 	@Override
@@ -333,6 +336,21 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			RookieHelper.showmsg(this,e.toString());
 		}
     	return true;
+    	
+    case MENU_DESCPOS:
+    {
+    	Intent intent = new Intent(this, DescribePosition.class);
+    	if (last_location!=null)
+    	{
+    		intent.putExtra("se.flightplanner.pos", new LatLon(last_location));
+    		startActivity(intent);
+    	}
+    	else
+    	{
+    		RookieHelper.showmsg(this, "Position Unknown");
+    	}
+    }
+    	
     }
 	    return false;
 	}

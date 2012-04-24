@@ -16,6 +16,13 @@ public class BoundingBox implements Cloneable, Serializable
 	{
 		return String.format("BB(%.2f,%.2f,%.2f,%.2f)", x1,y1,x2,y2);
 	}
+	public BoundingBox(Vector center,double size)
+	{
+		x1=center.getx()-size;
+		y1=center.gety()-size;
+		x2=center.getx()+size;
+		y2=center.gety()+size;		
+	}
 	public BoundingBox expand(double h)
 	{
 		return new BoundingBox(x1-h,y1-h,x2+h,y2+h);

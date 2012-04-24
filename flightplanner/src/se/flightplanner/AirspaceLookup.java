@@ -106,6 +106,7 @@ public class AirspaceLookup {
 			pointarr=new ArrayList<SigPoint>();
 		else
 			pointarr=airspace.getPoints();
+		ArrayList<SigPoint> sigpoints=new ArrayList<SigPoint>();
 		ArrayList<SigPoint> major_airports=new ArrayList<SigPoint>();
 		ArrayList<SigPoint> minor_airfields=new ArrayList<SigPoint>();
 		ArrayList<SigPoint> others=new ArrayList<SigPoint>();
@@ -130,12 +131,17 @@ public class AirspaceLookup {
 			if (po.kind=="town")
 				towns.add(po);
 			else
-				others.add(po);					
+			{
+				if (po.kind=="sigpoint")
+					sigpoints.add(po);
+				others.add(po);
+			}
 		}
 		majorAirports=new AirspaceSigPointsTree(major_airports);
 		minorAirfields=new AirspaceSigPointsTree(minor_airfields);
 		allObst=new AirspaceSigPointsTree(obsts);
 		allOthers=new AirspaceSigPointsTree(others);
+		allSigPoints=new AirspaceSigPointsTree(sigpoints);
 		allCities=new AirspaceSigPointsTree(cities);
 		allTowns=new AirspaceSigPointsTree(towns);
 		by_icao=new HashMap<String, SigPoint>();
@@ -152,6 +158,7 @@ public class AirspaceLookup {
 	public AirspaceSigPointsTree majorAirports;
 	public AirspaceSigPointsTree allObst;
 	public AirspaceSigPointsTree allOthers;
+	public AirspaceSigPointsTree allSigPoints;
 	public AirspaceSigPointsTree allCities;
 	public AirspaceSigPointsTree allTowns;
 	public Airspace airspace;

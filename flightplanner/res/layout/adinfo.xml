@@ -3,8 +3,8 @@
 <LinearLayout
   xmlns:android="http://schemas.android.com/apk/res/android"
   android:orientation="vertical"
-  android:layout_width="match_parent"
-  android:layout_height="match_parent">
+  android:layout_width="fill_parent"
+  android:layout_height="fill_parent">
 <ScrollView
   xmlns:android="http://schemas.android.com/apk/res/android"
   android:id="@+id/adinfoscrollview"  
@@ -15,7 +15,7 @@
   
     <TextView android:text="TextView" android:id="@+id/main_text" android:layout_width="wrap_content" android:layout_height="wrap_content"></TextView>
 	</ScrollView>    
-   <LinearLayout android:id="@+id/linearLayout1" android:layout_width="match_parent" android:layout_height="wrap_content">
+   <LinearLayout android:id="@+id/linearLayout1" android:layout_width="fill_parent" android:layout_height="wrap_content">
        <Button android:text="Back" android:id="@+id/back_button" android:layout_width="wrap_content" android:layout_height="wrap_content"></Button>
        <Button android:text="Charts" android:id="@+id/chart_button" android:layout_width="wrap_content" android:layout_height="wrap_content"></Button>
        <Button android:text="AIP" android:id="@+id/aip_button" android:layout_width="wrap_content" android:layout_height="wrap_content"></Button>

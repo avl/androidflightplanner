@@ -110,10 +110,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		
 		if (gui==null || drawer==null)
 		{
-			if (getLeft()!=0)
-				throw new RuntimeException("This app doesn't work in a subwindow 1");
-			if (getTop()!=0)
-				throw new RuntimeException("This app doesn't work in a subwindow 2");
+				
 			drawer=new MapDrawer(x_dpmm,y_dpmm);
 			if (getBottom()<50 || getRight()<50)
 				throw new RuntimeException("The screen is way too small");
@@ -123,6 +120,11 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			gui.setnorthup(defnorthup);
 			
 		}
+		if (getLeft()!=0)
+			canvas.translate(-getLeft(), 0);
+		if (getTop()!=0)
+			canvas.translate(0,-getTop());
+		
         canvas.drawColor(Color.BLACK);
 		if (tripdata==null)
 		{

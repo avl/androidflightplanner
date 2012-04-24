@@ -1,6 +1,5 @@
 package se.flightplanner;
 
-import se.flightplanner.R;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -172,6 +171,7 @@ public class CompassRoseView extends View {
 		planerect.right=(int) (0.70f*abox);
 		planerect.top=(int) (0.30f*abox);
 		planerect.bottom=(int) (0.70f*abox);
+		
 		if (little_plane==null)
 		{
 			//Options opts=new Options();
