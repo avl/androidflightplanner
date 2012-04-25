@@ -179,42 +179,78 @@ public class Polygon implements Serializable {
 	public static class SectorResult
 	{		
 		public double nearest_distance_to_center; //of sector		
-		public Pie pie;
 		public boolean inside; //if center is inside area
+		public Pie pie;
 	}
-	public SectorResult sector(Vector center)
+	public SectorResult sector(BoundPie center)
 	{
 	    if (points.size()==0)
 	        return null;
 	    SectorResult res=new SectorResult();
-        InsideResult ir=inside(center);
-        res.nearest_distance_to_center=center.minus(ir.closest).length();
+        InsideResult ir=inside(center.pos);
         res.inside=ir.isinside;
-        Vector delta=center.minus(points.get(0));
-        double conv=180.0/Math.PI;
+        if (res.inside)
+        {
+        	res.nearest_distance_to_center=0;
+        	res.pie=new Pie(0,360);
+        	return res;
+        }
+        ArrayList<Line> lines=new ArrayList<Line>();
+        for(int i=0;i<points.size();++i)
+        {
+        	Line l=new Line(points.get(i),points.get((i+1)%points.size()));
+        	Line out=center.cut(l);
+        	//System.out.println("Cut "+l+" to "+out+" ("+center+")");
+        	if (out!=null)
+        		lines.add(out);
+        }
+        if (lines.size()==0)
+        {
+        	res.nearest_distance_to_center=1e30;
+        	return res;
+        }
+        
+                
+        Vector delta=lines.get(0).getv1().minus(center.pos);
         double cur_a=delta.hdg();
         double anglea=cur_a;
         double angleb=cur_a;
-        for(int i=1;i<points.size();++i)
+        double dist=1e30;
+        
+        
+        
+        for(int i=0;i<lines.size();++i)
         {
-            Vector p=points.get(i);
-            delta=center.minus(p);
-            double x=delta.hdg();
-            double turn=cur_a-x;
-            if (turn<-180) turn+=360;
-            if (turn>180) turn-=360;
-            if (turn<0) //left
-            {
-            	if (!in(anglea,angleb,x))
-            		anglea=x;
-            }
-           	else
-           	{
-            	if (!in(anglea,angleb,x))
-            		angleb=x;           		
-           	}
-            cur_a=x;		
+        	Line l=lines.get(i);
+        	System.out.println("Filtered line: "+l);
+        	double curdist=l.distance(center.pos);
+        	if (curdist<dist)
+        		dist=curdist;
+        	for(Vector p:new Vector[]{l.getv1(),l.getv2()})
+        	{
+        		System.out.println("The p: "+p);
+	            delta=p.minus(center.pos);
+	            double x=delta.hdg();
+	            double turn=x-cur_a;
+	            System.out.println("Pre-step: cur_a: "+cur_a+" x: "+x+" turn: "+turn+" state: "+anglea+" "+angleb);
+	        	    if (turn<-180) turn+=360;
+	            if (turn>180) turn-=360;
+	            if (turn<-1e-8) //left
+	            {
+	            	if (!in(anglea,angleb,x))
+	            		anglea=x;
+	            }
+	           	else if (turn>1e-8)
+	           	{
+	            	if (!in(anglea,angleb,x))
+	            		angleb=x;           		
+	           	}
+	            cur_a=x;
+        	}
         }
+        res.pie=new Pie(anglea,angleb);
+        //System.out.println("Resulting pie: "+res.pie);
+        res.nearest_distance_to_center=dist;
         return res;
                
 	}

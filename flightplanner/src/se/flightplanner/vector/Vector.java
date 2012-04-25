@@ -77,7 +77,7 @@ public class Vector implements Serializable {
 	}
 	public double hdg()
 	{
-		return 90.0-(Math.atan2(-y,x)*180.0/Math.PI);		
+		return (360.0+90.0-(Math.atan2(-y,x)*180.0/Math.PI))%360.0;		
 	}
 	public static Vector fromhdg(double ang)
 	{

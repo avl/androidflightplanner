@@ -12,6 +12,30 @@ public class Line {
 		a = pa;
 		b = pb;
 	}
+	public Line(float x1,float y1,float x2,float y2)
+	{
+		a=new Vector(x1,y1);
+		b=new Vector(x2,y2);
+	}
+	@Override
+	public String toString()
+	{
+		return "Line("+a.x+","+a.y+"-"+b.x+","+b.y+")";
+	}
+	
+	@Override
+	public boolean equals(Object o)
+	{
+		Line ol=(Line)o;
+		return a.equals(ol.a) && b.equals(ol.b);
+		
+	}
+	public boolean almostEquals(Line o,double epsilon)
+	{
+		Line ol=(Line)o;
+		return a.almostEquals(ol.a,epsilon) && b.almostEquals(ol.b,epsilon);
+		
+	}
 	public Vector dir()
 	{
 		return b.minus(a).normalized();
