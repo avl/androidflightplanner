@@ -75,6 +75,17 @@ public class Vector implements Serializable {
 	public double taxinorm() {
 		return Math.abs(x)+Math.abs(y);
 	}
+	public double hdg()
+	{
+		return 90.0-(Math.atan2(-y,x)*180.0/Math.PI);		
+	}
+	public static Vector fromhdg(double ang)
+	{
+		double rad=Math.PI*(90-ang)/180.0;
+		double dx=Math.cos(rad);
+		double dy=-Math.sin(rad);
+		return new Vector(dx,dy);
+	}
 	
 	public Vector rot(double rad) {
 		double nx=Math.cos(rad)*x - Math.sin(rad)*y;
@@ -96,5 +107,8 @@ public class Vector implements Serializable {
 		}
 		return Math.sin(rad)*x + Math.cos(rad)*y;
 	}*/
+	public Vector negated() {
+		return new Vector(-x,-y);
+	}
 	
 }

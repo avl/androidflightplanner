@@ -187,4 +187,101 @@ i=(e+f*j-a)/b
 		}
 		return null;
 	}
+
+	/*!
+	 * Intersect with an infinitely long line 2 (the line2
+	 * is thought about as starting at its starting point, then
+	 * continuing forever in the direction toward its second point).
+	 */
+	static public Vector intersect_inf2(Line l1,Line l2)
+	{
+		/*
+x1=a+b*i
+y1=c+d*i
+x2=e+f*j
+y2=g+h*j
+
+
+a+b*i=e+f*j
+c+d*i=g+h*j
+
+a+b*i-e-f*j=0
+c+d*i-g-h*j=0
+
+a-e+b*i-f*j=0
+c-g+d*i-h*j=0
+
+b*i-f*j=-(a-e)
+d*i-h*j=-(c-g)
+
+b*i-f*j=-(a-e)
+d*i-h*j=-(c-g)
+
+d*i=-(c-g)+h*j
+i=(-(c-g)+h*j)/d
+
+
+b*(-(c-g)+h*j)/d-f*j=-(a-e)
+
+b*(-(c-g)/d+h*j/d)-f*j=-(a-e)
+b*-(c-g)/d+b*h*j/d-f*j=-(a-e)
+b*-(c-g)/d+j*(b*h/d-f)=-(a-e)
+j*(b*h/d-f)=-(a-e)+b*(c-g)/d
+j=(-(a-e)+b*(c-g)/d)/(b*h/d-f)
+j=(-(a-e)*d+b*(c-g))/(b*h-f*d)
+j=(b*(c-g)-(a-e)*d)/(b*h-f*d)
+
+Q=(b*h-f*d)
+j=(b*(c-g)-(a-e)*d)/Q
+
+a+b*i=e+f*j
+b*i=e+f*j-a
+i=(e+f*j-a)/b
+
+		 */
+		
+		double a=l1.a.getx(); 
+		double b=(l1.b.getx()-l1.a.getx());
+		double c=l1.a.gety();
+		double d=(l1.b.gety()-l1.a.gety());
+
+		double e=l2.a.getx(); 
+		double f=(l2.b.getx()-l2.a.getx());
+		double g=l2.a.gety();
+		double h=(l2.b.gety()-l2.a.gety());
+		double Q=(b*h-f*d);
+		//System.out.println("Q="+Q);
+		if (Math.abs(Q)<1e-10)
+			return null; //lines are almost parallel
+		double j=(b*(c-g)-(a-e)*d)/Q;
+		double i=0;
+		//System.out.println("b="+Q+" d="+d);
+		if (Math.abs(b)>1e-10)
+			i=(e+f*j-a)/b;
+		else
+		if (Math.abs(d)>1e-10)
+			i=(g+h*j-c)/d;
+		else
+			return null; //Both b and d are close to 0 -> line is extremely short
+		//System.out.println("i="+i+" j="+j);
+		if (i>=-1e-6 && i<=1+1e-6 &&
+			j>=-1e-6)
+		{
+			Vector res=new Vector(
+				a+b*i,
+				c+d*i);
+			return res;
+		}
+		return null;
+	}
+	
+	public Line moved(Vector pos) {		
+		return new Line(a.plus(pos),b.plus(pos));
+	}
+	public Vector getv1() {
+		return a;
+	}
+	public Vector getv2() {
+		return b;
+	}
 }

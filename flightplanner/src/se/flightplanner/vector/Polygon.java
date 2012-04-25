@@ -176,4 +176,59 @@ public class Polygon implements Serializable {
 		}
 		return res;
 	}
+	public static class SectorResult
+	{		
+		public double nearest_distance_to_center; //of sector		
+		public Pie pie;
+		public boolean inside; //if center is inside area
+	}
+	public SectorResult sector(Vector center)
+	{
+	    if (points.size()==0)
+	        return null;
+	    SectorResult res=new SectorResult();
+        InsideResult ir=inside(center);
+        res.nearest_distance_to_center=center.minus(ir.closest).length();
+        res.inside=ir.isinside;
+        Vector delta=center.minus(points.get(0));
+        double conv=180.0/Math.PI;
+        double cur_a=delta.hdg();
+        double anglea=cur_a;
+        double angleb=cur_a;
+        for(int i=1;i<points.size();++i)
+        {
+            Vector p=points.get(i);
+            delta=center.minus(p);
+            double x=delta.hdg();
+            double turn=cur_a-x;
+            if (turn<-180) turn+=360;
+            if (turn>180) turn-=360;
+            if (turn<0) //left
+            {
+            	if (!in(anglea,angleb,x))
+            		anglea=x;
+            }
+           	else
+           	{
+            	if (!in(anglea,angleb,x))
+            		angleb=x;           		
+           	}
+            cur_a=x;		
+        }
+        return res;
+               
+	}
+	private boolean in(double anglea, double angleb, double x) {
+		if (anglea<angleb)
+		{
+			return x>=anglea && x<=angleb;
+		}
+		if (anglea>angleb)
+		{
+			return x>=anglea || x<=angleb;
+		}
+		
+		return false;
+	}
+	
 }
