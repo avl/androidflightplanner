@@ -86,6 +86,47 @@ public class BoundPie {
 		
 		
 	}
+
+	/**
+	 * Filters away any part of the line that is outside a
+	 * secant that goes from the left edge of the pie to the
+	 * right edge of the pie, at an angle that is orthogonal to
+	 * the average angle of the two pie edges, and at a distance
+	 * from the origin that is given by the radius argument.
+	 * 
+	 *  If the pie is a viewport, this will filter out any part
+	 *  of the line with a distance greater than 'radius' from
+	 *  the view plane.
+	 */
+	public Line cap_at_secant(Line tline,double radius) {
+		Line line=tline.moved(pos.negated());
+		double center_radian=pie.getCenter()/(180.0/Math.PI);
+		line.rot(-center_radian);
+		double bigepsilon=3;
+		//Use a big epsilon, so that we're sure that no line
+		//which is entirely inside the cap gets by us.
+		if (line.getv1().y-bigepsilon<-radius && line.getv2().y-bigepsilon<radius)
+			return null; //line is completely outside of view.
+		
+		
+		Vector out=line.approx_intersect_horiz_line(-radius, 0);
+		if (out==null)
+		{ //we already know line is not entirely outside cap, and since
+ 		  //it doesn't intersect either, it must be entirely inside.
+			return tline;						
+		}
+		double distA=-line.getv1().y;
+		double distB=-line.getv2().y;
+		Line outline;
+		if (distA>distB)
+			//use B
+			outline=new Line(out,line.getv2());
+		else
+			//use A
+			outline=new Line(line.getv1(),out);
+		outline.rot(center_radian);
+		return outline.moved(pos);
+	}
 	
 	
 }

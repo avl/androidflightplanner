@@ -32,7 +32,7 @@ public class TestAirspaceSigPointTree {
 		InputStream is=
 						new FileInputStream("/home/anders/workspace/flightplannertest/airspaces.json");
 					
-		Airspace s=Airspace.download(is);
+		Airspace s=Airspace.download(is,null,null,null,null);
 		int zoomlevel=8;
 		int zoomgap=13-zoomlevel;
 		Merc center13=Project.latlon2merc(new LatLon(59.4,17.9),13);

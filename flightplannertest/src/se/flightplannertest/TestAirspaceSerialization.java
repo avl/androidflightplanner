@@ -66,7 +66,7 @@ public class TestAirspaceSerialization {
 		airspace.serialize(os);
 		ByteArrayInputStream bai=new ByteArrayInputStream(bao.toByteArray());
 		DataInputStream is=new DataInputStream(bai);
-		Airspace airspace2=Airspace.deserialize(is);		
+		Airspace airspace2=Airspace.deserialize(is,null,null);		
 		
 		Assert.assertEquals(airspace.points.size(),airspace2.points.size());
 		for(int i=0;i<airspace.points.size();++i)

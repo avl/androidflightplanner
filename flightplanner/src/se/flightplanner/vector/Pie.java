@@ -13,12 +13,11 @@ public class Pie
     public Pie(double a,double b)
     {
         if (a<-1e6 || b<-1e6) throw new RuntimeException("Very negative angles are not allowed");
-    	while (a<0) a+=360;
-    	while (b<0) b+=360;
+        while(b<a) b+=360.0;
+        double size=b-a;
+    	while (a<0) a+=360;    	
         this.a=a%360.0;
-        this.b=b%360.0;
-        if (this.b<this.a)
-            this.b+=360.0;
+        this.b=a+size;        
     }
     
     @Override
@@ -87,6 +86,30 @@ public class Pie
 	}
 	public boolean isInPie(Vector v,double epsilon) {
 		return isInPie(v.hdg(),epsilon);
+	}
+	public Pie swingRight(float x) {
+		Pie pie=new Pie(a+x,b+x);
+		return pie;
+	}
+	public Pie swingLeft(float x) {
+		Pie pie=new Pie(a-x,b-x);
+		return pie;
+	}
+	public boolean isAtAllRightOf(Pie pie) {
+		//returns true if 'this' can be conceivably considered
+		//to be to the right of 'pie'.
+		//this is determined by simply looking at the midpoints of the two
+		//pies. This can return true even if they overlap.
+		double thismid=0.5*(a+b);
+		double piemid=0.5*(pie.a+pie.b);
+		return thismid>piemid;
+	}
+	public double getSize() {
+
+		return b-a;
+	}
+	public double getCenter() {		
+		return 0.5*(a+b);
 	}
 
 

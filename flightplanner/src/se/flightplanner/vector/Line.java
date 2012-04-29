@@ -12,6 +12,14 @@ public class Line {
 		a = pa;
 		b = pb;
 	}
+	/**
+	 * Rotate the line around the origin
+	 */
+	public void rot(double radian)
+	{
+		a=a.rot(radian);
+		b=b.rot(radian);
+	}
 	public Line(float x1,float y1,float x2,float y2)
 	{
 		a=new Vector(x1,y1);

@@ -21,7 +21,7 @@ public class TestPolygon {
 		vecs.add(new Vector(1,1));
 		vecs.add(new Vector(0,1));
 		Polygon p=new Polygon(vecs);
-		Assert.assertEquals(1.0,p.calc_area(),1e-9);
+		Assert.assertEquals(1.0,p.get_area(),1e-9);
 	}
 
 	@Test

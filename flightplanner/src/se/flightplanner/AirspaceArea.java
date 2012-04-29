@@ -24,6 +24,10 @@ public class AirspaceArea implements Serializable
 	public ArrayList<String> freqs;
 	public String floor;
 	public String ceiling;
+	public String toString()
+	{
+		return "AirspaceArea("+name+" size: "+poly.get_area()+" floor: "+floor+" ceiling: "+ceiling+")";
+	}
 	/**
 	 * Dynamic information about this airspace area in relation to the single observer
 	 * From a high-level design level, this does not belong here. However, having it here

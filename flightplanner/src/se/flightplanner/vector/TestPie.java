@@ -105,6 +105,62 @@ public class TestPie extends TestCase {
 		Line r=bp.cut(a);
 		assertNotNull(r);
 	}
+	
+	public void testPieSecant1()
+	{
+		BoundPie p=new BoundPie(new Vector(0,0),new Pie(330,30));
+		Line l=p.cap_at_secant(new Line(
+				new Vector(0,-5),
+				new Vector(0,-100)), 
+				10);
+		assertEquals(-10.0,l.getv2().y);			
+	}
+	public void testPieSecant2()
+	{
+		BoundPie p=new BoundPie(new Vector(0,0),new Pie(80,100));
+		Line l=p.cap_at_secant(new Line(
+				new Vector(5,0),
+				new Vector(100,0)), 
+				10);
+		assertEquals(10.0,l.getv2().x);			
+	}
+	public void testPieSecant3()
+	{
+		BoundPie p=new BoundPie(new Vector(0,0),new Pie(80,100));
+		Line l=p.cap_at_secant(new Line(
+				new Vector(5,0),
+				new Vector(100,0)), 
+				1000);
+		assertEquals(100.0,l.getv2().x);			
+	}
+	public void testPieSecant4()
+	{
+		BoundPie p=new BoundPie(new Vector(0,0),new Pie(80,100));
+		Line l=p.cap_at_secant(new Line(
+				new Vector(5,0),
+				new Vector(100,0)), 
+				1e10);
+		assertEquals(100.0,l.getv2().x);			
+	}
+	public void testPieSecant5()
+	{
+		BoundPie p=new BoundPie(new Vector(0,0),new Pie(0,180));
+		Line l=p.cap_at_secant(new Line(
+				new Vector(5,0),
+				new Vector(100,0)), 
+				10);
+		assertEquals(10.0,l.getv2().x);			
+	}
+	public void testPieSecant6()
+	{
+		BoundPie p=new BoundPie(new Vector(0,0),new Pie(0,180));
+		Line l=p.cap_at_secant(new Line(
+				new Vector(0,0),
+				new Vector(100,100)), 
+				10);
+		assertEquals(10.0,l.getv2().y);			
+	}
+	
 	public void testPoly1()
 	{
 		Polygon p=new Polygon(new Vector[]{
@@ -114,10 +170,26 @@ public class TestPie extends TestCase {
 				new Vector(1,10)});
 		
 		BoundPie pie=new BoundPie(new Vector(0,0),new Pie(130,140));
-		SectorResult sr=p.sector(pie);
+		SectorResult sr=p.sector(pie,1e10);
 		assertEquals(Math.sqrt(2),sr.nearest_distance_to_center,1e-6);
 		assertFalse(sr.inside);		
 	}
+	public void testPoly1a()
+	{
+		Polygon p=new Polygon(new Vector[]{
+				new Vector(0,0),
+				new Vector(1000,0),
+				new Vector(1000,1000),
+				new Vector(900,1)});
+		
+		BoundPie pie=new BoundPie(new Vector(-10,0),new Pie(45,135));
+		SectorResult sr=p.sector(pie,100);
+		assertEquals(10,sr.nearest_distance_to_center,1e-6);
+		assertEquals(89.0,sr.pie.getA(),1);
+		assertEquals(90.0,sr.pie.getB());
+		assertFalse(sr.inside);		
+	}
+	
 	public void testPoly2()
 	{
 		Polygon p=new Polygon(new Vector[]{
@@ -127,7 +199,7 @@ public class TestPie extends TestCase {
 				new Vector(0,10)});
 		
 		BoundPie pie=new BoundPie(new Vector(5,11),new Pie(330,30));
-		SectorResult sr=p.sector(pie);
+		SectorResult sr=p.sector(pie,1e10);
 		assertEquals(1,sr.nearest_distance_to_center,1e-6);
 		assertFalse(sr.inside);		
 	}
@@ -140,7 +212,7 @@ public class TestPie extends TestCase {
 				new Vector(0,10)});
 		
 		BoundPie pie=new BoundPie(new Vector(11,11),new Pie(90,180));
-		SectorResult sr=p.sector(pie);
+		SectorResult sr=p.sector(pie,1e10);
 		assertTrue(sr.nearest_distance_to_center>1e10);
 	}
 	public void testPoly4()
@@ -152,7 +224,7 @@ public class TestPie extends TestCase {
 				new Vector(0,10)});
 		
 		BoundPie pie=new BoundPie(new Vector(11,11),new Pie(300,330));
-		SectorResult sr=p.sector(pie);
+		SectorResult sr=p.sector(pie,1e10);
 		assertEquals(Math.sqrt(2),sr.nearest_distance_to_center,1e-7);
 	}
 
@@ -165,7 +237,7 @@ public class TestPie extends TestCase {
 				new Vector(0,10)});
 		
 		BoundPie pie=new BoundPie(new Vector(-1,5),new Pie(80,100));
-		SectorResult sr=p.sector(pie);
+		SectorResult sr=p.sector(pie,1e10);
 		assertEquals(80.0,sr.pie.getA());
 		assertEquals(100.0,sr.pie.getB());
 		assertEquals(1.0,sr.nearest_distance_to_center);
@@ -179,7 +251,7 @@ public class TestPie extends TestCase {
 				new Vector(0,10)});
 		
 		BoundPie pie=new BoundPie(new Vector(-100,5),new Pie(80,100));
-		SectorResult sr=p.sector(pie);
+		SectorResult sr=p.sector(pie,1e10);
 		assertTrue(80.0<sr.pie.getA());
 		assertTrue(100.0>sr.pie.getB());
 		assertEquals(100.0,sr.nearest_distance_to_center);
@@ -193,7 +265,7 @@ public class TestPie extends TestCase {
 				new Vector(0,10)});
 		
 		BoundPie pie=new BoundPie(new Vector(5,5),new Pie(80,100));
-		SectorResult sr=p.sector(pie);
+		SectorResult sr=p.sector(pie,1e10);
 		assertTrue(sr.inside);
 	}
 	public void testPoly8()
@@ -205,7 +277,7 @@ public class TestPie extends TestCase {
 				new Vector(0,10)});
 		
 		BoundPie pie=new BoundPie(new Vector(5,5),new Pie(180,90));
-		SectorResult sr=p.sector(pie);
+		SectorResult sr=p.sector(pie,1e10);
 		assertFalse(sr.inside);
 		assertEquals(405.0,sr.pie.getB());
 		assertEquals(225.0,sr.pie.getA());
@@ -220,12 +292,13 @@ public class TestPie extends TestCase {
 				new Vector(0,10)});
 		
 		BoundPie pie=new BoundPie(new Vector(5,5),new Pie(90,360));
-		SectorResult sr=p.sector(pie);
+		SectorResult sr=p.sector(pie,1e10);
 		assertFalse(sr.inside);
 		assertEquals(360.0,sr.pie.getB());
-		assertEquals(225.0,sr.pie.getA());
-		
+		assertEquals(225.0,sr.pie.getA());		
 	}
+	
+	
 		
 	
 	

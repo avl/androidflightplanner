@@ -87,6 +87,10 @@ public class Vector implements Serializable {
 		return new Vector(dx,dy);
 	}
 	
+	/*!
+	 * Rotate counter-clockwise for right-handed coordinate system,
+	 * clockwise for our mercator (left-handed) system.
+	 */
 	public Vector rot(double rad) {
 		double nx=Math.cos(rad)*x - Math.sin(rad)*y;
 		double ny=Math.sin(rad)*x + Math.cos(rad)*y;

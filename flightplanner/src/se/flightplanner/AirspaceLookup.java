@@ -14,7 +14,7 @@ import se.flightplanner.vector.BoundingBox;
 import se.flightplanner.vector.Vector;
 import se.flightplanner.vector.Polygon.InsideResult;
 
-public class AirspaceLookup {
+public class AirspaceLookup implements AirspaceLookupIf {
 	static public class AirspaceDetails
 	{
 		boolean hasextra;
@@ -153,6 +153,11 @@ public class AirspaceLookup {
 		// TODO Auto-generated constructor stub
 	}
 	public AirspaceAreaTree areas;
+	/* (non-Javadoc)
+	 * @see se.flightplanner.AirspaceLookupIf#getAreas()
+	 */
+	@Override
+	public AirspaceAreaTree getAreas(){return areas;}
 	public HashMap<String,SigPoint> by_icao;
 	public AirspaceSigPointsTree minorAirfields;
 	public AirspaceSigPointsTree majorAirports;

@@ -10,6 +10,7 @@ public class Polygon implements Serializable {
 
 	private static final long serialVersionUID = -4421004724531424354L;
 	private ArrayList<Vector> points;
+	double area;
 
 	public int numPoints()
 	{
@@ -44,6 +45,7 @@ public class Polygon implements Serializable {
 		if (ppoints.size()==0)
 			throw new RuntimeException("Empty polygons (without points) are not supported");
 		points=ppoints;
+		area=calc_area();
 	}
 	/**
 	 * Points must form a counter-clockwise, non-intersecting polygon.
@@ -56,15 +58,21 @@ public class Polygon implements Serializable {
 		points=new ArrayList<Vector>();
 		for(Vector v:ppoints)
 			points.add(v);
+		area=calc_area();
 	}
 	
+	public double get_area()
+	{
+		return area;
+	}
 	/**
 	 * Return the area of the polygon.
 	 * @return
 	 */
-	public double calc_area()
+	private double calc_area()
 	{
 	    double sum=0;
+	    if (points.size()<3) return 0;
         for(int i=0;i<points.size();++i)
         {
             boolean up=false;
@@ -182,12 +190,24 @@ public class Polygon implements Serializable {
 		public boolean inside; //if center is inside area
 		public Pie pie;
 	}
-	public SectorResult sector(BoundPie center)
+	/*!
+	 * Returns null if this polygon has no points at all.
+	 * Otherwise returns non-null. 
+	 * inside will be set to true if the the pie center is inside the polygon,
+	 * in which case the returned pie will be 360degrees and nearest_distance_to_center
+	 * will be 0.
+	 * If center is not inside the polygon, return the distance to the nearest
+	 * point of the polygon inside the input pie in nearest_distance_to_center,
+	 * and return the smallest pie that contains the intersection of the input 
+	 * pie and the polygon. That is, the pie that gives the angles between
+	 * which the polygon can be observed from the input point.
+	 */
+	public SectorResult sector(BoundPie inputpie,double depth)
 	{
 	    if (points.size()==0)
 	        return null;
 	    SectorResult res=new SectorResult();
-        InsideResult ir=inside(center.pos);
+        InsideResult ir=inside(inputpie.pos);
         res.inside=ir.isinside;
         if (res.inside)
         {
@@ -199,10 +219,14 @@ public class Polygon implements Serializable {
         for(int i=0;i<points.size();++i)
         {
         	Line l=new Line(points.get(i),points.get((i+1)%points.size()));
-        	Line out=center.cut(l);
+        	Line out=inputpie.cut(l);        	
         	//System.out.println("Cut "+l+" to "+out+" ("+center+")");
         	if (out!=null)
-        		lines.add(out);
+        	{
+        		Line out2=inputpie.cap_at_secant(out,depth);
+        		if (out2!=null)
+        			lines.add(out2);
+        	}
         }
         if (lines.size()==0)
         {
@@ -211,7 +235,7 @@ public class Polygon implements Serializable {
         }
         
                 
-        Vector delta=lines.get(0).getv1().minus(center.pos);
+        Vector delta=lines.get(0).getv1().minus(inputpie.pos);
         double cur_a=delta.hdg();
         double anglea=cur_a;
         double angleb=cur_a;
@@ -223,13 +247,13 @@ public class Polygon implements Serializable {
         {
         	Line l=lines.get(i);
         	System.out.println("Filtered line: "+l);
-        	double curdist=l.distance(center.pos);
+        	double curdist=l.distance(inputpie.pos);
         	if (curdist<dist)
         		dist=curdist;
         	for(Vector p:new Vector[]{l.getv1(),l.getv2()})
         	{
         		System.out.println("The p: "+p);
-	            delta=p.minus(center.pos);
+	            delta=p.minus(inputpie.pos);
 	            double x=delta.hdg();
 	            double turn=x-cur_a;
 	            System.out.println("Pre-step: cur_a: "+cur_a+" x: "+x+" turn: "+turn+" state: "+anglea+" "+angleb);
