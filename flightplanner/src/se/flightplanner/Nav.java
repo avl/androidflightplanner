@@ -72,6 +72,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	final static int MENU_VIEW_CHARTS=7;
 	final static int MENU_HELP=8;
 	final static int MENU_DESCPOS=9;
+	final static int MENU_SIMPLER=10;
 	private LocationManager locman;
 	BackgroundMapDownloader terraindownloader;
 	private FlightPathLogger fplog;
@@ -143,10 +144,13 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    menu.add(0, MENU_FINISH, 0, "Exit");
 	    menu.add(0, MENU_SETTINGS, 0, "Settings");
 	    menu.add(0, MENU_HELP, 0, "Help");
+	    
 	    menu.add(0, MENU_VIEW_RECORDINGS, 0, "Recorded Trips");
 	    menu.add(0, MENU_DESCPOS, 0, "Describe My Position");
+	    menu.add(0, MENU_SIMPLER, 0, "Nearby Airspaces");
 	    return true;
 	}
+	
 	@Override
 	protected void onActivityResult(int req,int res,Intent data)
 	{
@@ -349,6 +353,23 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     	{
     		RookieHelper.showmsg(this, "Position Unknown");
     	}
+    	break;
+    }
+    case MENU_SIMPLER:
+    {
+    	Intent intent = new Intent(this, SimplerActivity.class);
+    	if (last_location!=null)
+    	{
+    		intent.putExtra("se.flightplanner.pos", new LatLon(last_location));
+    		intent.putExtra("se.flightplanner.hdg", last_location.getBearing());
+    		intent.putExtra("se.flightplanner.gs", last_location.getSpeed()*3.6/1.852);
+    		startActivity(intent);
+    	}
+    	else
+    	{
+    		RookieHelper.showmsg(this, "Position Unknown");
+    	}
+    	break;
     }
     	
     }
@@ -488,11 +509,12 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     	super.onCreate(savedInstanceState);
     	
     	final NavData data = (NavData) getLastNonConfigurationInstance();
-    	
     	tripstate=new TripState(null);
-    	setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+    	//setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
     	fplog=new FlightPathLogger();
     	
+    	last_location=bearingspeed.calcBearingSpeed(null);
+
         if (data != null) {
         	tripdata=data.tripdata;
         	airspace=data.airspace;
@@ -555,7 +577,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	private BearingSpeedCalc bearingspeed=new BearingSpeedCalc();
 	@Override
 	public void onLocationChanged(Location loc) {
-		Log.i("fplan","Location changed");
+		//Log.i("fplan","Location changed");
 		if (loc!=null && DataDownloader.chartGpsDebugMode())
 		{
 			double lat=loc.getLatitude();
@@ -644,6 +666,8 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
         		getPreferences(MODE_PRIVATE).getBoolean("northup", false));
 		map.enableTerrainMap(true);
 		last_load_terrain=SystemClock.elapsedRealtime();
+		
+		
 		if (do_load_trips)
 		{
 			selectTrip();

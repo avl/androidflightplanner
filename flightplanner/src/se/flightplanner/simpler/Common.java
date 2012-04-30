@@ -21,6 +21,8 @@ public class Common {
 			this.top=y1;
 			this.right=x2;
 			this.bottom=y2;
+			if (x1>x2) throw new RuntimeException("internal error x1>x2");
+			if (y1>y2) throw new RuntimeException("internal error x1>x2");
 		}
 		public int width(){return right-left;}
 		public int height(){return bottom-top;}
@@ -36,11 +38,13 @@ public class Common {
 		LEFT,AHEAD,RIGHT,PRESENT
 	}
 
+	
 	public static Pie getPie(Compartment comp) {
-		if (comp==Compartment.AHEAD) return new Pie(-45,+45);
-		if (comp==Compartment.LEFT) return new Pie(-100,-45);
-		if (comp==Compartment.RIGHT) return new Pie(+45,+100);
-		return null;
+		if (comp==Compartment.AHEAD) return new Pie(-30,+30);
+		if (comp==Compartment.LEFT) return new Pie(-100,-29);
+		if (comp==Compartment.RIGHT) return new Pie(+29,+100);
+		if (comp==Compartment.PRESENT) return new Pie(0,360);
+		throw new RuntimeException("Unknown compartment: "+comp);
 	}
 
 }

@@ -315,11 +315,13 @@ public class AdChartView extends View implements UpdatableUI {
 	}
 	@Override
 	protected void onDraw(Canvas canvas) {
-		
+				
 		int width=getRight()-getLeft();		
 		int height=getBottom()-getTop();
 		last_width=width;
 		last_height=height;
+		clamp_scroll();
+		
 		int required_cachesize=((width+255+255)/256)*((height+255+255)/256);
 		//TODO: Limit required cache size to never be bigger than total number of available tiles.
 				

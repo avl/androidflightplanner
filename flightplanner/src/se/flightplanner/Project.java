@@ -59,9 +59,9 @@ public class Project {
 			int[] tlat=getDegMinSec(lat);
 			int[] tlon=getDegMinSec(lon);
 			StringBuilder sb=new StringBuilder();			
-			sb.append(String.format("%02d°%02d'%02d%s\"",tlat[1],tlat[2],tlat[3],tlat[0]<0 ? "S" : "N"));
+			sb.append(String.format("%02d°%02d'%02d\"%s",tlat[1],tlat[2],tlat[3],tlat[0]<0 ? "S" : "N"));
 			sb.append(" ");
-			sb.append(String.format("%03d°%02d'%02d%s\"",tlon[1],tlon[2],tlon[3],tlon[0]<0 ? "W" : "E"));			
+			sb.append(String.format("%03d°%02d'%02d\"%s",tlon[1],tlon[2],tlon[3],tlon[0]<0 ? "W" : "E"));			
 			return sb.toString();
 		}
 		public LatLon(double plat,double plon)

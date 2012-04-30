@@ -56,7 +56,7 @@ public class NakedDetailedPlace implements DetailedPlace {
 	}
 
 	@Override
-	public boolean hasPlannedTime() {
+	public boolean hasPlanned() {
 		return false;
 	}
 
@@ -68,6 +68,36 @@ public class NakedDetailedPlace implements DetailedPlace {
 	@Override
 	public LatLon getPos() {
 		return pos;
+	}
+
+	@Override
+	public Float getPlannedFuel() {
+		return null;
+	}
+
+	@Override
+	public Float getPlannedGs() {
+		return null;
+	}
+
+	@Override
+	public boolean hasPrevNext() {
+		return false;
+	}
+
+	@Override
+	public void prev() {
+		
+	}
+
+	@Override
+	public void next() {
+		
+	}
+
+	@Override
+	public boolean is_own_position() {
+		return false;
 	}
 
 }

@@ -28,10 +28,18 @@ public interface DetailedPlace {
 
 	String getName();
 
-	boolean hasPlannedTime();
+	boolean hasPlanned();
 
 	Date getPlanned();
 
 	LatLon getPos();
+
+	Float getPlannedFuel();
+
+	Float getPlannedGs();
 	
+	boolean hasPrevNext();
+	void prev();
+	void next();
+	boolean is_own_position();
 }

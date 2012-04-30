@@ -396,5 +396,10 @@ public class GuiSituation
 		
 		movingMap.doShowExtended(places);
 	}
+	public void sizechange(int width, int height, int numInfoLines) {
+		this.xsize=width;
+		this.ysize=height;
+		this.maxinfolines=numInfoLines;		
+	}
 	
 }

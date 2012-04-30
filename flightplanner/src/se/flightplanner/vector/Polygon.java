@@ -6,6 +6,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 
+import se.flightplanner.Project;
+
 public class Polygon implements Serializable {
 
 	private static final long serialVersionUID = -4421004724531424354L;
@@ -189,6 +191,7 @@ public class Polygon implements Serializable {
 		public double nearest_distance_to_center; //of sector		
 		public boolean inside; //if center is inside area
 		public Pie pie;
+		public float bearing;
 	}
 	/*!
 	 * Returns null if this polygon has no points at all.
@@ -213,6 +216,7 @@ public class Polygon implements Serializable {
         {
         	res.nearest_distance_to_center=0;
         	res.pie=new Pie(0,360);
+        	res.bearing=0;
         	return res;
         }
         ArrayList<Line> lines=new ArrayList<Line>();
@@ -231,6 +235,7 @@ public class Polygon implements Serializable {
         if (lines.size()==0)
         {
         	res.nearest_distance_to_center=1e30;
+        	res.bearing=0;
         	return res;
         }
         
@@ -240,23 +245,34 @@ public class Polygon implements Serializable {
         double anglea=cur_a;
         double angleb=cur_a;
         double dist=1e30;
-        
+        double bearing=0;
         
         
         for(int i=0;i<lines.size();++i)
         {
         	Line l=lines.get(i);
-        	System.out.println("Filtered line: "+l);
-        	double curdist=l.distance(inputpie.pos);
+        	//System.out.println("Filtered line: "+l);
+    		Vector clo=l.closest(inputpie.pos);
+    		double curdist=clo.minus(inputpie.pos).length();        	
+        	//double curdist=l.distance(inputpie.pos);
+    		
+    		
         	if (curdist<dist)
+        	{
+        		Vector delta2=clo.minus(inputpie.pos);
+        		double tt=90-(Math.atan2(-delta2.y,delta2.x)*180.0/Math.PI);
+        		if (tt<0) tt+=360.0;        		
+        		bearing=tt;
         		dist=curdist;
+        	}
         	for(Vector p:new Vector[]{l.getv1(),l.getv2()})
         	{
-        		System.out.println("The p: "+p);
+        		//System.out.println("The p: "+p);
 	            delta=p.minus(inputpie.pos);
 	            double x=delta.hdg();
+	            
 	            double turn=x-cur_a;
-	            System.out.println("Pre-step: cur_a: "+cur_a+" x: "+x+" turn: "+turn+" state: "+anglea+" "+angleb);
+	            //System.out.println("Pre-step: cur_a: "+cur_a+" x: "+x+" turn: "+turn+" state: "+anglea+" "+angleb);
 	        	    if (turn<-180) turn+=360;
 	            if (turn>180) turn-=360;
 	            if (turn<-1e-8) //left
@@ -275,6 +291,7 @@ public class Polygon implements Serializable {
         res.pie=new Pie(anglea,angleb);
         //System.out.println("Resulting pie: "+res.pie);
         res.nearest_distance_to_center=dist;
+        res.bearing=(float)bearing;
         return res;
                
 	}

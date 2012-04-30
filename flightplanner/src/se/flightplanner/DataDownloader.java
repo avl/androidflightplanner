@@ -46,7 +46,7 @@ public class DataDownloader {
 		String addr;
 		if (debugMode())
 		{
-			addr="http://10.0.2.2:5000";
+			//addr="http://10.0.2.2:5000";
 			//String addr="192.168.42.222:5000";
 			//String addr="http://192.168.1.150:5000";
 			
@@ -54,7 +54,7 @@ public class DataDownloader {
 			//addr="http://192.168.1.160:5000";
 			//addr="http://192.168.1.101:5000";
 			//String addr="http://79.99.0.86:5000";
-			//addr="http://192.168.1.160:5000";
+			addr="http://192.168.1.160:5000";
 			//addr="http://192.168.43.251:5000";
 			
 		}

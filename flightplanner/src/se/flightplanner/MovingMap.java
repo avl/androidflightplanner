@@ -106,7 +106,11 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			gui.updateTripState(tripstate);
 		invalidate();
 	}
+	
+	private int lastwidth,lastheight; 
 	protected void onDraw(Canvas canvas) {
+		int width=getRight()-getLeft();
+		int height=getBottom()-getTop();
 		
 		if (gui==null || drawer==null)
 		{
@@ -115,15 +119,25 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			if (getBottom()<50 || getRight()<50)
 				throw new RuntimeException("The screen is way too small");
 
-			gui=new GuiSituation(this,drawer.getNumInfoLines(getBottom()-getTop()),lastpos,
-					getRight()-getLeft(),getBottom()-getTop(),tripstate,lookup);
-			gui.setnorthup(defnorthup);
-			
+			gui=new GuiSituation(this,drawer.getNumInfoLines(height),lastpos,
+					width,height,tripstate,lookup);
+			lastwidth=width;
+			lastheight=height;
+			gui.setnorthup(defnorthup);			
 		}
+		if (width!=lastwidth || height!=lastheight)
+		{
+			lastwidth=width;
+			lastheight=height;
+			gui.sizechange(width,height,drawer.getNumInfoLines(height));
+		}
+		
+		/*
 		if (getLeft()!=0)
 			canvas.translate(-getLeft(), 0);
 		if (getTop()!=0)
 			canvas.translate(0,-getTop());
+		*/
 		
         canvas.drawColor(Color.BLACK);
 		if (tripdata==null)

@@ -4,6 +4,7 @@ package se.flightplanner;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -29,6 +30,13 @@ public class AdChartActivity extends Activity implements LocationListener {
 	}
 	LocationManager locman;
 	AdChartView view;
+	
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+    	super.onConfigurationChanged(newConfig);
+    	view.invalidate();
+    }
+	
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -57,11 +65,12 @@ public class AdChartActivity extends Activity implements LocationListener {
 			finish();
 			return;
 		}
+    	/*
     	if (view.get_chart_width()>view.get_chart_height())
     		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
     	else
     		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        
+        */
         setContentView(view);
 
         if (view.haveGeoLocation())

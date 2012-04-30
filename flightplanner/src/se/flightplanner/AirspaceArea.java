@@ -36,7 +36,12 @@ public class AirspaceArea implements Serializable
 	 * the airspace area). The disadvantage is that we can't support multiple observers. 
 	 */
 	volatile public SpaceStats dyninfo; 
-	public byte r,g,b,a;
+	public short r,g,b,a;
+	/*!
+	 * True if we are cleared by ATC in this area.
+	 */
+	public boolean cleared;
+	
 	public void serialize(DataOutputStream os) throws IOException
 	{
 		if (name!=null)
@@ -76,10 +81,10 @@ public class AirspaceArea implements Serializable
 		a.name=is.readUTF();		
 		if (version>=2)
 		{
-			a.r=is.readByte();
-			a.g=is.readByte();
-			a.b=is.readByte();
-			a.a=is.readByte();
+			a.r=(short)(is.readByte()&0xff);
+			a.g=(short)(is.readByte()&0xff);
+			a.b=(short)(is.readByte()&0xff);
+			a.a=(short)(is.readByte()&0xff);
 		}
 		int numpoints=is.readInt();
 		if (numpoints<0 || numpoints>100)

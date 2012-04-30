@@ -90,7 +90,7 @@ public class DescribePosition extends Activity implements LocationListener{
 				else
 				{
 					
-					return String.format("<p>WGS84:</p><p>"+latlon.toString2()+"</p>");					
+					return String.format("<p>WGS84:</p><p>"+latlon.toString2().replace(" ", "<br/>")+"</p>");					
 				}
 			}
 		};
@@ -100,7 +100,9 @@ public class DescribePosition extends Activity implements LocationListener{
 	void update(LatLon mypos)
 	{
 		int pos=sel;
-		if (pos==AdapterView.INVALID_POSITION || mypos==null)
+		if (pos==AdapterView.INVALID_POSITION)
+			pos=0;
+		if (mypos==null)
 		{
 			describer.setText("Position Unknown");
 			return;
@@ -194,7 +196,7 @@ public class DescribePosition extends Activity implements LocationListener{
 		{
 
 			bigairfs=airports.findall(new BoundingBox(m.toVector(),Project.approx_scale(m, 13,wider_net)));
-			Log.i("fplan","Looking around "+m.x+","+m.y+" size: "+Project.approx_scale(m, 13,wider_net)+" found: "+bigairfs.size());
+			//Log.i("fplan","Looking around "+m.x+","+m.y+" size: "+Project.approx_scale(m, 13,wider_net)+" found: "+bigairfs.size());
 			if (bigairfs.size()>=10) break;
 		}
 		SigPoint.sort_nearest(bigairfs,mypos);

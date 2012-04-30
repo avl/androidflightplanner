@@ -35,7 +35,7 @@ public class MapDrawer {
 	private Paint linepaint;
 	private Paint thinlinepaint;
 	private Paint trippaint;
-	private Paint seltrippaint;
+	private Paint widetrippaint;
 	private Paint arrowpaint;
 	private Paint backgroundpaint;
 	private Paint textpaint;
@@ -86,15 +86,17 @@ public class MapDrawer {
 
 		trippaint = new Paint();
 		trippaint.setAntiAlias(true);
-		trippaint.setStrokeWidth(5);
-		trippaint.setColor(Color.rgb(0xb0,0xb0,0xff));
+		trippaint.setStrokeWidth(4);
+		trippaint.setARGB(0xff,0xff,0xff,0xff);
+		trippaint.setColor(Color.rgb(0xff,0xff,0xff));
 		trippaint.setStrokeCap(Paint.Cap.ROUND);
 
-		seltrippaint = new Paint();
-		seltrippaint.setAntiAlias(true);
-		seltrippaint.setStrokeWidth(5);
-		seltrippaint.setColor(Color.WHITE);
-		seltrippaint.setStrokeCap(Paint.Cap.ROUND);
+		widetrippaint = new Paint();
+		widetrippaint.setAntiAlias(true);
+		widetrippaint.setStrokeWidth(8);
+		widetrippaint.setARGB(0x70,0x80,0x80,0xff);
+		widetrippaint.setStrokeCap(Paint.Cap.ROUND);
+
 
 		backgroundpaint = new Paint();
 		backgroundpaint.setStyle(Style.FILL);
@@ -428,11 +430,11 @@ public class MapDrawer {
 
 			}
 
-			for (int i = 0; i < tripdata.waypoints.size() - 1; ++i) {
-				Paint p;
-				p = trippaint;
+			for (int i = tripdata.waypoints.size() - 2; i >=0; --i) {
 				canvas.drawLine(lines[4 * i + 0], lines[4 * i + 1],
-						lines[4 * i + 2], lines[4 * i + 3], p);
+						lines[4 * i + 2], lines[4 * i + 3], widetrippaint);
+				canvas.drawLine(lines[4 * i + 0], lines[4 * i + 1],
+						lines[4 * i + 2], lines[4 * i + 3], trippaint);
 			}
 			textpaint.setColor(Color.WHITE);
 			for (Waypoint wp : tripdata.waypoints) {
