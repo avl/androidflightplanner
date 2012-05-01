@@ -361,8 +361,8 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     	if (last_location!=null)
     	{
     		intent.putExtra("se.flightplanner.pos", new LatLon(last_location));
-    		intent.putExtra("se.flightplanner.hdg", last_location.getBearing());
-    		intent.putExtra("se.flightplanner.gs", last_location.getSpeed()*3.6/1.852);
+    		intent.putExtra("se.flightplanner.hdg", (float)last_location.getBearing());
+    		intent.putExtra("se.flightplanner.gs", (float)(last_location.getSpeed()*3.6/1.852));
     		startActivity(intent);
     	}
     	else

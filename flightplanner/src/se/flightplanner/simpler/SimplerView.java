@@ -1,6 +1,9 @@
 package se.flightplanner.simpler;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map.Entry;
 
 import se.flightplanner.AirspaceArea;
 import se.flightplanner.AirspaceLookupIf;
@@ -14,6 +17,7 @@ import se.flightplanner.simpler.AirspaceLayout.Rows;
 import se.flightplanner.simpler.Common;
 import se.flightplanner.simpler.Common.Compartment;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
@@ -21,6 +25,8 @@ import android.graphics.Paint;
 import android.graphics.Paint.Style;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.os.Handler;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -97,6 +103,15 @@ public class SimplerView extends View {
 		},nb);
 
 		needlayout=true;
+		bmsclear();
+	}
+	
+	private void bmsclear()
+	{
+		for(CacheVal cv:bms.values())
+			cv.bm.recycle();
+		bms.clear();
+		bms_survive.clear();
 	}
 	
 	private static class CompartmentData
@@ -127,7 +142,8 @@ public class SimplerView extends View {
 	private enum State
 	{
 		IDLE,
-		FINGER_DOWN,		
+		FINGER_DOWN,
+		DEAD
 	}
 	private State state=State.IDLE;
 	private float downx,downy;
@@ -138,44 +154,119 @@ public class SimplerView extends View {
 		
 		float x=ev.getX();
 		float y=ev.getY();
-		
 		if (ev.getAction()==MotionEvent.ACTION_DOWN ||
 				ev.getAction()==MotionEvent.ACTION_MOVE)
 		{
 			owner.touched();
+			if (state==State.FINGER_DOWN)
+			{
+				if (state==State.FINGER_DOWN)
+				{
+					if (x-downx>15 || y-downy<-15)
+					{
+						if (clear(downx,downy,false))
+							state=State.DEAD;
+					}
+					else if (x-downx<-15 || y-downy>15)
+					{
+						if (clear(downx,downy,true))
+							state=State.DEAD;
+					}				
+				}
+			}
 			if (state==State.IDLE)
 			{
 				downx=x;downy=y;
 				state=State.FINGER_DOWN;
 			}
+
+			if (state!=State.DEAD)
+				highlight_any(x,y);
+			else
+				cancel_any_highlight();
 		}
 		else if (ev.getAction()==MotionEvent.ACTION_UP)
 		{
+			cancel_any_highlight();			
 			owner.touched();
 			if (state==State.FINGER_DOWN)
 			{
-				if (x-downx>20 || y-downy<-20)
+				if (x-downx>15 || y-downy<-15)
 				{
 					clear(downx,downy,false);
 				}
-				else if (x-downx<-20 || y-downy>20)
+				else if (x-downx<-15 || y-downy>15)
 				{
 					clear(downx,downy,true);
-				}
+				}				
 			}
 			state=State.IDLE;
 		}
 		return true;
 	}
+	private void cancel_any_highlight() {
+		if (highlighted!=null)
+		{
+			handler.removeCallbacks(highlight_cycler);
+			invalidate();
+		}
+		highlighted=null;
+		
+	}
+	public void stop()
+	{
+		handler.removeCallbacks(highlight_cycler);
+	}
+	private Handler handler=new Handler();
+	private AirspaceArea highlighted;
+	private long highlight_phase=0;
+	private float highlight_intensity=0;
+	private float highlight_x=-1,highlight_y=-1;
 
-	private void clear(float x, float y, boolean cleared) {
+	private Runnable highlight_cycler=new Runnable()
+	{
+		@Override
+		public void run() {
+			highlight_intensity=(float) (0.5f+0.5f*Math.sin(((SystemClock.elapsedRealtime()-highlight_phase)%2000)*2*Math.PI/2000.0));
+			handler.postDelayed(this, 50);
+			SimplerView.this.invalidate();
+		}
+		
+	};
+	private void highlight_any(float x, float y) {
+		
+		AirspaceArea area=findSpace(x,y);
+		if (area!=null)
+		{
+			if (highlighted!=area)
+				highlight_phase=SystemClock.elapsedRealtime();
+			if (highlighted==null)			
+			{				
+				handler.postDelayed(highlight_cycler, 0);						
+			}
+			highlighted=area;
+			highlight_x=x;
+			highlight_y=y;
+		}
+		else
+		{
+			cancel_any_highlight();
+		}
+	}
+
+	private boolean clear(float x, float y, boolean cleared) {
 		AirspaceArea area=findSpace(x,y);
 		if (area!=null)
 		{
 			if (area.cleared!=cleared)
+			{
+				area.cleared=cleared;
 				invalidate();
-			area.cleared=cleared;
+				return true;
+			}			
+			
 		}
+		return false;
 		
 	}
 	private AirspaceArea findSpace(float x, float y) {
@@ -219,7 +310,7 @@ public class SimplerView extends View {
 		//Log.i("fplan.al","Hdg:"+hdg);
 		int width=getRight()-getLeft();
 		int height=getBottom()-getTop();
-		
+		long bef=SystemClock.elapsedRealtime();
 		if (width!=lastwidth || height!=lastheight) 
 			needlayout=true;
 		lastwidth=width;
@@ -263,6 +354,7 @@ public class SimplerView extends View {
 			canvas.rotate(comp.rot,comp.x,comp.y);
 			mat.preTranslate(comp.x,comp.y);
 			canvas.translate(comp.x, comp.y);
+			canvas.clipRect(0,0,comp.xsize,comp.ysize);
 			int cury=comp.ysize;
 			int nexty=Integer.MAX_VALUE;
 			
@@ -316,7 +408,9 @@ public class SimplerView extends View {
 					float b=orangeness*(0)+(1.0f-orangeness)*255;
 					
 					
-					cury=drawBox(canvas,cury,rect,"^ "+desc+" ^",(String)null,(int)r,(int)g,(int)b,smalltxtpaint);
+										
+					cury=drawCacheBox(canvas,cury,rect,new String[]{"^ "+desc+" ^"},(int)r,(int)g,(int)b,smalltxtpaint,false);
+					
 					has_range_box=true;
 				}
 								
@@ -343,8 +437,14 @@ public class SimplerView extends View {
 					{
 						r=g=b=0xc0;
 					}
-					int boxy2=drawBox(canvas,cury-off,cell.rect,alts,area.name,r,g,b,txtpaint);
+					if (area==highlighted)
+					{
+						b=255;
+						r=g=(int)(highlight_intensity*180.0);						
+					}
+					int boxy2=drawCacheBox(canvas,cury-off,cell.rect,new String[]{alts,area.name},r,g,b,txtpaint,false);
 					nexty=Math.min(nexty,boxy2);
+					
 					
 					if (needlayout)
 					{
@@ -363,11 +463,38 @@ public class SimplerView extends View {
 			canvas.restore();
 		}
 		
+		if (highlighted!=null)
+		{
+			
+			Common.Rect tr=new Common.Rect((int)highlight_x,0,(int)highlight_x+400,0);
+			boolean below=false;
+			int ypos=(int)highlight_y;
+			if (ypos<height/4)
+			{
+				below=true;
+			}
+			
+			drawCacheBox(canvas, ypos, tr, new String[]{highlighted.name}, 255,255,255,txtpaint,below);
+		}
+		
+		
 		
 		needlayout=false;
 		
+		for(Entry<CacheKey,CacheVal> cv:bms.entrySet())
+		{
+			if (bms_survive.get(cv.getKey())==null)
+			{
+				cv.getValue().bm.recycle();
+			}
+		}
 		
+		bms=bms_survive;		
+		bms_survive=new HashMap<SimplerView.CacheKey, SimplerView.CacheVal>();
 		
+		//bms.clear();
+		long aft=SystemClock.elapsedRealtime();
+		Log.i("fplan","Redrawn SimplerView in "+(aft-bef)+"ms");
 	}
 	private void storePosition(AirspaceArea area, RectF rect) {
 		Position p=new Position();
@@ -384,26 +511,91 @@ public class SimplerView extends View {
 		if (last_distrow_distance<0) return true;
 		return distance>last_distrow_distance*2;
 	}
-	private int drawBox(Canvas canvas, int cury, Common.Rect cellrect,String label,String label2,int r,int g,int b,Paint usetxtpaint) {
-		Rect re=new Rect();
-		re.left=cellrect.left+border;
-		re.right=cellrect.right-border;
-		re.bottom=cury-border;
-		
-		Rect drawrect1=new Rect();
-		usetxtpaint.getTextBounds(label, 0, label.length(), drawrect1);		
-		Rect drawrect2=new Rect();
-		int h;
-		if (label2!=null)
+	private class CacheKey
+	{
+		String[] ts;
+		int r,g,b;
+		public CacheKey(String[] ts,int r,int g,int b)
 		{
-			usetxtpaint.getTextBounds(label2, 0, label2.length(), drawrect2);
-			h=drawrect1.height()+drawrect2.height()+10;
+			this.ts=ts;
+			this.r=r;
+			this.g=g;
+			this.b=b;
 		}
-		else
+		@Override
+		public boolean equals(Object ko)
 		{
-			h=drawrect1.height();
-		}		
-		re.top=cury-h-border;
+			CacheKey k=(CacheKey)ko;
+			return Arrays.equals(ts,k.ts) && r==k.r && g==k.g && b==k.b;
+		}
+		@Override
+		public int hashCode()
+		{
+			int x=r+g+b;
+			for(String t:ts)
+				x+=t.hashCode();
+			return x;
+		}
+	}
+	public class CacheVal
+	{
+		int ysize;
+		Bitmap bm;
+	}
+	
+	HashMap<CacheKey,CacheVal> bms=new HashMap<CacheKey,CacheVal>();
+	HashMap<CacheKey,CacheVal> bms_survive=new HashMap<CacheKey,CacheVal>();
+	private int drawCacheBox(Canvas canvas, int cury, Common.Rect cellrect,String[] labels,int r,int g,int b,Paint usetxtpaint,boolean below)
+	{
+		CacheKey ck=new CacheKey(labels,r,g,b);
+		CacheVal ar=bms.get(ck);
+		if (ar==null)
+		{
+			Log.i("fplan","Cachemiss");
+			ar=new CacheVal();
+			Rect[] drawrects=new Rect[labels.length];
+			int h = 0;
+			int i=0;
+			for(String label:labels)
+			{
+				drawrects[i]=new Rect();
+				h+=measureBox(label,usetxtpaint, drawrects[i]);
+				++i;
+			}
+			//Log.i("fplan","Measure box:"+h);
+			int ysize=h+border*4;
+			ar.ysize=ysize;
+			ar.bm=Bitmap.createBitmap(cellrect.width(),ysize,Bitmap.Config.ARGB_8888);
+			//Log.i("fplan","bmsize:"+ar.bm.getWidth()+","+ar.bm.getHeight());
+			Canvas bmcanvas=new Canvas(ar.bm);
+			drawBox(bmcanvas,0,ysize,0,cellrect.width(),labels,r,g,b,usetxtpaint,drawrects);
+			bms.put(ck, ar);
+		}
+		bms_survive.put(ck, ar);
+		//Log.i("fplan","Drawing bitmap at x: "+cellrect.left+"cury:"+(cury-ar.ysize)+" ");
+		int acty;
+		if (below)
+			acty=cury;
+		else
+			acty=cury-ar.ysize;
+		canvas.drawBitmap(ar.bm,(float)(cellrect.left),acty,usetxtpaint);
+		
+		return acty;
+	}
+	
+	private void drawBox(Canvas canvas, int y1,int y2, int x1,int x2,String[] label,int r,int g,int b,Paint usetxtpaint,
+			Rect[] drawrects) {
+		
+		for(String lab:label)
+			if (lab==null)
+				throw new RuntimeException("Label==null");
+		Rect re=new Rect();
+		re.left=x1+border;
+		re.right=x2-border;
+		re.bottom=y2-border;
+		
+		
+		re.top=y1+border;
 		//AirspaceArea area=cell.area.area;
 		boxpaint.setColor(rgb(r,g,b,-140));
 		canvas.drawRect(re, boxpaint);
@@ -413,7 +605,7 @@ public class SimplerView extends View {
 		usetxtpaint.setColor(Color.WHITE);
 		canvas.save();
 		canvas.clipRect(re);
-		for(int i=0;i<2;++i)
+		for(int i=0;i<label.length;++i)
 		{
 			Rect drawrect;
 			///Rect re2;
@@ -421,31 +613,22 @@ public class SimplerView extends View {
 			int reh;
 			int yoff;
 			String text;
-			if (i==0)
-			{
-				drawrect=drawrect1;
-				
-				if (label2==null)
-					reh=re.height();
-				else
-					reh=re.height()/2;
-				yoff=0;
-				text=label;
-			}
-			else
-			{
-				if (label2==null) break;
-				drawrect=drawrect2;
-				reh=re.height()/2;
-				yoff=reh;
-				text=label2;
-			}
+			drawrect=drawrects[i];
+			reh=re.height()/label.length;
+			yoff=reh*i;
+			text=label[i];
 			int drw=drawrect.width();
 			int drh=drawrect.height();
-			canvas.drawText(text, cellrect.left-drawrect.left+(rew-drw)/2, cury-drawrect.bottom-(reh-drh)/2-yoff-border, usetxtpaint);
+			canvas.drawText(text, x1-drawrect.left+(rew-drw)/2, y2-drawrect.bottom-(reh-drh)/2-yoff-border, usetxtpaint);
 		}
 		canvas.restore();
-		return cury-h-border*2;
+		
+	}
+
+	private int measureBox(String label,  Paint usetxtpaint,
+			Rect drawrect) {
+		usetxtpaint.getTextBounds(label, 0, label.length(), drawrect);		
+		return drawrect.height();
 	}
 	private int rgb(int r, int g, int b,int lighten) {
 		r+=lighten;

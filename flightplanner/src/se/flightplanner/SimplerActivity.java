@@ -34,7 +34,7 @@ public class SimplerActivity extends Activity implements LocationListener {
 		{
 			public void touched()
 			{
-				postpone_layout();
+				postpone_layout();				
 			}
 		});
 		setContentView(simplerView);
@@ -51,6 +51,7 @@ public class SimplerActivity extends Activity implements LocationListener {
 	{
 		if (update_cb!=null)
 			handler.removeCallbacks(update_cb);
+		simplerView.stop();
 		super.onDestroy();
 		if (locman!=null)
 			locman.removeUpdates(this);
@@ -68,6 +69,7 @@ public class SimplerActivity extends Activity implements LocationListener {
 	{
 		inhibit_relayout=SystemClock.elapsedRealtime();
 		Log.i("fplan","order postpone relayout");
+		
 		if (scheduled)
 		{
 			handler.removeCallbacks(update_cb);
