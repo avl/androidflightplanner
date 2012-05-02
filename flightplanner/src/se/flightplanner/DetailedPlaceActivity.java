@@ -13,6 +13,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -122,12 +123,12 @@ public class DetailedPlaceActivity extends Activity{
 			fail();
 			return;
 		}
+		location=bsca.calcBearingSpeed(location);
 		
 		gs.setText(""+(int)(location.getSpeed()*3.6f/1.852f)+"kt");
 
 		
 		//Log.i("fplan.tmp","Update location:"+location.getLatitude()+","+location.getLongitude());
-		location=bsca.calcBearingSpeed(location);
 		LatLon ownlatlon=new LatLon(location);
 		place.update_pos(location);
 		
@@ -138,7 +139,7 @@ public class DetailedPlaceActivity extends Activity{
 		//Date when=tripstate.getETA2();
 		
 		//GregorianCalendar greg=new GregorianCalendar(TimeZone.getTimeZone("UTC"),Locale.ROOT);
-		SimpleDateFormat df=new SimpleDateFormat("HH:mm",Locale.US);
+		SimpleDateFormat df=new SimpleDateFormat("HH:mm:ss",Locale.US);
 		df.setTimeZone(TimeZone.getTimeZone("UTC"));
 		
 		tod.setText(df.format(new Date())+"Z");
@@ -148,7 +149,7 @@ public class DetailedPlaceActivity extends Activity{
 		{
 			if (ETA2!=null)
 				ETA2.setText(df.format(eta2time)+"Z");
-			int totseconds=(int)(eta2time.getTime()/1000-new Date().getTime()/1000);
+			int totseconds=(int)((eta2time.getTime()-new Date().getTime())/1000);
 			int hours=totseconds/3600;
 			totseconds-=hours*3600;
 			int minutes=totseconds/60;
@@ -163,6 +164,11 @@ public class DetailedPlaceActivity extends Activity{
 				
 			if (ETA2time!=null)
 				ETA2time.setText(s);
+		}
+		else
+		{
+			if (ETA2!=null) ETA2.setText("--");
+			if (ETA2time!=null) ETA2time.setText("--");
 		}
 		
 		Date planned=place.getPlanned();
@@ -228,8 +234,8 @@ public class DetailedPlaceActivity extends Activity{
 		}		
 				
 	}
-	private Button prev;
-	private Button next;
+	//private Button prev;
+	//private Button next;
 	private DetailedPlace place;
 	@Override
     public void onCreate(Bundle savedInstanceState) {
@@ -246,6 +252,14 @@ public class DetailedPlaceActivity extends Activity{
 		initialize();
 		
 		
+		final Handler handler=new Handler();
+		final Runnable gpsfail=new Runnable()
+		{
+			@Override
+			public void run() {
+				fail();
+			}
+		};
 		
 		
         locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
@@ -262,7 +276,9 @@ public class DetailedPlaceActivity extends Activity{
 				}
 				@Override
 				public void onLocationChanged(Location location) {
+					handler.removeCallbacks(gpsfail);
 					last_location=location;
+					handler.postDelayed(gpsfail, 4000);
 					update_location(location);					
 				}
 			});

@@ -196,27 +196,34 @@ public class MapDrawer {
 			//int minus = (diagonal + 255) / 256;
 			//minus=2;
 			//int tot = 2 * minus + 1;
-			float xres=sizex;
-			float yres=sizey;
-			double diag_angle=Math.atan2(xres,yres);
-			double diag_length=Math.sqrt(xres*xres+yres*yres);
-			//double hdiag_length=diag_length/2.0;
-			final int tilesize=256;
-			float base=yres;
-			//b= 180 - 90 - diag_angle
-			double ba=Math.PI-Math.PI/2-diag_angle;
-			//maxh/base = sin(b)
-			//maxh = sin(b)*base
-			double maxh=Math.sin(ba)*base;
-			//print "diag_length:",diag_length
-			//print "max height:",maxh
-			int iu=(int)(Math.floor((diag_length)/tilesize))+2;
-			//print "diag tiles",u
-			int iv=(int)(Math.floor((maxh)/tilesize))+2;
-			int tot=iu*iv;
-			tot=(tot*5+1)/4; //because of how zoom past max zoomlevel works - it always keeps the max zoomlevel bitmaps in memory as well, needing on average 0.25 less detailed bitmaps per zoomed in bitmap
+			
+			int tot;
+			int minus;
+			{
+				float smallres=Math.min(sizex,sizey);
+				float bigres=Math.max(sizex,sizey);
+				double diag_length=Math.sqrt(smallres*smallres+bigres*bigres);
+				double diag_angle=Math.atan2(smallres,bigres);
+				//double hdiag_length=diag_length/2.0;
+				final int tilesize=256;
+				float base=bigres;
+				//b= 180 - 90 - diag_angle
+				double ba=Math.PI-Math.PI/2-diag_angle;
+				//maxh/base = sin(b)
+				//maxh = sin(b)*base
+				double maxh=Math.sin(ba)*base;
+				//print "diag_length:",diag_length
+				//print "max height:",maxh
+				int iu=(int)(Math.floor((diag_length)/tilesize))+2;
+				//print "diag tiles",u
+				int iv=(int)(Math.floor((maxh)/tilesize))+2;
+				
+				tot=iu*iv;
+				tot=(tot*5+1)/4; //because of how zoom past max zoomlevel works - it always keeps the max zoomlevel bitmaps in memory as well, needing on average 0.25 less detailed bitmaps per zoomed in bitmap
+				minus=((int)diag_length+256)/256;
+			}
 			//Log.i("fplan.drawmap","Total tiles needed:"+tot);
-			int minus=((int)diag_length+256)/256;
+			
 			iMerc topleft = new iMerc(centertile.getX() - (256 * minus),
 					centertile.getY() - 256 * minus);
 			int cachesize = tot;

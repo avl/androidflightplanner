@@ -65,11 +65,11 @@ public class DescribePosition extends Activity implements LocationListener{
 				double distance=Project.exacter_distance(mypos, sp.latlon);
 				StringBuilder sb=new StringBuilder();
 				sb.append("<p>");
-				sb.append(String.format("%.0f miles %s of %s",distance,roughdir(bearing),name));
+				sb.append(String.format("%.1f miles %s of %s",distance,roughdir(bearing),name));
 				sb.append("</p>");
 				sb.append("(or)<br/>");
 				sb.append("<p>");
-				sb.append(String.format("%03.0f° %.0f miles from %s",bearing,distance,name));
+				sb.append(String.format("%03.0f° %.1f miles from %s",bearing,distance,name));
 				sb.append("</p>");
 				return sb.toString();
 			}
@@ -77,12 +77,14 @@ public class DescribePosition extends Activity implements LocationListener{
 		d.name=sp.name;		
 		items.add(d);
 	}
-	void addLatLon(String item,final LatLon latlon,final boolean decimal)
+	void addLatLon(String item,final boolean decimal)
 	{
 		RelDec d=new RelDec()
 		{
 			@Override
 			public String getDescr() {
+				if (mypos==null)
+					return "Unknown position";
 				if (decimal)
 				{
 					return String.format("<p>WGS84 Decimal:</p>Latitude: %02.4f<br/>Longitude: %03.4f<br/>",mypos.lat,mypos.lon);
@@ -90,7 +92,7 @@ public class DescribePosition extends Activity implements LocationListener{
 				else
 				{
 					
-					return String.format("<p>WGS84:</p><p>"+latlon.toString2().replace(" ", "<br/>")+"</p>");					
+					return String.format("<p>WGS84:</p><p>"+mypos.toString2().replace(" ", "<br/>")+"</p>");					
 				}
 			}
 		};
@@ -127,7 +129,7 @@ public class DescribePosition extends Activity implements LocationListener{
 		}
 		describer=(TextView)findViewById(R.id.posdescr);
 		spin=(ListView)findViewById(R.id.relspinner);
-		addLatLon("WGS84 Deg:MM:SS",mypos,false);
+		addLatLon("WGS84 Deg:MM:SS",false);
 		ArrayList<SigPoint> bigairfs=null;		
 		ArrayList<SigPoint> smallairfs=null;		
 		ArrayList<SigPoint> sigps=new ArrayList<SigPoint>();		
@@ -142,15 +144,15 @@ public class DescribePosition extends Activity implements LocationListener{
 			ArrayList<SigPoint> tmp=getAirports(m,GlobalLookup.lookup.allSigPoints);
 			for(SigPoint p:tmp)
 			{
-				if (p.name.length()==5)
-					sigps.add(p);
+				//if (p.alt==0)
+					sigps.add(p);					
 			}
 			if (sigps.size()>0)
 				addPoint(sigps.get(0));
 			if (bigairfs.size()>0)
 				addPoint(bigairfs.get(0));			
 		}
-		addLatLon("WGS84 Decimal",mypos,true);
+		addLatLon("WGS84 Decimal",true);
 		for(int i=0;i<10;++i)
 		{
 			if (i>0 && i<sigps.size())
@@ -205,6 +207,7 @@ public class DescribePosition extends Activity implements LocationListener{
 	@Override
 	public void onLocationChanged(Location location) {
 		mypos=new LatLon(location);
+		Log.i("fplan","DescribePosition update");
 		update(mypos);
 	}
 	@Override

@@ -39,7 +39,7 @@ public class NakedDetailedPlace implements DetailedPlace {
 				pos);
 		if (actual_gs<1.0)
 			return null;
-		float deltah=d/actual_gs;
+		double deltah=d/actual_gs;
 		long now=new Date().getTime();
 		return new Date((long)(now+deltah*1000l*3600l));
 	}
