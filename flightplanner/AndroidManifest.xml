@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-      package="se.flightplanner"
+      package="se.flightplanner2"
       android:versionCode="25"
       android:largeHeap="true"
       android:versionName="2.10">
@@ -16,7 +16,7 @@
  		android:theme="@android:style/Theme.NoTitleBar"     
     	android:icon="@drawable/icon" android:label="@string/app_name">
   	<provider android:name=".Local"
-          android:authorities="se.flightplanner"
+          android:authorities="se.flightplanner2"
       />    	
         <activity android:name=".Nav"
                   android:label="@string/app_name"
