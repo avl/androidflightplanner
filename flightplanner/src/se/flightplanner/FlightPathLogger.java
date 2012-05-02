@@ -286,7 +286,7 @@ public class FlightPathLogger {
 			String filename=dateformat.format(d);
 			File extpath = Environment.getExternalStorageDirectory();
 			File tripdirpath = new File(extpath,
-				"/Android/data/se.flightplanner/files/triplog/");
+					Config.path+"triplog/");
 			Log.i("fplan.fplog","Writing"+filename);
 			serialize(filename, tripdirpath);				
 			
@@ -294,7 +294,7 @@ public class FlightPathLogger {
 		static public Chunk loadFromDisk(String filename,boolean headeronly) throws IOException {
 			File extpath = Environment.getExternalStorageDirectory();
 			File tripdirpath = new File(extpath,
-				"/Android/data/se.flightplanner/files/triplog/");
+					Config.path+"triplog/");
 			Chunk c=new Chunk();
 			c.deserialize(filename, tripdirpath, headeronly);
 			return c;

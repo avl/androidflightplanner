@@ -33,7 +33,7 @@ public class ViewRecordings extends Activity implements HandleUpload {
 	
 	final File extpath = Environment.getExternalStorageDirectory();
 	final File tripdirpath = new File(extpath,
-		"/Android/data/se.flightplanner/files/triplog/");
+			Config.path+"triplog/");
 	FlightPathUploader ful;
 	static private String toreadable(String filename)
 	{

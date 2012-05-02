@@ -340,7 +340,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 					
 					File extpath = Environment.getExternalStorageDirectory();
 					File path = new File(extpath,
-							"/Android/data/se.flightplanner/files/level" + i);
+							Config.path+"level" + i);
 					if (!path.exists())
 						break;
 					Log.i("fplan","Reading map from "+path.toString());

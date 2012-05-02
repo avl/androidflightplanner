@@ -42,7 +42,7 @@ public class FlightPathUploader extends AsyncTask<String, Void, String> {
 		{
 			File extpath = Environment.getExternalStorageDirectory();
 			File tripdirpath = new File(extpath,
-				"/Android/data/se.flightplanner/files/triplog/");
+					Config.path+"triplog/");
 			File path= new File(tripdirpath,filename);
 			
 			try {

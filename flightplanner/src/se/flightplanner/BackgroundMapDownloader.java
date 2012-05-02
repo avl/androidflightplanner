@@ -240,11 +240,11 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		
 		File extpath = Environment.getExternalStorageDirectory();
 		File metapath = new File(extpath,
-				"/Android/data/se.flightplanner/files/chartmeta.dat");
+				Config.path+"chartmeta.dat");
 		File newstyle = new File(extpath,
-				"/Android/data/se.flightplanner/files/newstyle.dat");
+				Config.path+"newstyle.dat");
 		File chartlistpath = new File(extpath,
-				"/Android/data/se.flightplanner/files/chartlist.dat");
+				Config.path+"chartlist.dat");
 		long stamp=0;
 		long lateststamp=0;
 		if (metapath.exists())
@@ -310,7 +310,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		{
 			checkspace(2000000);
 			File chartprojpath = new File(extpath,
-					"/Android/data/se.flightplanner/files/"+chart.chartname+".proj");
+					Config.path+chart.chartname+".proj");
 			publishProgress(chart.humanreadable);
 			
 			ArrayList<NameValuePair> nvps = new ArrayList<NameValuePair>();
@@ -355,7 +355,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			for(int i=0;i<numlevels;++i)
 			{
 				File chartblobpath= new File(extpath,
-						"/Android/data/se.flightplanner/files/"+chart.chartname+"-"+i+".bin");
+						Config.path+chart.chartname+"-"+i+".bin");
 				String cksum=inp2.readUTF();
 				if (master_cksum==null)
 					master_cksum=cksum;
@@ -418,7 +418,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		for (;;) {
 			File extpath = Environment.getExternalStorageDirectory();
 			File metapath = new File(extpath,
-			"/Android/data/se.flightplanner/files/meta.dat");
+					Config.path+"meta.dat");
 	
 			if (!metapath.exists())
 			{
@@ -427,14 +427,14 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			}
 
 			
-			File dirpath = new File(extpath,"/Android/data/se.flightplanner/files/");
+			File dirpath = new File(extpath,Config.path);
 			if (!dirpath.exists())
 				dirpath.mkdirs();
 			if (!dirpath.exists())
 				throw new RuntimeException("Couldn't create directory:"+dirpath);
 
 			File path = new File(extpath,
-					"/Android/data/se.flightplanner/files/level" + level);
+					Config.path+"level" + level);
 			
 			
 			long filelength = 0;
@@ -597,7 +597,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		
 		File extpath2 = Environment.getExternalStorageDirectory();
 		File metapath = new File(extpath2,
-		"/Android/data/se.flightplanner/files/meta.dat");
+				Config.path+"meta.dat");
 		if (metapath.exists())
 		{
 			if (metapath.delete()==false)
@@ -606,7 +606,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		for(int dellevel=0;dellevel<=13;++dellevel)
 		{						
 			File levpath = new File(extpath2,
-					"/Android/data/se.flightplanner/files/level" + dellevel);
+					Config.path+"level" + dellevel);
 			if (levpath.exists())
 				if (levpath.delete()==false)
 					throw new FatalBackgroundException("Couldn't delete existing file "+levpath.getName());

@@ -24,7 +24,7 @@ public class AipText {
 		File extpath = Environment.getExternalStorageDirectory();
 		if (icao.length()>100) throw new RuntimeException("Totally unexpected value of icao.");
 		File aiptextpath = new File(extpath,
-				"/Android/data/se.flightplanner/files/"+icao+"/");
+				Config.path+icao+"/");
 		Log.i("fplan","Path:"+aiptextpath.getAbsolutePath());
 		aiptextpath.mkdirs();
 		File path=new File(aiptextpath,category+".html");
@@ -49,7 +49,7 @@ public class AipText {
 			Log.i("fplan","Reading "+bloblen+" byte blob.");
 			File extpath = Environment.getExternalStorageDirectory();
 			File aiptextpath = new File(extpath,
-					"/Android/data/se.flightplanner/files/"+p.icao+"/");
+					Config.path+p.icao+"/");
 			aiptextpath.mkdirs();
 			File path=new File(aiptextpath,p.category+".html");
 			File tmppath=new File(aiptextpath,p.category+".html.part");

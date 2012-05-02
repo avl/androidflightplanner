@@ -252,7 +252,7 @@ public class AdChartView extends View implements UpdatableUI {
 		pospaint.setStrokeWidth(2.0f);
 		
 		File chartprojpath = new File(extpath,
-				"/Android/data/se.flightplanner/files/"+chartname+".proj");
+				Config.path+chartname+".proj");
 		DataInputStream ds=new DataInputStream(
 				new FileInputStream(chartprojpath));
 		A=new double[2][2];
@@ -301,7 +301,7 @@ public class AdChartView extends View implements UpdatableUI {
 			Integer is=new Integer(5-i-1);
 
 			File chartpath = new File(extpath,
-					"/Android/data/se.flightplanner/files/"+chartname+"-"+is.toString()+".bin");
+					Config.path+chartname+"-"+is.toString()+".bin");
 			Blob blob=new Blob(chartpath.getAbsolutePath(),256);
 			blobs.add(blob);
 			Log.i("fplan.adchart","Dimensions of level "+is+" "+

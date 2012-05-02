@@ -584,7 +584,7 @@ public class Airspace implements Serializable{
 	{
 		File extpath = Environment.getExternalStorageDirectory();
 		File dirpath = new File(extpath,
-				"/Android/data/se.flightplanner/files/");
+				Config.path);
 		if (!dirpath.exists())
 			dirpath.mkdirs();
 		File path = new File(dirpath,filename);
@@ -611,7 +611,7 @@ public class Airspace implements Serializable{
 	{
 		File extpath = Environment.getExternalStorageDirectory();
 		File path = new File(extpath,
-				"/Android/data/se.flightplanner/files/"+filename);
+				Config.path+filename);
 		InputStream ofstream=new BufferedInputStream(
 				new FileInputStream(path)
 				);
@@ -632,7 +632,7 @@ public class Airspace implements Serializable{
 		try
 		{
 			File chartlistpath = new File(extpath,
-					"/Android/data/se.flightplanner/files/chartlist.dat");			
+					Config.path+"chartlist.dat");			
 			data.load_chart_list(chartlistpath);
 		} catch(Throwable e)
 		{
