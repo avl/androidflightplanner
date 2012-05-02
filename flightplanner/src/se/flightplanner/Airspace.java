@@ -51,7 +51,7 @@ public class Airspace implements Serializable{
 		int version=is.readInt();
 		if (magic!=0x8A31CDA)
 			throw new RuntimeException("Couldn't load airspace data, bad header magic. Was: "+magic+" should be: "+0x8A31CDA);
-		if (version!=1 && version!=2 && version!=3 && version!=4)
+		if (version!=1 && version!=2 && version!=3 && version!=4 && version!=5)
 			throw new RuntimeException("Couldn't load airspace data, bad version");
 		
 		int numspaces=is.readInt();
@@ -59,14 +59,22 @@ public class Airspace implements Serializable{
 			throw new RuntimeException("Too many airspace definitions: "+numspaces);
 		a.spaces=new ArrayList<AirspaceArea>();
 		for(int i=0;i<numspaces;++i)
+		{
+			if (version==5)
+				is.readByte(); //dummy, we don't really speak v5
 			a.spaces.add(AirspaceArea.deserialize(is,version));
+		}
 
 		int numpoints=is.readInt();
 		if (numpoints>10000)
 			throw new RuntimeException("Too many points: "+numpoints);
 		a.points=new ArrayList<SigPoint>();
 		for(int i=0;i<numpoints;++i)
+		{
+			if (version==5)
+				is.readByte(); //dummy, we don't really speak v5
 			a.points.add(SigPoint.deserialize(is,version));
+		}
 		
 		return a;
 	}

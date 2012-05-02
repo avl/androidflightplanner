@@ -95,6 +95,19 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 				p.kind="field";
 			}
 		}
+		if (version>=5)
+		{
+			int num_notams=is.readInt();
+			for(int i=0;i<num_notams;++i)
+				is.readUTF();
+			
+			if (is.readByte()!=0)
+				is.readUTF();//icao
+			if (is.readByte()!=0)
+				is.readUTF();//TAF
+			if (is.readByte()!=0)
+				is.readUTF();//Metar						
+		}		
 		p.alt=is.readFloat();		
 		p.latlon=LatLon.deserialize(is);
 		if (version>=3)
