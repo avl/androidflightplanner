@@ -174,13 +174,14 @@ public class MapDrawer {
 		rect.bottom += 2;
 		rect.top-=2;
 		
-		Bitmap bm=Bitmap.createBitmap(rect.width()+bm_off_x,rect.height()+bm_off_y,Bitmap.Config.ARGB_8888);
+		Bitmap bm=Bitmap.createBitmap(rect.width()+bm_off_x,rect.height()+bm_off_y,Bitmap.Config.ARGB_4444);
 		Canvas canvas=new Canvas(bm);
 		rect.offset(xadj+bm_off_x, yadj+bm_off_y);
 		
 		Rect globrect=new Rect(rect);
 		globrect.offset((int)p.x,(int)p.y);
-		if (declutter==null || declutter.checkAndAdd(globrect))
+		RectF globrectf=new RectF(globrect);
+		if (!mcanvas.quickReject(globrectf, Canvas.EdgeType.BW) && (declutter==null || declutter.checkAndAdd(globrect)))
 		{
 			canvas.drawRect(rect, backgroundpaint);
 			textpaint.setColor(color);
@@ -424,6 +425,7 @@ public class MapDrawer {
 					Vector b = vs.get((i + 1) % vs.size());
 					
 					linepaint.setColor(Color.rgb(as.r,as.g,as.b));
+					
 					canvas.drawLine((float) a.getx(), (float) a.gety(),
 							(float) b.getx(), (float) b.gety(), linepaint);
 				}
@@ -440,7 +442,7 @@ public class MapDrawer {
 			last_zoomlevel=zoomlevel;
 		}*/
 		if (onlyWithin(60, isUserPresentlyMovingMap))
-		if (zoomlevel >= 7 && lookup != null) {
+		if (zoomlevel >= 8 && lookup != null) {
 			if (major_airfields==null)		
 				major_airfields=lookup.majorAirports.findall(bb13);
 						
@@ -449,7 +451,8 @@ public class MapDrawer {
 				Vector p = tf.merc2screen(m);
 				String text;
 				text = sp.name;
-								
+				if (zoomlevel<=8 && (sp.extra==null | sp.extra.runways==null || sp.extra.runways.length==0))
+					continue; //only draw really big afs on zoomlevel 8
 				
 				textpaint.setColor(Color.GREEN);
 				linepaint.setColor(Color.GREEN);
@@ -482,7 +485,7 @@ public class MapDrawer {
 			}			
 		}
 		if (onlyWithin(60, isUserPresentlyMovingMap))
-		if (lookup!=null && zoomlevel>=7)
+		if (lookup!=null && zoomlevel>8)
 		{
 			for (SigPoint sp : lookup.allTowns.findall(bb13)) {
 				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
@@ -1090,16 +1093,22 @@ public class MapDrawer {
 		}
 
 		long aft=SystemClock.elapsedRealtime();
-		for(Entry<CacheKey, Bitmap> e:cached.entrySet())
+		
+		if (cached.size()>120)
 		{
-			if (!used.containsKey(e.getKey()))
+			int was=cached.size();
+			for(Entry<CacheKey, Bitmap> e:cached.entrySet())
 			{
-				e.getValue().recycle();
-			}
-		}		
-		cached=used;
+				if (!used.containsKey(e.getKey()))
+				{
+					e.getValue().recycle();
+				}
+			}		
+			cached=used;
+			//Log.i("fplan.fps","Clear cache with "+was+" items new size: "+cached.size());			
+		}
 		used=new HashMap<MapDrawer.CacheKey, Bitmap>();
-		Log.i("fplan.fps","Time to draw: "+(aft-bef)+"ms");
+		//Log.i("fplan.fps","Time to draw: "+(aft-bef)+"ms");
 		return res;
 	}
 
