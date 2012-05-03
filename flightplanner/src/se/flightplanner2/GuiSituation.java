@@ -401,5 +401,8 @@ public class GuiSituation
 		this.ysize=height;
 		this.maxinfolines=numInfoLines;		
 	}
+	public boolean getFingerDown() {
+		return state!=GuiState.IDLE;
+	}
 	
 }

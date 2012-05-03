@@ -166,7 +166,8 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 					gui,
 					last_real_position,
 					download_status,
-					gui.getCurrentInfo()
+					gui.getCurrentInfo(),
+					this
 					);
 			lastcachesize=res.lastcachesize;
 			if (mapcache!=null && mapcache.haveUnsatisfiedQueries())

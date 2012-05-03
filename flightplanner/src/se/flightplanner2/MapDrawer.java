@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map.Entry;
 import java.util.TimeZone;
 
 import se.flightplanner2.GetMapBitmap.BitmapRes;
@@ -17,6 +19,7 @@ import se.flightplanner2.TripData.Waypoint;
 import se.flightplanner2.vector.BoundingBox;
 import se.flightplanner2.vector.ConvexPolygon;
 import se.flightplanner2.vector.Vector;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -26,11 +29,14 @@ import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.Paint.Style;
 import android.location.Location;
+import android.os.Handler;
 import android.os.SystemClock;
 import android.util.Log;
+import android.view.View;
 
 public class MapDrawer {
 
+	private Paint neutralpaint;
 	private Paint bigtextpaint;
 	private Paint linepaint;
 	private Paint thinlinepaint;
@@ -44,6 +50,30 @@ public class MapDrawer {
 	private String zoom_in_text=null;
 	private String zoom_out_text=null;
 	private boolean zoom_buttons;
+
+	private class CacheKey
+	{
+		String text;
+		int color;
+		public CacheKey(String t,int col)
+		{
+			text=t;
+			color=col;
+		}
+		@Override
+		public boolean equals(Object o)
+		{
+			CacheKey ko=(CacheKey)o;
+			return ko.text.equals(text) && color==ko.color;			
+		}
+		@Override
+		public int hashCode()
+		{
+			return text.hashCode()+color;
+		}		
+	}
+	HashMap<CacheKey,Bitmap> cached=new HashMap<MapDrawer.CacheKey, Bitmap>();	
+	HashMap<CacheKey,Bitmap> used=new HashMap<MapDrawer.CacheKey, Bitmap>();	
 
 	public MapDrawer(float x_dpmm, float y_dpmm) {
 		 formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -72,27 +102,28 @@ public class MapDrawer {
 		bigtextpaint.setTypeface(Typeface.create(Typeface.SANS_SERIF,
 				Typeface.NORMAL));
 		linepaint = new Paint();
-		linepaint.setAntiAlias(true);
+		linepaint.setAntiAlias(false);
 		linepaint.setStrokeWidth(5);
 		linepaint.setColor(Color.RED);
 		linepaint.setStrokeCap(Paint.Cap.ROUND);
 
+		neutralpaint=new Paint();
 		thinlinepaint = new Paint();
-		thinlinepaint.setAntiAlias(true);
+		thinlinepaint.setAntiAlias(false);
 		thinlinepaint.setStrokeWidth(2);
 		thinlinepaint.setStyle(Style.STROKE);
 		thinlinepaint.setColor(Color.RED);
 		thinlinepaint.setStrokeCap(Paint.Cap.ROUND);
 
 		trippaint = new Paint();
-		trippaint.setAntiAlias(true);
+		trippaint.setAntiAlias(false);
 		trippaint.setStrokeWidth(4);
 		trippaint.setARGB(0xff,0xff,0xff,0xff);
 		trippaint.setColor(Color.rgb(0xff,0xff,0xff));
 		trippaint.setStrokeCap(Paint.Cap.ROUND);
 
 		widetrippaint = new Paint();
-		widetrippaint.setAntiAlias(true);
+		widetrippaint.setAntiAlias(false);
 		widetrippaint.setStrokeWidth(8);
 		widetrippaint.setARGB(0x70,0x80,0x80,0xff);
 		widetrippaint.setStrokeCap(Paint.Cap.ROUND);
@@ -103,37 +134,104 @@ public class MapDrawer {
 		backgroundpaint.setARGB(0xa0, 0, 0, 0);
 
 		arrowpaint = new Paint();
-		arrowpaint.setAntiAlias(true);
+		arrowpaint.setAntiAlias(false);
 		arrowpaint.setStyle(Style.FILL);
 		arrowpaint.setStrokeWidth(5);
 		arrowpaint.setColor(Color.WHITE);
 		arrowpaint.setStrokeCap(Paint.Cap.ROUND);
 	}
 
-	private void renderText(Canvas canvas, Vector p, String text, DeclutterTree declutter) {
+	private void renderText(Canvas mcanvas, Vector p, String text, DeclutterTree declutter,int color) {
+		
+		//if (p!=null) return;
+		int bm_off_x=20;
+		int bm_off_y=20;
+		CacheKey ck=new CacheKey(text,color);
+		{
+			Bitmap bm=cached.get(ck);
+			if (bm!=null)
+			{
+				used.put(ck,bm);
+				Rect rect=new Rect();
+				rect.right=bm.getWidth();
+				rect.bottom=bm.getHeight();
+				rect.offset((int)p.x,(int)p.y);
+				if (declutter==null || declutter.checkAndAdd(rect))
+				{
+					//Log.i("fplan.fps","Drawing cached bm in: "+rect);
+					mcanvas.drawBitmap(bm, (float)p.x-bm_off_x,(float)p.y-bm_off_y,neutralpaint);
+				}
+				return;
+			}
+		}
+		
 		Rect rect = new Rect();
 		textpaint.getTextBounds(text, 0, text.length(), rect);
-		int adj = (rect.bottom - rect.top) / 3;
-		rect.left += p.x - 1 + 7;
-		rect.right += p.x + 1 + 7;
-		rect.top += p.y - 2 + adj;
-		rect.bottom += p.y + 3 + adj;
-		int c = linepaint.getColor();
-		if (declutter==null || declutter.checkAndAdd(rect))
+		int xadj=-rect.left;
+		int yadj=-rect.top;
+		rect.left-=2;
+		rect.right += 2;
+		rect.bottom += 2;
+		rect.top-=2;
+		
+		Bitmap bm=Bitmap.createBitmap(rect.width()+bm_off_x,rect.height()+bm_off_y,Bitmap.Config.ARGB_8888);
+		Canvas canvas=new Canvas(bm);
+		rect.offset(xadj+bm_off_x, yadj+bm_off_y);
+		
+		Rect globrect=new Rect(rect);
+		globrect.offset((int)p.x,(int)p.y);
+		if (declutter==null || declutter.checkAndAdd(globrect))
 		{
 			canvas.drawRect(rect, backgroundpaint);
-			canvas.drawText(text, (float) (p.x + 7), (float) (p.y + adj), textpaint);
-			linepaint.setStrokeWidth(10);
+			textpaint.setColor(color);
+			canvas.drawText(text, rect.left+xadj+2, rect.top+yadj+2, textpaint);
+			linepaint.setStrokeWidth(8);
 			linepaint.setColor(Color.BLACK);
-			canvas.drawPoint((float) p.x, (float) p.y, linepaint);
+			canvas.drawPoint(bm_off_x, bm_off_y, linepaint);
+
+			linepaint.setColor(color);
+			linepaint.setStrokeWidth(4);
+			canvas.drawPoint(bm_off_x,bm_off_y, linepaint);
+
+			cached.put(ck,bm);
+			used.put(ck,bm);
+			//Log.i("fplan.fps","Caching bm in: "+rect);
+			///canvas.
+			mcanvas.drawBitmap(bm, (float)p.x-bm_off_x,(float)p.y-bm_off_y,neutralpaint);
+			
 		}
-		linepaint.setColor(c);
-		linepaint.setStrokeWidth(5);
-		canvas.drawPoint((float) p.x, (float) p.y, linepaint);
+		else
+		{
+			linepaint.setColor(color);
+			linepaint.setStrokeWidth(4);
+			mcanvas.drawPoint((float)p.x, (float)p.y, linepaint);
+			
+		}
+		
 	}
 
 	static public class DrawResult {
 		int lastcachesize;
+	}
+	
+	long redraw_start;
+	View redraw_view;
+	Handler handler=new Handler();
+	Runnable schedule_redraw=new Runnable()
+	{
+		@Override
+		public void run() {
+			redraw_view.invalidate();
+		}
+	};
+	boolean onlyWithin(long ms,boolean dragging)
+	{
+		if (!dragging) return true;
+		long en=SystemClock.elapsedRealtime()-redraw_start;
+		if (en<ms)return true;
+		handler.removeCallbacks(schedule_redraw);
+		handler.postDelayed(schedule_redraw, 300);
+		return false;
 	}
 
 	private int left;
@@ -141,11 +239,19 @@ public class MapDrawer {
 	private int top;
 	private int bottom;
 	private int last_zoomlevel;
+	private double last_mypos_y;
+	private double last_mypos_x;
 	public DrawResult draw_actual_map(TripData tripdata, TripState tripstate,
 			AirspaceLookup lookup, Canvas canvas, Rect screen_extent,
 			Location lastpos, GetMapBitmap bitmaps, final GuiSituation gui,
 			long last_real_position, String download_status,
-			InformationPanel panel) {
+			InformationPanel panel,View view) {
+		
+		long bef=SystemClock.elapsedRealtime();
+		
+		redraw_start=bef;
+		redraw_view=view;
+		
 		Transform tf = gui.getTransform();
 		boolean extrainfo = gui.getExtraInfo();
 		
@@ -168,6 +274,13 @@ public class MapDrawer {
 		// Project.latlon2merc(new
 		// LatLon(lastpos.getLatitude(),lastpos.getLongitude()),13);
 		Merc mypos = tf.getPos();
+		float delta=(float)(Math.abs(last_mypos_x-mypos.x)+Math.abs(last_mypos_y-mypos.y));
+		last_mypos_x=mypos.x;
+		last_mypos_y=mypos.y;
+		boolean isUserPresentlyMovingMap=gui.getFingerDown();
+		if (delta<20)
+			isUserPresentlyMovingMap=false;
+		
 		Merc mypos13 = Project.merc2merc(tf.getPos(), zoomlevel, 13);
 
 		Vector arrow = gui.getArrow();
@@ -232,6 +345,7 @@ public class MapDrawer {
 			for (int j = 0; j < 2*minus; ++j) {
 
 				for (int i = 0; i < 2*minus; ++i) {
+					
 					iMerc cur = new iMerc(topleft.getX() + 256 * i,
 							topleft.getY() + 256 * j);
 					if (cur.getX() < 0 || cur.getY() < 0)
@@ -263,6 +377,7 @@ public class MapDrawer {
 		}
 
 		ArrayList<SigPoint> major_airfields=null;
+		if (onlyWithin(60, isUserPresentlyMovingMap))
 		if (zoomlevel >= 9 && lookup != null)
 		{
 			major_airfields=lookup.majorAirports.findall(bb13);
@@ -284,6 +399,7 @@ public class MapDrawer {
 		}
 		
 		// sigPointTree.verify();
+		if (onlyWithin(60, isUserPresentlyMovingMap))
 		if (zoomlevel >= 8 && lookup != null) {
 			ArrayList<AirspaceArea> areas=lookup.areas.get_areas(bb13);
 			Collections.sort(areas,new Comparator<AirspaceArea>() {
@@ -323,6 +439,7 @@ public class MapDrawer {
 			declutter.clear();
 			last_zoomlevel=zoomlevel;
 		}*/
+		if (onlyWithin(60, isUserPresentlyMovingMap))
 		if (zoomlevel >= 7 && lookup != null) {
 			if (major_airfields==null)		
 				major_airfields=lookup.majorAirports.findall(bb13);
@@ -336,10 +453,11 @@ public class MapDrawer {
 				
 				textpaint.setColor(Color.GREEN);
 				linepaint.setColor(Color.GREEN);
-				renderText(canvas, p, text, declutter);
+				renderText(canvas, p, text, declutter,Color.GREEN);
 			}
 		}
 
+		if (onlyWithin(60, isUserPresentlyMovingMap))
 		if (zoomlevel >= 9 && lookup != null) {
 			for (SigPoint sp : lookup.minorAirfields.findall(bb13)) {
 				// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
@@ -349,9 +467,10 @@ public class MapDrawer {
 				text = sp.name;
 				textpaint.setColor(Color.GREEN);
 				linepaint.setColor(Color.GREEN);
-				renderText(canvas, p, text, declutter);
+				renderText(canvas, p, text, declutter,Color.GREEN);
 			}
 		}
+		if (onlyWithin(60, isUserPresentlyMovingMap))
 		if (lookup!=null)
 		{
 			for (SigPoint sp : lookup.allCities.findall(bb13)) {
@@ -359,9 +478,10 @@ public class MapDrawer {
 				Vector p = tf.merc2screen(m);
 				textpaint.setARGB(0xff, 0xff, 0xff, 0xb0);
 				linepaint.setARGB(0xff, 0xff, 0xff, 0xb0);
-				renderText(canvas, p, "["+sp.name+"]", declutter);
+				renderText(canvas, p, "["+sp.name+"]", declutter,Color.rgb(0xff,0xff,0xb0));
 			}			
 		}
+		if (onlyWithin(60, isUserPresentlyMovingMap))
 		if (lookup!=null && zoomlevel>=7)
 		{
 			for (SigPoint sp : lookup.allTowns.findall(bb13)) {
@@ -369,10 +489,11 @@ public class MapDrawer {
 				Vector p = tf.merc2screen(m);
 				textpaint.setARGB(0xff, 0xff, 0xff, 0xb0);
 				linepaint.setARGB(0xff, 0xff, 0xff, 0xb0);
-				renderText(canvas, p, "["+sp.name+"]", declutter);
+				renderText(canvas, p, "["+sp.name+"]", declutter,Color.rgb(0xff,0xff,0xb0));
 			}			
 		}
 		
+		if (onlyWithin(60, isUserPresentlyMovingMap))
 		if (zoomlevel >= 10 && lookup != null) {
 			for (SigPoint sp : lookup.allOthers.findall(bb13)) {
 				// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
@@ -388,7 +509,7 @@ public class MapDrawer {
 					linepaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
 					t=sp.name;
 				}
-				renderText(canvas, p, t, declutter);
+				renderText(canvas, p, t, declutter,Color.rgb(0xff,0xa0,0xa0));
 			}
 
 			for (SigPoint sp : lookup.allObst.findall(smbb13)) {
@@ -408,7 +529,7 @@ public class MapDrawer {
 				// textpaint.setARGB(0, 255,255,255);
 				textpaint.setARGB(0xff, 0xff, 0xa0, 0xff);
 				linepaint.setARGB(0xff, 0xff, 0xa0, 0xff);
-				renderText(canvas, p, String.format("%.0fft", sp.alt),null);
+				renderText(canvas, p, String.format("%.0fft", sp.alt),null,Color.rgb(0xff,0xa0,0xff));
 				// canvas.drawText(String.format("%.0fft",sp.alt), (float)(p.x),
 				// (float)(p.y), textpaint);
 				// canvas.drawPoint((float)p.x,(float)p.y,linepaint);
@@ -454,7 +575,7 @@ public class MapDrawer {
 				// double py=rot_y(m.x-center.x,m.y-center.y)+oy;
 				textpaint.setColor(Color.WHITE);
 				linepaint.setColor(Color.WHITE);
-				renderText(canvas, p, wp.name,null);
+				renderText(canvas, p, wp.name,null,Color.WHITE);
 			}
 		}
 		boolean havefix = lastpos.getTime() > 3600 * 24 * 10 * 1000
@@ -968,6 +1089,17 @@ public class MapDrawer {
 			}
 		}
 
+		long aft=SystemClock.elapsedRealtime();
+		for(Entry<CacheKey, Bitmap> e:cached.entrySet())
+		{
+			if (!used.containsKey(e.getKey()))
+			{
+				e.getValue().recycle();
+			}
+		}		
+		cached=used;
+		used=new HashMap<MapDrawer.CacheKey, Bitmap>();
+		Log.i("fplan.fps","Time to draw: "+(aft-bef)+"ms");
 		return res;
 	}
 
