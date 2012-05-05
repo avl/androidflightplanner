@@ -64,6 +64,8 @@ public class DescribePosition extends Activity implements LocationListener{
 				float bearing=Project.bearing(sp.latlon,mypos);
 				double distance=Project.exacter_distance(mypos, sp.latlon);
 				StringBuilder sb=new StringBuilder();
+				
+				//say "Long final rwy" if possible..
 				sb.append("<p>");
 				sb.append(String.format("%.1f miles %s of %s",distance,roughdir(bearing),name));
 				sb.append("</p>");

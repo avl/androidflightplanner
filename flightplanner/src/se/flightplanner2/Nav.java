@@ -72,6 +72,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	final static int MENU_HELP=8;
 	final static int MENU_DESCPOS=9;
 	final static int MENU_SIMPLER=10;
+	final static int MENU_PHRASES=11;
 	private LocationManager locman;
 	BackgroundMapDownloader terraindownloader;
 	private FlightPathLogger fplog;
@@ -147,6 +148,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    menu.add(0, MENU_VIEW_RECORDINGS, 0, "Recorded Trips");
 	    menu.add(0, MENU_DESCPOS, 0, "Describe My Position");
 	    menu.add(0, MENU_SIMPLER, 0, "Nearby Airspaces");
+	    menu.add(0, MENU_PHRASES, 0, "Phraseology");
 	    return true;
 	}
 	
@@ -369,6 +371,17 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     		RookieHelper.showmsg(this, "Position Unknown");
     	}
     	break;
+    }
+    case MENU_PHRASES:
+    {
+    	Intent intent = new Intent(this, PhrasesActivity.class);
+    	if (last_location!=null)
+    	{
+    		intent.putExtra("se.flightplanner2.pos", new LatLon(last_location));
+    		intent.putExtra("se.flightplanner2.hdg", (float)last_location.getBearing());
+    		intent.putExtra("se.flightplanner2.gs", (float)(last_location.getSpeed()*3.6/1.852));
+    	}
+		startActivity(intent);
     }
     	
     }

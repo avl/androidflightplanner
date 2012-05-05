@@ -50,6 +50,7 @@ public class MapCache {
 		private long lastuse;
 		Bitmap b;
 		boolean fake;
+		public boolean only_fake_available;
 	}
 	private HashMap<Key,MapCache.Payload> map;
 	private HashSet<Key> faked;
@@ -61,7 +62,7 @@ public class MapCache {
 		faked=new HashSet<Key>();
 		isShutdown=false;
 	}
-	synchronized public void inject(iMerc m, int zoomlevel, Bitmap out,boolean fake) {
+	synchronized public void inject(iMerc m, int zoomlevel, Bitmap out,boolean fake,boolean only_fake_avail) {
 		if (isShutdown)
 		{
 			if (out!=null)
@@ -69,12 +70,13 @@ public class MapCache {
 			return;
 		}
 		Key k=new Key(m,zoomlevel);
-		//Log.i("fplan.bitmap","Injected bitmap"+k+" fake:"+fake);
+		Log.i("fplan.adchart","Injected bitmap"+k+" fake: "+fake+" only fake-avail: "+only_fake_avail);
 		long now=SystemClock.uptimeMillis();
 		MapCache.Payload p=new MapCache.Payload();
 		p.lastuse=now;
 		p.b=out;
 		p.fake=fake;
+		p.only_fake_available=only_fake_avail;
 		map.put(k,p);
 		if (p.fake)
 			faked.add(k);
@@ -120,7 +122,7 @@ public class MapCache {
 		{
 			boolean removed=queryhistory.remove(key);
 			//Remove any present fake value.
-			MapCache.Payload l=map.get(key);
+			//MapCache.Payload l=map.get(key);
 			/*TODO: Do this: if (l!=null && l.fake)
 				eject(key);*/
 			if (!removed)
@@ -142,15 +144,15 @@ public class MapCache {
 		faked.remove(d);
 		map.remove(d);
 	}	
-	synchronized public MapCache.Payload query(iMerc m, int zoomlevel, boolean backgroundload) {
+	synchronized public MapCache.Payload query(iMerc m, int zoomlevel,boolean background_load) {
 		Key key=new Key(m,zoomlevel);
 		//Log.i("fplan.adchart","Queried: "+m.getX()+","+m.getY());
 		MapCache.Payload l=map.get(key);
-		if (l==null || l.fake)
+		if (background_load)
 		{
-			if (backgroundload)
+			if (l==null || (l.fake && !l.only_fake_available))
 			{
-				//Log.i("fplan.adchart","Missing, adding to queryhistory: "+m.getX()+","+m.getY()+" zoom: "+zoomlevel+" curr size: "+map.size());
+				Log.i("fplan.adchart","Missing, adding to queryhistory: "+m.getX()+","+m.getY()+" zoom: "+zoomlevel+" curr size: "+map.size()+" history size: "+queryhistory.size());
 				queryhistory.add(key);
 			}
 		}
@@ -168,20 +170,21 @@ public class MapCache {
 			//Log.i("fplan.bitmap","garbageCollect, cache size: "+cachesize+" map: "+map.size());
 			for(Entry<Key, MapCache.Payload> e:map.entrySet())
 			{
+				Log.i("fplan.adchart","GC Item: "+e.getKey());
 				long age=now-e.getValue().lastuse;
 				if (e.getValue().fake)
-					age+=10000;
+					age+=10000;				
+				/*else if (e.getValue().b==null)
+					age-=30000; //Don't bother evicting non-bitmap-carrying non-fake elements quickly, they're almost free.
+				*/
 				if (age>30000)				
 					deletelist.add(e.getKey());
-				if (map.size()>cachesize)
+				if (age>oldest_age)
 				{
-					if (age>oldest_age)
-					{
-						oldest_age=age;
-						oldest=e.getKey();
-					}
+					oldest_age=age;
+					oldest=e.getKey();
 				}
-			}
+		}
 			if (oldest!=null)
 			{
 				//Log.i("fplan.drawmap","Oldest age:"+oldest_age);
@@ -189,7 +192,7 @@ public class MapCache {
 			}
 			for(Key d:deletelist)
 			{
-				//Log.i("fplan.drawmap","Ejecting:"+d);
+				Log.i("fplan.adchart","Ejecting:"+d);
 				eject(d);
 			}
 		}

@@ -176,7 +176,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 				{
 					loader=new BackgroundMapLoader(blobs, mapcache, this,lastcachesize);
 					loader.run();
-					Log.i("fplan.bitmap","Start a background task again");
+					//Log.i("fplan.bitmap","Start a background task again");
 				}
 				else
 				{

@@ -36,10 +36,12 @@ public class GetMapBitmap {
 	 */
 	private BitmapRes collectUsableBitmap(iMerc m, int desiredzoomlevel)
 	{
+		//boolean only_fake=true;
 		for(int zoomlevel=desiredzoomlevel;zoomlevel>=0;--zoomlevel)
 		{
 			iMerc curm=Project.imerc2imerc(m,desiredzoomlevel,zoomlevel);
 			curm=new iMerc(curm.getX() & (~255),curm.getY() & (~255));
+			/*
 			boolean should_be_there=false;
 			if (desiredzoomlevel>maxzoomlevel)
 			{
@@ -51,11 +53,12 @@ public class GetMapBitmap {
 				if (zoomlevel==desiredzoomlevel)
 					should_be_there=true;
 			}
+			*/
 			//if (zoomlevel==desiredzoomlevel || desiredzoomlevel>maxzoomlevel && zoomlevel==maxzoomlevel)
 			//	should_be_there=true;
 			//Log.i("fplan","Request for tile at "+desiredzoomlevel+" now at "+zoomlevel+" should be there: "+should_be_there);
-			Bitmap b=getBitmapImpl(curm,zoomlevel,should_be_there);
-			if (b!=null)
+			MapCache.Payload b=getBitmapImpl(curm,zoomlevel,true);
+			if (b!=null && b.b!=null)
 			{
 				iMerc gotten=Project.imerc2imerc(curm,zoomlevel,desiredzoomlevel);
 				int zoomgap=(desiredzoomlevel-zoomlevel);
@@ -65,11 +68,16 @@ public class GetMapBitmap {
 				int dx=(int)(((long)256*(long)(m.getX()-gotten.getX()))/gottensize);
 				int dy=(int)(((long)256*(long)(m.getY()-gotten.getY()))/gottensize);
 				BitmapRes res=new BitmapRes();
-				res.b=b;
+				res.b=b.b;
 				res.rect=new Rect(dx,dy,dx+usablesize,dy+usablesize);
+				
 				return res;
 			}
+			//if (b==null || !b.only_fake_available)
+			//	only_fake=false;
 		}
+		
+		/*
 		for(int zoomlevel=desiredzoomlevel+1;zoomlevel<=maxzoomlevel;++zoomlevel)
 		{
 			int zoomgap=(zoomlevel-desiredzoomlevel);
@@ -85,12 +93,12 @@ public class GetMapBitmap {
 				for (int i=0;i<gapfactor;++i)
 				{
 					curm=new iMerc(basecurm.getX()+i*256,basecurm.getY()+j*256);
-					Bitmap b=getBitmapImpl(curm,zoomlevel,false);
-					if (b!=null)
+					MapCache.Payload bp=getBitmapImpl(curm,zoomlevel,false);
+					if (bp.b!=null)
 					{
 						if (out==null)
 						{
-							out = Bitmap.createBitmap(256,256,b.getConfig());
+							out = Bitmap.createBitmap(256,256,bp.b.getConfig());
 							canvas = new Canvas(out);
 						}
 						
@@ -100,7 +108,7 @@ public class GetMapBitmap {
 						dst.right=dst.left+256/gapfactor;
 						dst.top=(j*256)/gapfactor;
 						dst.bottom=dst.top+256/gapfactor;						
-						canvas.drawBitmap(b,src,dst,null);			
+						canvas.drawBitmap(bp.b,src,dst,null);			
 						//mapcache.eject(new Key(curm,zoomlevel));
 					}
 					
@@ -108,24 +116,21 @@ public class GetMapBitmap {
 			}
 			if (out!=null)
 			{
-				mapcache.inject(m, desiredzoomlevel, out,true);
+				mapcache.inject(m, desiredzoomlevel, out,true,false);
 				BitmapRes res=new BitmapRes();
 				res.b=out;
 				res.rect=new Rect(0,0,256,256);
 				return res;				
 			}
+			
 		}
+		*/
 		return null;
 	}
 	
-	private Bitmap getBitmapImpl(iMerc m, int zoomlevel,boolean backgroundload)
+	private MapCache.Payload getBitmapImpl(iMerc m, int zoomlevel,boolean background_load)
 	{
-		MapCache.Payload l = mapcache.query(m, zoomlevel,backgroundload);
-		if (l!=null)
-		{
-			return l.b;
-		}
-		return null;
+		return mapcache.query(m, zoomlevel, background_load);
 	}
 	/*
 	ArrayList<Blob> blobs;

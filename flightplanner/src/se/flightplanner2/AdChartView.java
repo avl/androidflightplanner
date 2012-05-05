@@ -81,7 +81,7 @@ public class AdChartView extends View implements UpdatableUI {
 	{
 		float x=ev.getX();
 		float y=ev.getY();
-		Log.i("fplan.chart","Dragging"+x+" "+y+": "+ev.getAction()+"state:"+state);
+		//Log.i("fplan.chart","Dragging"+x+" "+y+": "+ev.getAction()+"state:"+state);
 		if (ev.getAction()==MotionEvent.ACTION_MOVE || ev.getAction()==MotionEvent.ACTION_DOWN)
 		{
 			
@@ -293,8 +293,8 @@ public class AdChartView extends View implements UpdatableUI {
 		chart_width<<=(maxzoomgui-maxzoomdata);
 		chart_height<<=(maxzoomgui-maxzoomdata);
 		ds.close();
-		Log.i("fplan.adchart","loaded matrix:"+A[0][0]+","+A[1][0]+","+A[0][1]+","+A[1][1]);
-		Log.i("fplan.adchart","loaded vector:"+T[0]+", "+T[1]);
+		//Log.i("fplan.adchart","loaded matrix:"+A[0][0]+","+A[1][0]+","+A[0][1]+","+A[1][1]);
+		//Log.i("fplan.adchart","loaded vector:"+T[0]+", "+T[1]);
 		
 		for(int i=0;i<5;++i)
 		{
@@ -304,12 +304,12 @@ public class AdChartView extends View implements UpdatableUI {
 					Config.path+chartname+"-"+is.toString()+".bin");
 			Blob blob=new Blob(chartpath.getAbsolutePath(),256);
 			blobs.add(blob);
-			Log.i("fplan.adchart","Dimensions of level "+is+" "+
+			/*Log.i("fplan.adchart","Dimensions of level "+is+" "+
 					"x1:"+blob.getX1()+
 					"y1:"+blob.getY1()+
 					"x2:"+blob.getX2()+
 					"y2:"+blob.getY2()
-					);
+					);*/
 		}
 		
 	}
@@ -325,7 +325,7 @@ public class AdChartView extends View implements UpdatableUI {
 		int required_cachesize=((width+255+255)/256)*((height+255+255)/256);
 		//TODO: Limit required cache size to never be bigger than total number of available tiles.
 				
-		Log.i("fplan.adchart","Re-drawing chart!");
+		//Log.i("fplan.adchart","Re-drawing chart!");
 		mapcache.forgetqueries();
 		Paint white=new Paint();
 		white.setColor(Color.WHITE);
@@ -365,11 +365,11 @@ public class AdChartView extends View implements UpdatableUI {
 			{
 				loader=new BackgroundMapLoader(blobs, mapcache, this,required_cachesize);
 				loader.run();
-				Log.i("fplan.adchart","Start a background task again");
+				//Log.i("fplan.adchart","Start a background task again");
 			}
 			else
 			{
-				Log.i("fplan.adchart","Map download still in progress");
+				//Log.i("fplan.adchart","Map download still in progress");
 			}
 		}
 		
@@ -386,11 +386,11 @@ public class AdChartView extends View implements UpdatableUI {
 				RectF r=new RectF(px-40,py-40,px+40,py+40);
 				canvas.drawArc(r,rad*(float)(180.0/Math.PI)+180.0f-20f,40,true,pospaint);
 				//canvas.drawText("Hdg:"+rad*180/Math.PI, px+50, py+50, pospaint);
-				Log.i("fplan.adchart","Drawing arc at "+px+" "+py);
+				//Log.i("fplan.adchart","Drawing arc at "+px+" "+py);
 			}
 			else
 			{
-				Log.i("fplan.adchart","Drawing circle at "+px+" "+py);
+				//Log.i("fplan.adchart","Drawing circle at "+px+" "+py);
 				canvas.drawCircle(px,py, 15, pospaint);
 			}
 		}
@@ -400,7 +400,7 @@ public class AdChartView extends View implements UpdatableUI {
 	@Override
 	public void updateUI(boolean done) {
 		loader=null;
-		Log.i("fplan.adchart","Background task finished");
+		//Log.i("fplan.adchart","Background task finished");
 		invalidate();
 	}
 
@@ -436,7 +436,7 @@ public class AdChartView extends View implements UpdatableUI {
 			double px=A[0][0]*mlat + A[0][1]*mlon; 
 			double py=A[1][0]*mlat + A[1][1]*mlon;
 			userPosition=new Vector(px,py);
-			Log.i("fplan.adchart","Lat lon "+lat+","+lon+" mlat: "+mlat+" mlon: "+mlon+" converted to: "+px+","+py);
+			//Log.i("fplan.adchart","Lat lon "+lat+","+lon+" mlat: "+mlat+" mlon: "+mlon+" converted to: "+px+","+py);
 		}
 		userHdgRad=null;
 		if (location.hasBearing())

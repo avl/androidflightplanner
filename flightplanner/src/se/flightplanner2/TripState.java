@@ -80,7 +80,8 @@ public class TripState implements InformationPanel {
 		last_location=mylocation;
 		lastpos=new LatLon(last_location);
 		///update_target(l);		
-		actual_gs=0.0;
+		actual_gs=mylocation.getSpeed()*3.6/1.852;
+				
 		time_to_destination=0;
 		//distance_to_destination=0.0;
 		Vector heading=Project.heading2vector(mylocation.getBearing());
@@ -108,9 +109,10 @@ public class TripState implements InformationPanel {
 			}
 			double best_points=-1e30;
 			int best_points_i=0;
+			boolean skipped_landing=false;
 			for(int i=0;i<tripdata.waypoints.size()-1;++i)
 			{
-				Waypoint wp=tripdata.waypoints.get(i);
+				//Waypoint wp=tripdata.waypoints.get(i);
 				Merc m1=Project.latlon2merc(tripdata.waypoints.get(i).latlon,13);
 				Merc m2=Project.latlon2merc(tripdata.waypoints.get(i+1).latlon,13);
 				Vector mv1=new Vector(m1.x,m1.y);
@@ -122,9 +124,22 @@ public class TripState implements InformationPanel {
 					rightheading*=10; //big penalty in going backwards
 				double distance=line.distance(mypos);
 				
+				if (i+1>=target_wp)
+				{
+					Waypoint wp=tripdata.waypoints.get(i+1);
+					WaypointInfo we=waypointEvents.get(i+1);
+					if (wp.land_at_end && we.passed==null)
+						skipped_landing=true;						
+				}
+				
 				double tpoints=0;
 				tpoints-=(distance)/nm;
 				tpoints+=rightheading;
+				if (i+1>target_wp && skipped_landing)
+				{
+					tpoints-=5; //Gravely penalize not landing 
+				}
+					
 				if (i+1==target_wp)
 				{
 					//Log.i("fplan","rightheading bonus:"+rightheading+" distance penalty: "+distance/nm);
@@ -154,9 +169,21 @@ public class TripState implements InformationPanel {
 					if (Project.latlon2mercvec(old_wp.latlon,13).minus(mypos).length()<
 							corridor_width*onenm)
 					{
-						we.eta2=null;
-						we.passed=new Date();
-						we.skipped=false;
+						if (old_wp.land_at_end)
+						{
+							if (actual_gs<20)
+							{
+								we.eta2=null;
+								we.passed=new Date();
+								we.skipped=false;
+							}							
+						}
+						else
+						{
+							we.eta2=null;
+							we.passed=new Date();
+							we.skipped=false;							
+						}
 					}
 					else
 					{
@@ -174,7 +201,6 @@ public class TripState implements InformationPanel {
 			double accum_time_to_destination=0;
 			boolean landed=false;
 			double accum_distance=0;
-			actual_gs=mylocation.getSpeed()*3.6/1.852;
 			/*
 			Waypoint prevwp=null;
 			if (tripdata.waypoints.size()>=1)

@@ -89,7 +89,7 @@ public class BackgroundMapLoader extends AsyncTask<Key,BackgroundMapLoader.Loade
     	{
 			mapcache.garbageCollect(cachesize);
 			//Log.i("fplan.bitmap","Injected a non-fake bitmap"+bm.key.getPos());
-    		mapcache.inject(bm.key.getPos(),bm.key.getZoomlevel(),bm.bitmap,false);
+    		mapcache.inject(bm.key.getPos(),bm.key.getZoomlevel(),bm.bitmap,false,bm.bitmap==null);
     		change=true;
     	}
 		if (change)

@@ -59,6 +59,7 @@ public class SimplerActivity extends Activity implements LocationListener {
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
     	super.onConfigurationChanged(newConfig);
+    	simplerView.clearcache();
     	simplerView.invalidate();
     }
 

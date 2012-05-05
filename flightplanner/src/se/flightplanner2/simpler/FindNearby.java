@@ -21,16 +21,18 @@ import se.flightplanner2.vector.Polygon.SectorResult;
 public class FindNearby {
 	public static class FoundAirspace
 	{
-		public FoundAirspace(double dist,AirspaceArea area,Pie pie,float bearing,float relbearing)
+		public FoundAirspace(double dist,AirspaceArea area,Pie pie,float bearing,float relbearing,double dist_nm)
 		{
 			assert pie!=null;
 			this.distance=dist;
+			this.dist_nm=dist_nm;
 			this.area=area;
 			this.pie=pie;
 			this.bearing=bearing;
 			this.relbearing=relbearing;
 		}
 		public double distance;
+		public double dist_nm;
 		public float bearing;
 		public float relbearing;
 		public AirspaceArea area;
@@ -59,6 +61,7 @@ public class FindNearby {
 		Merc mpos=Project.latlon2merc(pos, 13);
 		
 		double dist_merc=Project.approx_scale(mpos, 13,dist_nm);
+		double onenm=Project.approx_scale(mpos, 13,1.0);
 		ArrayList<AirspaceArea> allareas=lookup.getAreas().get_areas(new BoundingBox(mpos.toVector(),dist_merc));
         ArrayList<FoundAirspace> left=putcomp(Common.Compartment.LEFT);
         ArrayList<FoundAirspace> ahead=putcomp(Common.Compartment.AHEAD);
@@ -75,22 +78,22 @@ public class FindNearby {
 		    if (res==null) continue; //polygon has no points
 		    if (res.inside)
 		    {
-		    	present.add(new FoundAirspace(res.nearest_distance_to_center, a,res.pie.swingLeft(hdg),0,0));
+		    	present.add(new FoundAirspace(res.nearest_distance_to_center, a,res.pie.swingLeft(hdg),0,0,res.nearest_distance_to_center/onenm));
 		    	continue;		    	
 		    }		    
 		    if (res.nearest_distance_to_center<dist_merc)
 		    {
 		    	//Log.i("fplan","Ahead pie:"+aheadpie+" res bearing: "+res.bearing);
-	    		ahead.add(new FoundAirspace(res.nearest_distance_to_center, a,res.pie.swingLeft(hdg),res.bearing,(float)(res.bearing-hdg+360.0)%360.0f));
+	    		ahead.add(new FoundAirspace(res.nearest_distance_to_center, a,res.pie.swingLeft(hdg),res.bearing,(float)(res.bearing-hdg+360.0)%360.0f,res.nearest_distance_to_center/onenm));
 		    }
 		    	
 			res=a.poly.sector(leftpie,dist_merc);
 			if (res.nearest_distance_to_center<dist_merc)			
-				left.add(new FoundAirspace(res.nearest_distance_to_center, a,res.pie.swingLeft(hdg),res.bearing,(float)(res.bearing-hdg+360.0)%360.0f));
+				left.add(new FoundAirspace(res.nearest_distance_to_center, a,res.pie.swingLeft(hdg),res.bearing,(float)(res.bearing-hdg+360.0)%360.0f,res.nearest_distance_to_center/onenm));
 
 			res=a.poly.sector(rightpie,dist_merc);
 			if (res.nearest_distance_to_center<dist_merc)
-				right.add(new FoundAirspace(res.nearest_distance_to_center, a,res.pie.swingLeft(hdg),res.bearing,(float)(res.bearing-hdg+360.0)%360.0f));
+				right.add(new FoundAirspace(res.nearest_distance_to_center, a,res.pie.swingLeft(hdg),res.bearing,(float)(res.bearing-hdg+360.0)%360.0f,res.nearest_distance_to_center/onenm));
 		}
 		
 		//Purge duplicates

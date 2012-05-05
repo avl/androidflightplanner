@@ -149,7 +149,7 @@ public class ViewAdInfo extends Activity {
 							what="Airport Chart";
 						else if (vi.variant.equals(".landing"))
 							what="Landing Chart";
-						else if (vi.variant.equals(".VAC"))
+						else if (vi.variant.equals(".VAC") || vi.variant.equals(".vac"))
 							what="Visual Approach Chart";
 						else if (vi.variant.equals(".parking"))
 							what="Parking Chart";
