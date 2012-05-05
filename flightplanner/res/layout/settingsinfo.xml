@@ -39,6 +39,7 @@
         android:prompt="@string/detail_prompt"
     />
  <CheckBox android:id="@+id/northup_default" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/north_up_default_str"></CheckBox>
+ <CheckBox android:id="@+id/vibrate_default" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Vibrate to warn of airspaces ahead"></CheckBox>
         
 <Button
         android:id="@+id/button"

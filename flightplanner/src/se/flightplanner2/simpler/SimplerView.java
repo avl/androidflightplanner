@@ -508,9 +508,9 @@ public class SimplerView extends View {
 			return "--";
 		float minutes=(float)(60*fb.dist_nm/gs);
 		if (minutes>1)
-			return String.format("%.0f min",Math.floor(minutes));
+			return String.format("%.0fmin",Math.floor(minutes));
 		else
-			return String.format("%.0f s",60*minutes);
+			return String.format("%.0fs",60*minutes);
 	}
 
 	private void storePosition(FoundAirspace nb, RectF rect) {

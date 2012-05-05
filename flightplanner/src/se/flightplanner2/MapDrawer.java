@@ -38,6 +38,7 @@ public class MapDrawer {
 
 	private Paint neutralpaint;
 	private Paint bigtextpaint;
+	private Paint ahtextpaint;
 	private Paint linepaint;
 	private Paint thinlinepaint;
 	private Paint trippaint;
@@ -101,6 +102,14 @@ public class MapDrawer {
 		bigtextpaint.setTextSize(bigtextsize);
 		bigtextpaint.setTypeface(Typeface.create(Typeface.SANS_SERIF,
 				Typeface.NORMAL));
+		
+		ahtextpaint = new Paint();
+		ahtextpaint.setAntiAlias(true);
+		ahtextpaint.setColor(Color.rgb(255,190,190));
+		ahtextpaint.setTextSize(15);
+		ahtextpaint.setTypeface(Typeface.create(Typeface.SANS_SERIF,
+				Typeface.NORMAL));
+		
 		linepaint = new Paint();
 		linepaint.setAntiAlias(false);
 		linepaint.setStrokeWidth(5);
@@ -246,7 +255,7 @@ public class MapDrawer {
 			AirspaceLookup lookup, Canvas canvas, Rect screen_extent,
 			Location lastpos, GetMapBitmap bitmaps, final GuiSituation gui,
 			long last_real_position, String download_status,
-			InformationPanel panel,View view) {
+			InformationPanel panel,View view,String prox_warning) {
 		
 		long bef=SystemClock.elapsedRealtime();
 		
@@ -1032,12 +1041,16 @@ public class MapDrawer {
 		addTextIfFits(canvas, "Z13", r, String.format("Z%d", zoomlevel), y,
 				bigtextpaint);
 
+		
+		int airspace_button_space_left=left;
+		int airspace_button_space_right=right;
 		if (isDragging) {
 			float h = bigtextpaint.getTextSize();
 			float topbutton_y = y+h;
 
 			String text = "Center";
 			final Rect tr1 = drawButton(canvas, right,topbutton_y, text,-1,0,right,false);
+			airspace_button_space_right=tr1.left-4;
 			clickables.add(new GuiSituation.Clickable() {
 				@Override
 				public Rect getRect() {
@@ -1056,6 +1069,7 @@ public class MapDrawer {
 				text = "Set North Up";
 				final Rect tr2 = drawButton(canvas, 0,topbutton_y, text,1,0,edge,false);
 				if (tr2!=null) {				
+					airspace_button_space_left=tr2.right+4;
 					clickables.add(new GuiSituation.Clickable() {
 						@Override
 						public Rect getRect() {
@@ -1090,6 +1104,24 @@ public class MapDrawer {
 				});
 				
 			}
+		}
+		Log.i("fplan","prox warning coords " +airspace_button_space_left+".."+airspace_button_space_right);
+		if (prox_warning!=null && airspace_button_space_right>airspace_button_space_left)
+		{
+			final Rect tr1 = drawAirspaceAhead(canvas, (y*3)/2, prox_warning, airspace_button_space_left,airspace_button_space_right);
+			clickables.add(new GuiSituation.Clickable() {
+				@Override
+				public Rect getRect() {
+					return tr1;
+				}
+
+				@Override
+				public void onClick() {
+					gui.showAirspaces();
+				}
+			});
+			
+				
 		}
 
 		long aft=SystemClock.elapsedRealtime();
@@ -1138,6 +1170,51 @@ public class MapDrawer {
 		}
 		return tr1;
 	}
+	
+	private Rect drawAirspaceAhead(Canvas canvas, float y, String text2,int x1lim, int x2lim) {
+		float x=x1lim;
+		Rect totrect=new Rect();
+		Rect bounds1=new Rect();
+		int textsize1=30;
+	
+		String text1="Airspace Ahead";
+		for(;textsize1>10;textsize1-=(textsize1/8+1))
+		{
+			ahtextpaint.setTextSize(textsize1);
+			ahtextpaint.getTextBounds(text1, 0, text1.length(), bounds1);
+			if (bounds1.width()<(x2lim-x1lim))
+				break;
+		}
+		Rect bounds2=new Rect();
+		int textsize2=25;
+		for(;textsize2>10;textsize2-=(textsize2/8+1))
+		{
+			ahtextpaint.setTextSize(textsize2);
+			ahtextpaint.getTextBounds(text2, 0, text2.length(), bounds2);
+			if (bounds2.width()<(x2lim-x1lim))
+				break;
+		}
+		totrect.left=(int)x;
+		totrect.top=(int)y;
+		totrect.right=(int)x+Math.max(bounds1.width(),bounds2.width())+25;		
+		totrect.bottom=(int)y+bounds1.height()+4+bounds2.height()+4;
+		totrect.offset(((x2lim-x1lim)-totrect.width())/2,0);
+		if (totrect.right>x2lim) totrect.right=x2lim;
+		if (totrect.left<x1lim) totrect.left=x1lim;
+				
+		canvas.save();
+		canvas.drawRect(totrect, backgroundpaint);
+		canvas.drawRect(totrect, thinlinepaint);
+		
+		canvas.clipRect(totrect);
+		ahtextpaint.setTextSize(textsize1);
+		canvas.drawText(text1, totrect.left-bounds1.left+1+totrect.width()/2-bounds1.width()/2, y-bounds1.top+1, ahtextpaint);
+		ahtextpaint.setTextSize(textsize2);
+		canvas.drawText(text2, totrect.left-bounds2.left+1+totrect.width()/2-bounds2.width()/2, y-bounds2.top+2+bounds1.height(), ahtextpaint);
+		canvas.restore();
+		return totrect;
+	}
+	
 
 	public int getNumInfoLines(int ysize) {
 		float tsy = bigtextpaint.getTextSize() + 2;

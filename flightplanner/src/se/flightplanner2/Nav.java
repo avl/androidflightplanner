@@ -37,6 +37,7 @@ import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.os.Vibrator;
 import android.text.Html;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -173,6 +174,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			final String password=data.getStringExtra("se.flightplanner2.password");
 			final int mapdetail=data.getIntExtra("se.flightplanner2.mapdetail", 0);
 			final boolean northup=data.getBooleanExtra("se.flightplanner2.northup", false);
+			final boolean vibrate=data.getBooleanExtra("se.flightplanner2.vibrate", true);
 			//RookieHelper.showmsg(this,"mapdetail now:"+mapdetail);
 			SharedPreferences prefs=getPreferences(MODE_PRIVATE);
 			SharedPreferences.Editor pedit=prefs.edit();			
@@ -180,6 +182,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			pedit.putString("password", password);
 			pedit.putInt("mapdetail", mapdetail);
 			pedit.putBoolean("northup", northup);
+			pedit.putBoolean("vibrate", vibrate);
 			pedit.commit();
 			
 			
@@ -358,18 +361,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     }
     case MENU_SIMPLER:
     {
-    	Intent intent = new Intent(this, SimplerActivity.class);
-    	if (last_location!=null)
-    	{
-    		intent.putExtra("se.flightplanner2.pos", new LatLon(last_location));
-    		intent.putExtra("se.flightplanner2.hdg", (float)last_location.getBearing());
-    		intent.putExtra("se.flightplanner2.gs", (float)(last_location.getSpeed()*3.6/1.852));
-    		startActivity(intent);
-    	}
-    	else
-    	{
-    		RookieHelper.showmsg(this, "Position Unknown");
-    	}
+    	showAirspaces();
     	break;
     }
     case MENU_PHRASES:
@@ -386,6 +378,24 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     	
     }
 	    return false;
+	}
+	
+	@Override
+	public void showAirspaces()
+	{
+    	Intent intent = new Intent(this, SimplerActivity.class);
+    	if (last_location!=null)
+    	{
+    		intent.putExtra("se.flightplanner2.pos", new LatLon(last_location));
+    		intent.putExtra("se.flightplanner2.hdg", (float)last_location.getBearing());
+    		intent.putExtra("se.flightplanner2.gs", (float)(last_location.getSpeed()*3.6/1.852));
+    		startActivity(intent);
+    	}
+    	else
+    	{
+    		RookieHelper.showmsg(this, "Position Unknown");
+    	}
+		
 	}
 	private void do_load_terrain() {
 		if (terraindownloader!=null)
@@ -576,6 +586,11 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
         
 		map.thisSetContentView(this);
 		map.gps_update(null);
+		
+		proxdet=new AirspaceProximityDetector(lookup,5);
+		vibrator= (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+		warner=new AirspaceWarner(proxdet);
+		
     }
     
     @Override
@@ -586,6 +601,9 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     
 	private double offlat=0;
 	private double offlon=0;
+	private AirspaceProximityDetector proxdet;
+	private Vibrator vibrator;
+	private AirspaceWarner warner;
 	private BearingSpeedCalc bearingspeed=new BearingSpeedCalc();
 	@Override
 	public void onLocationChanged(Location loc) {
@@ -610,7 +628,10 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			loc.setLongitude(lon);
 		}
 		
-		Location location=bearingspeed.calcBearingSpeed(loc);		
+		Location location=bearingspeed.calcBearingSpeed(loc);
+				
+		warner.run(location, (getPreferences(MODE_PRIVATE).getBoolean("vibrate", true)) ?  vibrator : null);		
+		map.proxwarner_update(warner.getWarning());
 		map.gps_update(location);
 		last_location=location;
 		//RookieHelper.showmsg(this, ""+location.getLatitude()+","+location.getLongitude());
@@ -673,9 +694,13 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		{
 			map.set_download_status("Complete",true);
 		}
+		
 		if (airspace!=null)
+		{
+			proxdet.update_lookup(lookup);
 			map.update_airspace(airspace,lookup,getPreferences(MODE_PRIVATE).getInt("mapdetail", 0),
         		getPreferences(MODE_PRIVATE).getBoolean("northup", false));
+		}
 		map.enableTerrainMap(true);
 		last_load_terrain=SystemClock.elapsedRealtime();
 		
@@ -798,6 +823,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	        }
 		}
 	}
+
     
 
 }

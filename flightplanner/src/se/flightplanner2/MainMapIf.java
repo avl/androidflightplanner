@@ -33,4 +33,6 @@ public interface MainMapIf {
 
 	public abstract void releaseMemory();
 
+	public abstract void proxwarner_update(String warning);
+
 }

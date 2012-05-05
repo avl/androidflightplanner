@@ -130,19 +130,30 @@ public class MapCache {
 		}
 		return keys.toArray(new Key[]{});
 	}
-	synchronized public void eject(Key d) {
+	public int mapsize()
+	{
+		int cnt=0;
+		for(MapCache.Payload p:map.values())
+			if (p.b!=null) ++cnt;
+		return cnt;
+		
+	}
+	synchronized public int eject(Key d) {
 		//Log.i("fplan.bitmap","Ejecting bitmap "+d);
 		MapCache.Payload p=map.get(d);
+		int cnt=0;
 		if (p!=null)
 		{
 			if (p.b!=null)
 			{
 				p.b.recycle();
 				p.b=null;
+				cnt=1;
 			}
 		}
 		faked.remove(d);
 		map.remove(d);
+		return cnt;
 	}	
 	synchronized public MapCache.Payload query(iMerc m, int zoomlevel,boolean background_load) {
 		Key key=new Key(m,zoomlevel);
@@ -152,7 +163,7 @@ public class MapCache {
 		{
 			if (l==null || (l.fake && !l.only_fake_available))
 			{
-				Log.i("fplan.adchart","Missing, adding to queryhistory: "+m.getX()+","+m.getY()+" zoom: "+zoomlevel+" curr size: "+map.size()+" history size: "+queryhistory.size());
+				Log.i("fplan.adchart","Missing, adding to queryhistory: "+m.getX()+","+m.getY()+" zoom: "+zoomlevel+" curr size: "+mapsize()+" history size: "+queryhistory.size());
 				queryhistory.add(key);
 			}
 		}
@@ -161,8 +172,9 @@ public class MapCache {
 		return l;
 	}
 	synchronized public void garbageCollect(int cachesize) {
-		long now=SystemClock.uptimeMillis();		
-		while(map.size()>cachesize)
+		long now=SystemClock.uptimeMillis();
+		int curmapsize=mapsize();
+		while(curmapsize>cachesize)
 		{
 			ArrayList<Key> deletelist=new ArrayList<Key>();
 			long oldest_age=0;
@@ -192,8 +204,8 @@ public class MapCache {
 			}
 			for(Key d:deletelist)
 			{
-				Log.i("fplan.adchart","Ejecting:"+d);
-				eject(d);
+				Log.i("fplan.adchart","Ejecting:"+d);				
+				curmapsize-=eject(d);
 			}
 		}
 	}

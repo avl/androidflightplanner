@@ -53,11 +53,14 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	private FlightPathLogger fplog;
 	private MovingMapOwner owner;
 	private int detaillevel;
+	private String prox_warning; //about nearby airspaces
 	interface MovingMapOwner
 	{
 		public void cancelMapDownload();
 
 		public void doShowExtended(Place[] places);
+
+		public void showAirspaces();
 	}
 	public void doInvalidate()
 	{
@@ -167,7 +170,8 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 					last_real_position,
 					download_status,
 					gui.getCurrentInfo(),
-					this
+					this,
+					prox_warning
 					);
 			lastcachesize=res.lastcachesize;
 			if (mapcache!=null && mapcache.haveUnsatisfiedQueries())
@@ -471,6 +475,16 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	public void doShowExtended(Place[] places) {
 		this.owner.doShowExtended(places);
 		
+	}
+	@Override
+	public void proxwarner_update(String warning) {
+		prox_warning=warning;		
+		
+	}
+	@Override
+	public void showAirspaces()
+	{
+		this.owner.showAirspaces();
 	}
 	
 }

@@ -54,7 +54,8 @@ public class GuiSituation
 	{
 		void doInvalidate();	
 		void cancelMapDownload();
-		void doShowExtended(Place[] places);				
+		void doShowExtended(Place[] places);
+		void showAirspaces();				
 	}
 	public interface Clickable
 	{
@@ -403,6 +404,9 @@ public class GuiSituation
 	}
 	public boolean getFingerDown() {
 		return state!=GuiState.IDLE;
+	}
+	public void showAirspaces() {
+		movingMap.showAirspaces();
 	}
 	
 }
