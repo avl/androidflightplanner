@@ -147,7 +147,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 	protected DownloadedAirspaceData doInBackground(Airspace... asp) {
 		try
 		{
-			if (asp.length>1) throw new RuntimeException("Provide 1 or 0 preivous spaces");
+			if (asp.length>1) throw new RuntimeException("Provide 1 or 0 previous spaces");
 			Airspace previous=asp[0];
 			DownloadedAirspaceData res=null;
 			publishProgress("Starting");
@@ -177,51 +177,12 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				e.printStackTrace();
 				res.error="Failed";
 				return res;
-			}
+			}						
 			
-			
-			
-			
-			int failcount=0;
-			for (;;) {
-				try {
-					waitAvailable();
-					if (Thread.currentThread().isInterrupted())
-					{
-						DownloadedAirspaceData  ret=new DownloadedAirspaceData();
-						ret.error="Cancelled";
-						return ret;					
-					}
-					long totprog = 0;
-					int maxlevel=MapDetailLevels.getMaxLevelFromDetail(mapdetail);
-					for (int level = 0; level <= maxlevel; ++level) {
-						Log.i("fplan.download","About to download level "+level);
-						
-						totprog = downloadLevel(totprog, level, maxlevel);
-					}
-					return res;
-				} catch (InterruptedException e) {
-					DownloadedAirspaceData  ret=new DownloadedAirspaceData();
-					ret.error="Cancelled";
-					return ret;					
-				} catch (BackgroundException e) {
-					publishProgress(e.what);
-					try {
-						Thread.sleep(5000);
-					} catch (InterruptedException e1) {
-						return null;
-					}
-					++failcount;
-					if (failcount>25)
-					{
-						DownloadedAirspaceData  ret=new DownloadedAirspaceData();
-						ret.error="Too many failures";
-						return ret;					
-					}
-				}
-	
-			}
-			
+			downloadBlobs(res,MapDetailLevels.getMaxLevelFromDetail(mapdetail),"nolabel");
+			if (MapDetailLevels.getHaveElevFromDetail(mapdetail))
+				downloadBlobs(res,MapDetailLevels.getMaxElevLevelFromDetail(mapdetail),"elev");
+			return res;
 			
 		} 
 		catch (FatalBackgroundException e) 
@@ -233,6 +194,41 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			return ret;			
 		}
 		
+	}
+	private void downloadBlobs(DownloadedAirspaceData res,int maxlevel,String kind)
+			throws FatalBackgroundException {
+		int failcount=0;
+		for (;;) {
+			try {
+				waitAvailable();
+				if (Thread.currentThread().isInterrupted())
+				{
+					res.error="Cancelled";
+					break;					
+				}
+				long totprog = 0;				
+				for (int level = 0; level <= maxlevel; ++level) {
+					Log.i("fplan.download","About to download level "+level+" of "+kind);					
+					totprog = downloadLevel(totprog, level, maxlevel,kind);
+				}
+				break;
+			} catch (InterruptedException e) {
+				res.error="Cancelled";
+				break;					
+			} catch (BackgroundException e) {
+				publishProgress(e.what);
+				try {
+					Thread.sleep(5000);
+				} catch (InterruptedException e1) {
+				}
+				++failcount;
+				if (failcount>10)
+				{
+					res.error="Too many failures";
+					break;					
+				}
+			}	
+		}
 	}
 
 	private void downloadAdCharts(DownloadedAirspaceData res) throws Exception {
@@ -411,19 +407,22 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		
 		
 	}
-	private long downloadLevel(long totprog, int level, int maxlevel)
+	private long downloadLevel(long totprog, int level, int maxlevel, String kind)
 			throws InterruptedException, BackgroundException, FatalBackgroundException {
 		long startversion = -1;
 		boolean first=true;
 		for (;;) {
+			String prefix=kind;
+			if (prefix.equals("nolabel"))
+				prefix="";
 			File extpath = Environment.getExternalStorageDirectory();
 			File metapath = new File(extpath,
-					Config.path+"meta.dat");
+					Config.path+prefix+"meta.dat");
 	
 			if (!metapath.exists())
 			{
 				Log.i("fplan.download","Metadata missing, deleting all present map tile files");
-				deleteStoredFiles();
+				deleteStoredFiles(prefix);
 			}
 
 			
@@ -434,7 +433,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				throw new RuntimeException("Couldn't create directory:"+dirpath);
 
 			File path = new File(extpath,
-					Config.path+"level" + level);
+					Config.path+prefix+"level" + level);
 			
 			
 			long filelength = 0;
@@ -450,6 +449,8 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			nvps.add(new BasicNameValuePair("offset", "" + filelength));
 			nvps.add(new BasicNameValuePair("maxlen", "" + 1000000));
 			nvps.add(new BasicNameValuePair("maxlevel", "" + maxlevel));
+			nvps.add(new BasicNameValuePair("maptype", kind));
+			
 
 			InputStream inp=null;
 			try {
@@ -507,7 +508,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				{
 					Log.i("fplan.download","Map dataversion changed. Was:"+startversion+" now: "+dataversion);
 
-					deleteStoredFiles();
+					deleteStoredFiles(prefix);
 					throw new BackgroundException(
 							"Dataversion changed. Restarting download.");
 				}
@@ -561,7 +562,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 						perc=(float)100.0f*(totprog+cnt+filelength)/totalsize;
 						long now=SystemClock.uptimeMillis();
 						if (now-last>2000)
-							publishProgress(String.format("%.3f%%",perc));
+							publishProgress(String.format(kind+":"+"%.3f%%",perc));
 						last=now;
 					}
 				}
@@ -593,11 +594,11 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 
 		}
 	}
-	private void deleteStoredFiles() throws FatalBackgroundException {
+	private void deleteStoredFiles(String prefix) throws FatalBackgroundException {
 		
 		File extpath2 = Environment.getExternalStorageDirectory();
 		File metapath = new File(extpath2,
-				Config.path+"meta.dat");
+				Config.path+prefix+"meta.dat");
 		if (metapath.exists())
 		{
 			if (metapath.delete()==false)
@@ -606,7 +607,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		for(int dellevel=0;dellevel<=13;++dellevel)
 		{						
 			File levpath = new File(extpath2,
-					Config.path+"level" + dellevel);
+					Config.path+prefix+"level" + dellevel);
 			if (levpath.exists())
 				if (levpath.delete()==false)
 					throw new FatalBackgroundException("Couldn't delete existing file "+levpath.getName());

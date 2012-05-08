@@ -2,11 +2,14 @@ package se.flightplanner2.simpler;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
 import se.flightplanner2.AirspaceArea;
 import se.flightplanner2.AirspaceLookupIf;
+import se.flightplanner2.Config;
+import se.flightplanner2.GlobalClearancePersistence;
 import se.flightplanner2.Project;
 import se.flightplanner2.Project.LatLon;
 import se.flightplanner2.Project.Merc;
@@ -168,19 +171,41 @@ public class SimplerView extends View {
 					}
 				}
 			}
+			FoundAirspace was_highlight=highlighted;
 			if (state == State.IDLE) {
-				downx = x;
-				downy = y;
-				state = State.FINGER_DOWN;
+				if (highlighted!=null && dropdown_rect!=null)
+				{
+					if (dropdown_rect.contains((int)x,(int)y))
+					{
+						cancel_any_highlight();
+						state=State.DEAD;
+					}
+				}
+				if (state==State.IDLE)
+				{
+					cancel_any_highlight();
+					downx = x;
+					downy = y;
+					state = State.FINGER_DOWN;
+				}
 			}
 
 			if (state != State.DEAD) {
 				highlight_any(x, y);
+				if (was_highlight==highlighted)
+				{
+					show_dropdown=!show_dropdown;
+				}
+				else
+				{
+					show_dropdown=true;
+				}
 			} else {
-				cancel_any_highlight();
+				//cancel_any_highlight();
 			}
 		} else if (ev.getAction() == MotionEvent.ACTION_UP) {
-			cancel_any_highlight();
+			
+			handler.postDelayed(this.highlight_canceler, 5000);
 			owner.touched();
 			if (state == State.FINGER_DOWN) {
 				if (x - downx > 15 || y - downy < -15) {
@@ -194,7 +219,14 @@ public class SimplerView extends View {
 		return true;
 	}
 
+	Runnable highlight_canceler=new Runnable(){
+		@Override
+		public void run() {
+			cancel_any_highlight();
+		}
+	};
 	private void cancel_any_highlight() {
+		handler.removeCallbacks(highlight_canceler);
 		if (highlighted != null) {
 			handler.removeCallbacks(highlight_cycler);
 			invalidate();
@@ -205,9 +237,12 @@ public class SimplerView extends View {
 
 	public void stop() {
 		handler.removeCallbacks(highlight_cycler);
+		handler.removeCallbacks(highlight_canceler);
 	}
 
 	private Handler handler = new Handler();
+	private boolean show_dropdown=true;
+	private Rect dropdown_rect=null;
 	private FoundAirspace highlighted;
 	private long highlight_phase = 0;
 	private float highlight_intensity = 0;
@@ -217,10 +252,10 @@ public class SimplerView extends View {
 		@Override
 		public void run() {
 			highlight_intensity = (float) (0.5f + 0.5f * Math.sin(((SystemClock
-					.elapsedRealtime() - highlight_phase) % 2000)
+					.elapsedRealtime() - highlight_phase) % 1000)
 					* 2
 					* Math.PI
-					/ 2000.0));
+					/1000.0));
 			handler.postDelayed(this, 50);
 			SimplerView.this.invalidate();
 		}
@@ -243,7 +278,7 @@ public class SimplerView extends View {
 			}
 		}
 		FoundAirspace fb = findSpace(x, y);
-		if (fb.area != null) {
+		if (fb!=null && fb.area != null) {
 
 			if (highlighted == null) {
 				highlight_phase = SystemClock.elapsedRealtime();
@@ -262,12 +297,16 @@ public class SimplerView extends View {
 	private boolean clear(float x, float y, boolean cleared) {
 		FoundAirspace fb = findSpace(x, y);
 		if (fb.area != null) {
-			if (fb.area.cleared != cleared) {
-				fb.area.cleared = cleared;
-				invalidate();
-				return true;
-			}
-
+			long oldclearval=fb.area.cleared;
+			if (cleared)
+				fb.area.cleared=new Date().getTime();
+			else
+				fb.area.cleared=0;
+			
+			if (Math.abs(oldclearval-fb.area.cleared)>60*1000l)
+				GlobalClearancePersistence.clearper.save(lookup);
+			invalidate();
+			return true;
 		}
 		return false;
 
@@ -317,6 +356,7 @@ public class SimplerView extends View {
 		int width = getRight() - getLeft();
 		int height = getBottom() - getTop();
 		long bef = SystemClock.elapsedRealtime();
+		long now = new Date().getTime();
 		if (width != lastwidth || height != lastheight)
 		{
 			clearcache();
@@ -376,7 +416,7 @@ public class SimplerView extends View {
 					float nm = (float) cell.area.distance / scalefactor;
 					if (nm < closest_dist)
 						closest_dist = nm;
-					if (!cell.area.area.cleared && nm < closest_uncleared_dist)
+					if (!iscleared(cell.area.area.cleared,now) && nm < closest_uncleared_dist)
 						closest_uncleared_dist = nm;
 
 				}
@@ -411,7 +451,7 @@ public class SimplerView extends View {
 
 					cury = drawCacheBox(canvas, cury, rect, new String[] { "^ "
 							+ desc + " ^" }, (int) r, (int) g, (int) b,
-							smalltxtpaint, false);
+							smalltxtpaint, false,false);
 
 					has_range_box = true;
 				}
@@ -432,16 +472,12 @@ public class SimplerView extends View {
 					int r = area.r;
 					int g = area.g;
 					int b = area.b;
-					if (area.cleared) {
+					if (iscleared(area.cleared, now)) {
 						r = g = b = 0xc0;
-					}
-					if (cell.area == highlighted) {
-						b = 255;
-						r = g = (int) (highlight_intensity * 180.0);
 					}
 					int boxy2 = drawCacheBox(canvas, cury - off, cell.rect,
 							new String[] { alts, area.name }, r, g, b,
-							txtpaint, false);
+							txtpaint, false,cell.area == highlighted);
 					nexty = Math.min(nexty, boxy2);
 
 					if (needlayout) {
@@ -461,26 +497,39 @@ public class SimplerView extends View {
 			canvas.restore();
 		}
 
-		if (highlighted != null) {
+		if (highlighted != null && show_dropdown) {
 
 			Common.Rect tr = new Common.Rect((int) width / 24, 0, (int) width
 					- width / 12, 0);
-			boolean below = false;
 			int ypos = (int) highlight_y;
 			if (ypos > height / 6) {
 				ypos = width / 24;
-				below = true;
 			} else {
 				ypos = height / 3;
-				below = true;
 			}
-
-			String[] hs = new String[] {
-					(!highlighted.area.cleared) ? "Swipe down or left to inactivate"
-							: "Swipe up or right to activate",
-					geteta(highlighted), getdirdist(highlighted),
-					getalts(highlighted.area), highlighted.area.name, };
-			drawCacheBox(canvas, ypos, tr, hs, 160, 255, 160, txtpaint, below);
+			
+			ArrayList<String> hs=new ArrayList<String>();
+											
+			hs.add(!iscleared(highlighted.area.cleared,now) ? "Swipe down or left to clear"
+							: "Swipe up or right to cancel clearance");
+			if (highlighted.area.cleared>0)
+			{
+				long clearedago=(int) ((new Date().getTime()-highlighted.area.cleared));
+				if (clearedago>Config.clearance_valid_time)
+					highlighted.area.cleared=0;
+				hs.add("Cleared "+(clearedago/(60*1000l))+"min ago.");
+				
+			}
+			hs.add(geteta(highlighted));
+			hs.add(getdirdist(highlighted));
+			hs.add(getalts(highlighted.area));
+			hs.add(highlighted.area.name);
+			
+			int rety=drawCacheBox(canvas, ypos, tr, hs.toArray(new String[hs.size()]), 160, 255, 160, txtpaint, true,false);
+			
+			dropdown_rect=new Rect(tr.left,Math.min(ypos,rety),tr.right,Math.max(ypos,rety));
+			Log.i("fplan.rect","Dropdown rect:"+dropdown_rect);
+			
 		}
 		needlayout = false;
 
@@ -498,8 +547,12 @@ public class SimplerView extends View {
 		Log.i("fplan", "Redrawn SimplerView in " + (aft - bef) + "ms");
 	}
 
+	private boolean iscleared(long cleared, long now) {
+		long elapsed=now-cleared;		
+		return elapsed<Config.clearance_valid_time;
+	}
+
 	private String getdirdist(FoundAirspace fb) {
-		// TODO Auto-generated method stub			
 		return String.format("%03.0f°, %.1fNM",fb.bearing,fb.dist_nm);
 	}
 
@@ -508,9 +561,9 @@ public class SimplerView extends View {
 			return "--";
 		float minutes=(float)(60*fb.dist_nm/gs);
 		if (minutes>1)
-			return String.format("%.0fmin",Math.floor(minutes));
+			return String.format("%.0fmin away",Math.floor(minutes));
 		else
-			return String.format("%.0fs",60*minutes);
+			return String.format("%.0fs away",60*minutes);
 	}
 
 	private void storePosition(FoundAirspace nb, RectF rect) {
@@ -534,18 +587,19 @@ public class SimplerView extends View {
 	private class CacheKey {
 		String[] ts;
 		int r, g, b;
-
-		public CacheKey(String[] ts, int r, int g, int b) {
+		boolean highlight;
+		public CacheKey(String[] ts, int r, int g, int b,boolean highlight) {
 			this.ts = ts;
 			this.r = r;
 			this.g = g;
 			this.b = b;
+			this.highlight=highlight;
 		}
 
 		@Override
 		public boolean equals(Object ko) {
 			CacheKey k = (CacheKey) ko;
-			return Arrays.equals(ts, k.ts) && r == k.r && g == k.g && b == k.b;
+			return Arrays.equals(ts, k.ts) && r == k.r && g == k.g && b == k.b && highlight==k.highlight;
 		}
 
 		@Override
@@ -567,11 +621,11 @@ public class SimplerView extends View {
 
 	private int drawCacheBox(Canvas canvas, int cury, Common.Rect cellrect,
 			String[] labels, int r, int g, int b, Paint usetxtpaint,
-			boolean below) {
-		CacheKey ck = new CacheKey(labels, r, g, b);
+			boolean below,boolean highlighted) {
+		CacheKey ck = new CacheKey(labels, r, g, b, highlighted);
 		CacheVal ar = bms.get(ck);
 		if (ar == null) {
-			Log.i("fplan", "Cachemiss");
+			//Log.i("fplan", "Cachemiss");
 			ar = new CacheVal();
 			Rect[] drawrects = new Rect[labels.length];
 			int h = 0;
@@ -589,10 +643,12 @@ public class SimplerView extends View {
 			// Log.i("fplan","bmsize:"+ar.bm.getWidth()+","+ar.bm.getHeight());
 			Canvas bmcanvas = new Canvas(ar.bm);
 			drawBox(bmcanvas, 0, ysize, 0, cellrect.width(), labels, r, g, b,
-					usetxtpaint, drawrects);
-			bms.put(ck, ar);
+					usetxtpaint, drawrects,highlighted);
+			if (!highlighted)
+				bms.put(ck, ar);
 		}
-		bms_survive.put(ck, ar);
+		if (!highlighted)
+			bms_survive.put(ck, ar);
 		// Log.i("fplan","Drawing bitmap at x: "+cellrect.left+"cury:"+(cury-ar.ysize)+" ");
 		int acty;
 		if (below)
@@ -600,13 +656,15 @@ public class SimplerView extends View {
 		else
 			acty = cury - ar.ysize;
 		canvas.drawBitmap(ar.bm, (float) (cellrect.left), acty, usetxtpaint);
-
-		return acty;
+		if (below)
+			return acty+ar.ysize;
+		else
+			return acty;
 	}
 
 	private void drawBox(Canvas canvas, int y1, int y2, int x1, int x2,
 			String[] label, int r, int g, int b, Paint usetxtpaint,
-			Rect[] drawrects) {
+			Rect[] drawrects,boolean highlighted) {
 
 		for (String lab : label)
 			if (lab == null)
@@ -620,6 +678,10 @@ public class SimplerView extends View {
 		// AirspaceArea area=cell.area.area;
 		boxpaint.setColor(rgb(r, g, b, -140));
 		canvas.drawRect(re, boxpaint);
+		if (highlighted) {
+			b = 255;
+			r = g = (int) (highlight_intensity * 230.0);
+		}		
 		boxframepaint.setColor(rgb(r, g, b, 0));
 		boxframepaint.setStrokeWidth(border);
 		canvas.drawRect(re, boxframepaint);

@@ -2,17 +2,18 @@ package se.flightplanner2;
 
 import java.util.Arrays;
 
+import android.content.Context;
 import android.location.Location;
 import android.os.SystemClock;
 import android.os.Vibrator;
+import android.widget.Toast;
 
 public class AirspaceWarner {
 	private enum State
 	{
 		IDLE,
 		FIVE_MIN_WARNED,
-		FOUR_MIN_WARNED,
-		IMMINENT_WARNED
+		FOUR_MIN_WARNED
 	}
 	private State state=State.IDLE;
 	private AirspaceProximityDetector det;
@@ -25,31 +26,39 @@ public class AirspaceWarner {
 	private long[] imminent_pattern=new long[]{0,100,100,100,100,100,100,100,100,100,100,200,200,500,200,1000,200,1500};
 	private long blocktime;
 	private String[] lastareas;
-	public String getWarning()
+	private String[] report_warning;
+	public String[] getWarning()
 	{
-		return det.getWarning();
+		return report_warning;
 	}
-	void run(Location loc,Vibrator vibrator)
+	void run(Location loc,Vibrator vibrator,Context context)
 	{
 		det.run(loc);
 		if (!det.isWarning())
 		{
-			long sinceblock=SystemClock.elapsedRealtime()-blocktime;
-			if (sinceblock<60*1000)
-				return;
-			blocktime=SystemClock.elapsedRealtime();
 			state=State.IDLE;
+			report_warning=null;
 			return;
 		}
+		report_warning=det.getWarning();
 		
-		if (!Arrays.equals(lastareas,det.getAreanames())){
-			long sinceblock=SystemClock.elapsedRealtime()-blocktime;
-			if (sinceblock>60*1000)
+		if (state!=State.IDLE)
+		{
+			if (!Arrays.equals(lastareas,det.getAreanames()))
 			{
 				lastareas=det.getAreanames();
-				blocktime=SystemClock.elapsedRealtime();
-				state=State.IDLE;				
-			}			
+				long sinceblock=SystemClock.elapsedRealtime()-blocktime;
+				if (sinceblock>60*1000)
+				{
+					lastareas=det.getAreanames();
+					blocktime=SystemClock.elapsedRealtime();
+					state=State.IDLE;				
+				}
+			}
+		}
+		else
+		{
+			lastareas=det.getAreanames();
 		}
 		
 		
@@ -57,35 +66,30 @@ public class AirspaceWarner {
 		{
 		case IDLE:
 		{
-			if ((det.getTimeLeft()<5 || det.getDistLeft()<1)) 
+			if ((det.getTimeLeft()<4.5 || det.getDistLeft()<0.7)) 
 			{				
-				if (vibrator!=null) vibrator.vibrate(fivemin_pattern, -1);
+				if (vibrator!=null && report_warning[0]!=null) 
+				{
+					vibrator.vibrate(fivemin_pattern, -1);
+				}
+				Toast.makeText(context, "Airspace Ahead: "+report_warning[0], Toast.LENGTH_SHORT).show();
 				state=State.FIVE_MIN_WARNED;
 			}
 		}
 		break;
 		case FIVE_MIN_WARNED:
 		{
-			if ((det.getTimeLeft()<4 || det.getDistLeft()<0.25)) 
+			if ((det.getTimeLeft()<3 || det.getDistLeft()<0.5)) 
 			{				
-				if (vibrator!=null) vibrator.vibrate(fourmin_pattern, -1);
+				if (vibrator!=null) 
+				{
+					vibrator.vibrate(fourmin_pattern, -1);
+				}
+				Toast.makeText(context, "Airspace Ahead: "+report_warning[0], Toast.LENGTH_SHORT).show();
 				state=State.FOUR_MIN_WARNED;
 			}
 		}
 		break;
-		case FOUR_MIN_WARNED:
-		{
-			if ((det.getTimeLeft()<1 || det.getDistLeft()<0.1)) 
-			{				
-				if (vibrator!=null) vibrator.vibrate(imminent_pattern, -1);
-				state=State.IMMINENT_WARNED;
-			}
-		}
-		break;
-		case IMMINENT_WARNED:
-		{
-			
-		}
 		}
 		
 	}

@@ -115,8 +115,7 @@ public class Blob {
     		return null;
         
         byte[] ret=new byte[imagesize];
-        if (raf.read(ret)!=imagesize)
-        	throw new RuntimeException("Couldn't read image");
+        raf.readFully(ret);
         return ret;
     }
 	Bitmap get_bitmap(iMerc coords) throws IOException

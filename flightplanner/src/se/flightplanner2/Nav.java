@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 
 import org.apache.http.NameValuePair;
@@ -28,6 +29,9 @@ import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.location.GpsSatellite;
+import android.location.GpsStatus;
+import android.location.GpsStatus.Listener;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -174,7 +178,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			final String password=data.getStringExtra("se.flightplanner2.password");
 			final int mapdetail=data.getIntExtra("se.flightplanner2.mapdetail", 0);
 			final boolean northup=data.getBooleanExtra("se.flightplanner2.northup", false);
-			final boolean vibrate=data.getBooleanExtra("se.flightplanner2.vibrate", true);
+			final boolean vibrate=data.getBooleanExtra("se.flightplanner2.vibrate", false);
 			//RookieHelper.showmsg(this,"mapdetail now:"+mapdetail);
 			SharedPreferences prefs=getPreferences(MODE_PRIVATE);
 			SharedPreferences.Editor pedit=prefs.edit();			
@@ -285,12 +289,40 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	{
 		super.onResume();
 		if (locman!=null)
-			locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000,5, this);
+			requestGpsUpdates();
+	}
+	Listener gpsstatuslistener=new Listener()
+	{
+		@Override
+		public void onGpsStatusChanged(int event) {
+			if (locman==null) return;
+			if (event==GpsStatus.GPS_EVENT_SATELLITE_STATUS)
+			{
+				GpsStatus st=locman.getGpsStatus(null);
+				int satcnt=0;
+				int satfixcnt=0;
+				for(GpsSatellite sat:st.getSatellites())
+				{
+					Log.i("fplan.gps","Sat: "+sat.getSnr()+" fix: "+sat.usedInFix()+" ");
+					if (sat.usedInFix())						
+						satfixcnt+=1;
+					satcnt+=1;
+				}
+				map.set_gps_sat_cnt(satcnt,satfixcnt);
+			}
+			
+		}
+	};
+	private void requestGpsUpdates() {
+		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000,5, this);
+		locman.addGpsStatusListener(gpsstatuslistener);
 	}
 	public boolean onOptionsItemSelected(MenuItem item) {
 	    switch (item.getItemId()) {
 	    case MENU_FINISH:
 	    	locman.removeUpdates(this);
+	    	if (gpsstatuslistener!=null)
+	    		locman.removeGpsStatusListener(gpsstatuslistener);
 	    	finish();
 	    	break;
 	    case MENU_SETTINGS:
@@ -361,7 +393,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     }
     case MENU_SIMPLER:
     {
-    	showAirspaces();
+    	doShowAirspaces();
     	break;
     }
     case MENU_PHRASES:
@@ -380,8 +412,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    return false;
 	}
 	
-	@Override
-	public void showAirspaces()
+	public void doShowAirspaces()
 	{
     	Intent intent = new Intent(this, SimplerActivity.class);
     	if (last_location!=null)
@@ -396,6 +427,47 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     		RookieHelper.showmsg(this, "Position Unknown");
     	}
 		
+	}
+	@Override
+	public void showAirspaces()
+	{
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		StringBuilder spacestr=new StringBuilder();
+		final ArrayList<AirspaceArea> areas=proxdet.getAreas();
+		if (areas==null) return;
+			
+		for(AirspaceArea a:areas)
+		{
+			spacestr.append("<b>"+a.name+"</b><br />");
+		}
+		builder.setMessage(Html.fromHtml(
+				"<h1>Airspace Ahead</h1>"+
+				"<p>You are approaching the following airspaces:</p>"+
+				spacestr.toString(),null,null))
+		.setCancelable(true)
+		.setPositiveButton("Mark cleared", new DialogInterface.OnClickListener() {
+		    public void onClick(DialogInterface dialog, int id) {
+		        dialog.dismiss();
+		        Date now=new Date();
+		        for(AirspaceArea a:areas)
+		        	a.cleared=now.getTime();
+		        clearper.save(lookup);
+		        
+		    }
+		})
+		.setNeutralButton("More Info", new DialogInterface.OnClickListener() {
+		    public void onClick(DialogInterface dialog, int id) {
+	         dialog.dismiss();
+				doShowAirspaces();				
+		    }
+		})
+		.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+		    public void onClick(DialogInterface dialog, int id) {
+	         dialog.dismiss();
+		    }
+		});
+		AlertDialog diag=builder.create();
+		diag.show();
 	}
 	private void do_load_terrain() {
 		if (terraindownloader!=null)
@@ -477,6 +549,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		int mapd=getPreferences(MODE_PRIVATE).getInt("mapdetail", 0);
 		intent.putExtra("se.flightplanner2.mapdetail", mapd);
 		intent.putExtra("se.flightplanner2.northup", getPreferences(MODE_PRIVATE).getBoolean("northup", false));
+		intent.putExtra("se.flightplanner2.vibrate", getPreferences(MODE_PRIVATE).getBoolean("vibrate", false));
 		//RookieHelper.showmsg(this,"Got mapd"+mapd);
 		return intent;
 	}
@@ -532,6 +605,8 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     	UpgradeFromv1.upgradeIfNeeded();
     	final NavData data = (NavData) getLastNonConfigurationInstance();
     	tripstate=new TripState(null);
+		GlobalTripState.tripstate=tripstate;
+    	
     	//setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
     	fplog=new FlightPathLogger();
     	
@@ -577,19 +652,25 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		getWindowManager().getDefaultDisplay().getMetrics(metrics);
 
         tripstate=new TripState(tripdata);
+		GlobalTripState.tripstate=tripstate;
+        
         map=new MovingMap(this,metrics,fplog,this,tripstate);
         map.update_airspace(airspace,lookup,getPreferences(MODE_PRIVATE).getInt("mapdetail", 0),
         		getPreferences(MODE_PRIVATE).getBoolean("northup", false));
         map.update_tripdata(tripdata,tripstate);
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
-		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000,5, this);
+		requestGpsUpdates();
         
 		map.thisSetContentView(this);
 		map.gps_update(null);
 		
 		proxdet=new AirspaceProximityDetector(lookup,5);
+		clearper=new ClearancePersistence();
+		GlobalClearancePersistence.clearper=clearper;
 		vibrator= (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 		warner=new AirspaceWarner(proxdet);
+		if (airspace!=null && airspace.spaces!=null)
+			clearper.load(airspace.spaces);
 		
     }
     
@@ -601,10 +682,12 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     
 	private double offlat=0;
 	private double offlon=0;
+	private ClearancePersistence clearper;
 	private AirspaceProximityDetector proxdet;
 	private Vibrator vibrator;
 	private AirspaceWarner warner;
 	private BearingSpeedCalc bearingspeed=new BearingSpeedCalc();
+	
 	@Override
 	public void onLocationChanged(Location loc) {
 		//Log.i("fplan","Location changed");
@@ -628,23 +711,32 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			loc.setLongitude(lon);
 		}
 		
+
 		Location location=bearingspeed.calcBearingSpeed(loc);
+		
 				
-		warner.run(location, (getPreferences(MODE_PRIVATE).getBoolean("vibrate", true)) ?  vibrator : null);		
+		warner.run(location, (getPreferences(MODE_PRIVATE).getBoolean("vibrate", false)) ?  vibrator : null,this);
+		clearper.update(location,lookup);
 		map.proxwarner_update(warner.getWarning());
 		map.gps_update(location);
 		last_location=location;
 		//RookieHelper.showmsg(this, ""+location.getLatitude()+","+location.getLongitude());
 		//locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,5, this);
 	}
+	@Override
 	public void onProviderDisabled(String provider) {
 		map.gps_disabled();
 	}
+	@Override
 	public void onProviderEnabled(String provider) {
 	}
+	@Override
 	public void onStatusChanged(String provider, int status, Bundle extras) {
 		if (status!=LocationProvider.AVAILABLE)
 			map.gps_disabled();
+
+		
+		
 	}
 
 	@Override
@@ -697,7 +789,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		
 		if (airspace!=null)
 		{
-			proxdet.update_lookup(lookup);
+			proxdet.update_lookup(lookup);			
 			map.update_airspace(airspace,lookup,getPreferences(MODE_PRIVATE).getInt("mapdetail", 0),
         		getPreferences(MODE_PRIVATE).getBoolean("northup", false));
 		}
@@ -718,7 +810,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			terraindownloader.cancel(true);
 		}
 	}
-	AsyncTask<Void,Void,TripData> load_trip_task;
+	//AsyncTask<Void,Void,TripData> load_trip_task;
 	private void loadSelectedTrip(final String trip) {
 		final Nav nav=this;
 		if (airspace!=null)
@@ -733,6 +825,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 				nav.tripdata=td;
 				nav.tripdata.serialize_to_file(nav,"tripdata.bin");
 				tripstate=new TripState(nav.tripdata);
+				GlobalTripState.tripstate=tripstate;
 				map.update_tripdata(nav.tripdata,tripstate);
 				tripstate.reupdate();
 			} 

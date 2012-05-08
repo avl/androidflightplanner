@@ -7,6 +7,7 @@ import java.util.Date;
 import se.flightplanner2.Project.LatLon;
 import se.flightplanner2.Project.Merc;
 import se.flightplanner2.TripData.Waypoint;
+import se.flightplanner2.vector.BoundingBox;
 import se.flightplanner2.vector.Line;
 import se.flightplanner2.vector.Vector;
 import android.location.Location;
@@ -45,6 +46,134 @@ public class TripState implements InformationPanel {
 	 */
 	private ArrayList<WaypointInfo> waypointEvents;
 	static private final double corridor_width=2.0; //nominal width of corridor of flight
+	
+	static private class EnrouteSigPoints
+	{
+		NextSigPoints nesp;
+		SigPoint sp;
+		public LatLon latlon;
+		public float ratio;
+		public int target_wp;
+		public Date passed;
+		public String name;
+		public String toString()
+		{
+			return "SP: "+name+" ratio: "+ratio+" target_wp "+target_wp+" passed: "+passed;
+		}
+	}
+	private ArrayList<EnrouteSigPoints> enroute=new ArrayList<TripState.EnrouteSigPoints>();
+	
+	
+	static public class NextSigPoints
+	{
+		public Date eta;
+		public Date passed;
+		public LatLon latlon;
+		public String name;
+	}
+	public float cur_wp_along()
+	{
+		if (target_wp<=0 || target_wp>=tripdata.waypoints.size()) return 0;
+		Waypoint w1=tripdata.waypoints.get(target_wp-1);
+		Waypoint w2=tripdata.waypoints.get(target_wp);
+		float along_a=(float)Project.exacter_distance(w1.latlon, lastpos);
+		float along_b=(float)Project.exacter_distance(w2.latlon, lastpos);
+		float along=along_a/(along_a+along_b);		
+		return along;
+	}
+	public ArrayList<NextSigPoints> get_remaining_ensps()
+	{
+		ArrayList<NextSigPoints> ret=new ArrayList<TripState.NextSigPoints>();
+		float along=cur_wp_along();
+		for(EnrouteSigPoints ensp:enroute)
+		{
+			Log.i("fplan.dp","Cur along: "+along+" considering ensp: "+ensp);
+			if (ensp.target_wp>target_wp || ensp.target_wp==target_wp && ensp.ratio>along)
+			{
+				NextSigPoints nesp=ensp.nesp;
+				nesp.latlon=ensp.latlon;
+				nesp.name=ensp.name;
+				nesp.passed=ensp.passed;
+				nesp.eta=getEta(ensp);
+				Log.i("fplan","Adding ensp, eta. "+nesp.eta);
+				ret.add(nesp);
+			}
+		}
+		return ret;		
+	}
+	public NextSigPoints getSPInfo(SigPoint sp)
+	{
+		if (target_wp<=0 || target_wp>=tripdata.waypoints.size()) return null;
+		Waypoint w1=tripdata.waypoints.get(target_wp-1);
+		Waypoint w2=tripdata.waypoints.get(target_wp);
+		EnrouteSigPoints ensp=null;
+		
+		float along=cur_wp_along();
+		for(EnrouteSigPoints cand:enroute)
+		{
+			Log.i("fplan.dp","Cand enr sig point: "+cand);
+			if (cand.sp==sp) 
+			{
+				ensp=cand;
+				if (ensp.target_wp>target_wp || (ensp.target_wp==target_wp && ensp.ratio>=along))
+					break; //un-passed one
+			}			
+		}
+		Log.i("fplan.dp","Enroute sig point: "+ensp);
+		if (ensp==null) return null;
+		NextSigPoints ret=ensp.nesp;
+		ret.latlon=ensp.latlon;
+		ret.name=ensp.name;
+		if (ensp.target_wp<target_wp || (ensp.target_wp==target_wp && ensp.ratio<along))
+		{
+			Log.i("fplan.dp","has been pased");
+			//this has been passed, or should have been passed
+			if (ensp.passed!=null)
+			{
+				ret.passed=ensp.passed;
+				return ret;
+			}
+			return ret; //neither passed or planned to be passed (missed)			
+		}
+		
+		ret.eta=getEta(ensp);
+		return ret;
+	}
+	private Date getEta(EnrouteSigPoints ensp) {
+		if (target_wp<=1 || target_wp>=tripdata.waypoints.size()) return null;		
+		Waypoint w1=tripdata.waypoints.get(target_wp-1);
+		Waypoint w2=tripdata.waypoints.get(target_wp);
+		if (ensp.target_wp==target_wp)
+		{
+			Log.i("fplan.dp","not been pased, cur leg, w2 gs"+w2.gs);
+			
+			float dist=(float)Project.exacter_distance(lastpos, ensp.latlon);
+			if (w2.gs<1) return null;
+			double time_hour=dist/w2.gs;
+			double time_ms=time_hour*3600.0*1000.0;
+			return new Date(new Date().getTime()+(long)time_ms);
+		}
+		if (waypointEvents.size()!=tripdata.waypoints.size())
+			return null; //should never happen
+		
+		Date eta;
+		WaypointInfo we1=waypointEvents.get(target_wp-1);
+		WaypointInfo we2=waypointEvents.get(target_wp);
+		Log.i("fplan.dp","not been pased, future legs: "+we1.eta2+" - "+we2.eta2);
+		if (we1.eta2==null || we2.eta2==null)
+		{
+			eta=null;
+		}
+		else
+		{
+			long newtime=we1.eta2.getTime()+(long)(ensp.ratio*(double)(we2.eta2.getTime()-we1.eta2.getTime()));
+			
+			eta=new Date(newtime);;
+		}
+		return eta;
+	}
+	
+	
 	TripState(TripData trip)
 	{
 		waypointEvents=new ArrayList<WaypointInfo>();
@@ -52,6 +181,51 @@ public class TripState implements InformationPanel {
 		current_waypoint_idx=0;
 		target_wp=0;
 		extradummy=new String[]{};
+		
+		if (trip!=null && trip.waypoints!=null)
+		{
+			AirspaceLookup lookup=GlobalLookup.lookup;
+			for(int i=1;i<trip.waypoints.size();++i)
+			{
+				Waypoint w1=trip.waypoints.get(i-1);
+				Waypoint w2=trip.waypoints.get(i);
+				Vector m1=Project.latlon2mercvec(w1.latlon, 13);
+				Vector m2=Project.latlon2mercvec(w2.latlon, 13);
+				Line line=new Line(m1,m2);
+				double cutoff=Project.approx_scale(m1.gety(),13,0.5);
+				BoundingBox bb=new BoundingBox(m1,m2);
+				bb=bb.expand(50);			
+				for(SigPoint sp:lookup.allSigPoints.findall(bb))
+				{
+					Vector sppos=sp.pos.toVector();
+					Vector clo=line.closest(sppos);
+					LatLon clolatlon=Project.mercvec2latlon(clo,13);
+					float dist=(float)clo.minus(sppos).length();
+					if (dist<=cutoff)
+					{
+						float along_a=(float)Project.exacter_distance(w1.latlon, clolatlon);
+						float along_b=(float)Project.exacter_distance(w2.latlon, clolatlon);
+						float along=along_a/(along_a+along_b);
+						EnrouteSigPoints ensp=new EnrouteSigPoints();
+						ensp.nesp=new NextSigPoints();
+						ensp.ratio=along;
+						ensp.sp=sp;
+						ensp.latlon=sp.latlon;
+						ensp.target_wp=i;
+						ensp.name=sp.name;
+						enroute.add(ensp);
+					}
+				}
+				EnrouteSigPoints ensp2=new EnrouteSigPoints();
+				ensp2.nesp=new NextSigPoints();
+				ensp2.ratio=1;
+				ensp2.target_wp=i;
+				ensp2.name=w2.name;			
+				ensp2.latlon=w2.latlon;
+				enroute.add(ensp2);
+			}
+		}
+		
 	}
 	public int get_time_to_destination() {
 		return time_to_destination;
@@ -549,6 +723,9 @@ public class TripState implements InformationPanel {
 	public boolean getHasExtraInfo() {
 		return false;
 	}
+	
+	
+	
 	private Place place=new Place()
 	{
 		@Override

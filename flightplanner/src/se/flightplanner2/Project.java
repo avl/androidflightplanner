@@ -228,6 +228,15 @@ public class Project {
 	    		unmerc((128*factor-y)/128.0/factor*merc(85.05113)),
 	    		x*360.0/(256.0*factor)-180.0);
 	}
+	static public LatLon mercvec2latlon(Vector merc,int zoomlevel)
+	{
+		double x=merc.x;
+		double y=merc.y;
+		double factor=Math.pow(2.0,zoomlevel);
+	    return new LatLon(
+	    		unmerc((128*factor-y)/128.0/factor*merc(85.05113)),
+	    		x*360.0/(256.0*factor)-180.0);
+	}
 	static public LatLon imerc2latlon(iMerc merc,int zoomlevel)
 	{
 		double x=merc.getX();

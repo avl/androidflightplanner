@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.TimeZone;
 
+import se.flightplanner2.ElevBitmapCache.BMResult;
 import se.flightplanner2.GetMapBitmap.BitmapRes;
 import se.flightplanner2.GuiSituation.Clickable;
 import se.flightplanner2.Project.LatLon;
@@ -38,6 +39,7 @@ public class MapDrawer {
 
 	private Paint neutralpaint;
 	private Paint bigtextpaint;
+	private Paint hugetextpaint;
 	private Paint ahtextpaint;
 	private Paint linepaint;
 	private Paint thinlinepaint;
@@ -45,9 +47,11 @@ public class MapDrawer {
 	private Paint widetrippaint;
 	private Paint arrowpaint;
 	private Paint backgroundpaint;
+	private Paint blackgroundpaint;
 	private Paint textpaint;
 	private float x_dpmm, y_dpmm;
 	private SimpleDateFormat formatter = new SimpleDateFormat("kkmmss");
+	private SimpleDateFormat formatter2 = new SimpleDateFormat("kkmm");
 	private String zoom_in_text=null;
 	private String zoom_out_text=null;
 	private boolean zoom_buttons;
@@ -75,32 +79,42 @@ public class MapDrawer {
 	}
 	HashMap<CacheKey,Bitmap> cached=new HashMap<MapDrawer.CacheKey, Bitmap>();	
 	HashMap<CacheKey,Bitmap> used=new HashMap<MapDrawer.CacheKey, Bitmap>();	
-
-	public MapDrawer(float x_dpmm, float y_dpmm) {
+	private float bigtextsize;
+	public MapDrawer(float x_dpmm, float y_dpmm,float screen_size_x,float screen_size_y) {
 		 formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+		 formatter2.setTimeZone(TimeZone.getTimeZone("UTC"));
 
 		this.x_dpmm = x_dpmm;
 		this.y_dpmm = y_dpmm;
+		float factor=(float)Math.sqrt(Math.max(screen_size_x,screen_size_y)/92.0f);
+		if (factor<1.0f)
+			factor=1.0f;
+		x_dpmm*=factor;
+		y_dpmm*=factor;
 		int foreground = Color.WHITE;
-		float textsize = y_dpmm * 1.75f;
-		float bigtextsize = y_dpmm * 2.7f; // 6.5 mm text size
+		float textsize = y_dpmm * 2.4f;
+		bigtextsize = y_dpmm * 3.1f; // 6.5 mm text size
+		float hugetextsize = y_dpmm * 3.7f; // 6.5 mm text size
 
 		textpaint = new Paint();
 		textpaint.setAntiAlias(true);
-		textpaint.setStrokeWidth(5);
 		textpaint.setColor(foreground);
-		textpaint.setStrokeCap(Paint.Cap.ROUND);
 		textpaint.setTextSize(textsize);
 		textpaint.setTypeface(Typeface.create(Typeface.SANS_SERIF,
 				Typeface.NORMAL));
 
 		bigtextpaint = new Paint();
 		bigtextpaint.setAntiAlias(true);
-		bigtextpaint.setStrokeWidth(5);
 		bigtextpaint.setColor(foreground);
-		bigtextpaint.setStrokeCap(Paint.Cap.ROUND);
 		bigtextpaint.setTextSize(bigtextsize);
 		bigtextpaint.setTypeface(Typeface.create(Typeface.SANS_SERIF,
+				Typeface.NORMAL));
+
+		hugetextpaint = new Paint();
+		hugetextpaint.setAntiAlias(true);
+		hugetextpaint.setColor(foreground);
+		hugetextpaint.setTextSize(hugetextsize);
+		hugetextpaint.setTypeface(Typeface.create(Typeface.SANS_SERIF,
 				Typeface.NORMAL));
 		
 		ahtextpaint = new Paint();
@@ -112,28 +126,28 @@ public class MapDrawer {
 		
 		linepaint = new Paint();
 		linepaint.setAntiAlias(false);
-		linepaint.setStrokeWidth(5);
+		linepaint.setStrokeWidth(1f*x_dpmm);
 		linepaint.setColor(Color.RED);
 		linepaint.setStrokeCap(Paint.Cap.ROUND);
 
 		neutralpaint=new Paint();
 		thinlinepaint = new Paint();
 		thinlinepaint.setAntiAlias(false);
-		thinlinepaint.setStrokeWidth(2);
+		thinlinepaint.setStrokeWidth(0.5f*x_dpmm);
 		thinlinepaint.setStyle(Style.STROKE);
 		thinlinepaint.setColor(Color.RED);
 		thinlinepaint.setStrokeCap(Paint.Cap.ROUND);
 
 		trippaint = new Paint();
 		trippaint.setAntiAlias(false);
-		trippaint.setStrokeWidth(4);
+		trippaint.setStrokeWidth(0.5f*x_dpmm);
 		trippaint.setARGB(0xff,0xff,0xff,0xff);
 		trippaint.setColor(Color.rgb(0xff,0xff,0xff));
 		trippaint.setStrokeCap(Paint.Cap.ROUND);
 
 		widetrippaint = new Paint();
 		widetrippaint.setAntiAlias(false);
-		widetrippaint.setStrokeWidth(8);
+		widetrippaint.setStrokeWidth(0.75f*x_dpmm);
 		widetrippaint.setARGB(0x70,0x80,0x80,0xff);
 		widetrippaint.setStrokeCap(Paint.Cap.ROUND);
 
@@ -141,11 +155,14 @@ public class MapDrawer {
 		backgroundpaint = new Paint();
 		backgroundpaint.setStyle(Style.FILL);
 		backgroundpaint.setARGB(0xa0, 0, 0, 0);
+		blackgroundpaint = new Paint();
+		blackgroundpaint.setStyle(Style.FILL);
+		blackgroundpaint.setColor(Color.BLACK);
 
 		arrowpaint = new Paint();
 		arrowpaint.setAntiAlias(false);
 		arrowpaint.setStyle(Style.FILL);
-		arrowpaint.setStrokeWidth(5);
+		arrowpaint.setStrokeWidth(1.5f*x_dpmm);
 		arrowpaint.setColor(Color.WHITE);
 		arrowpaint.setStrokeCap(Paint.Cap.ROUND);
 	}
@@ -153,8 +170,8 @@ public class MapDrawer {
 	private void renderText(Canvas mcanvas, Vector p, String text, DeclutterTree declutter,int color) {
 		
 		//if (p!=null) return;
-		int bm_off_x=20;
-		int bm_off_y=20;
+		int bm_off_x=(int)(3.0f*x_dpmm);
+		int bm_off_y=(int)(3.0f*x_dpmm);
 		CacheKey ck=new CacheKey(text,color);
 		{
 			Bitmap bm=cached.get(ck);
@@ -195,12 +212,12 @@ public class MapDrawer {
 			canvas.drawRect(rect, backgroundpaint);
 			textpaint.setColor(color);
 			canvas.drawText(text, rect.left+xadj+2, rect.top+yadj+2, textpaint);
-			linepaint.setStrokeWidth(8);
+			linepaint.setStrokeWidth(1.2f*x_dpmm);
 			linepaint.setColor(Color.BLACK);
 			canvas.drawPoint(bm_off_x, bm_off_y, linepaint);
 
 			linepaint.setColor(color);
-			linepaint.setStrokeWidth(4);
+			linepaint.setStrokeWidth(0.6f*x_dpmm);
 			canvas.drawPoint(bm_off_x,bm_off_y, linepaint);
 
 			cached.put(ck,bm);
@@ -213,7 +230,7 @@ public class MapDrawer {
 		else
 		{
 			linepaint.setColor(color);
-			linepaint.setStrokeWidth(4);
+			linepaint.setStrokeWidth(0.6f*x_dpmm);
 			mcanvas.drawPoint((float)p.x, (float)p.y, linepaint);
 			
 		}
@@ -255,13 +272,18 @@ public class MapDrawer {
 			AirspaceLookup lookup, Canvas canvas, Rect screen_extent,
 			Location lastpos, GetMapBitmap bitmaps, final GuiSituation gui,
 			long last_real_position, String download_status,
-			InformationPanel panel,View view,String prox_warning) {
+			InformationPanel panel,View view,String[] prox_warning,int gps_sat_cnt, int gps_sat_fix_cnt,
+			ElevBitmapCache elevbmc) {
+		
 		
 		long bef=SystemClock.elapsedRealtime();
 		
 		redraw_start=bef;
 		redraw_view=view;
-		
+		int elev_ft=(int)(lastpos.getAltitude()/0.3048f);
+		if (DataDownloader.debugMode())
+			elev_ft=1500;
+		elevbmc.start_frame(gui.getZoomlevel(), elev_ft);
 		Transform tf = gui.getTransform();
 		boolean extrainfo = gui.getExtraInfo();
 		
@@ -378,18 +400,31 @@ public class MapDrawer {
 						Rect src = b.rect;
 						canvas.rotate(-hdg, (float) v.x, (float) v.y);
 						canvas.drawBitmap(b.b, src, trg, null);
+						Log.i("fplan.terr","Queried "+cur);
+						BMResult elevbm=elevbmc.query2(cur);
+						if (elevbm!=null && elevbm.bm!=null)
+							canvas.drawBitmap(elevbm.bm, elevbm.r,trg,null);
+						
 						canvas.restore();
 					}
+					
+					
+					
 				}
 			}
 			//Log.i("fplan.drawmap","Tiles used:"+tilesused);
 			res.lastcachesize = cachesize;
 		}
+		
+		elevbmc.delete_all_unused();
+		elevbmc.schedule_background_tasks();
+		
 
 		ArrayList<SigPoint> major_airfields=null;
 		if (onlyWithin(60, isUserPresentlyMovingMap))
 		if (zoomlevel >= 9 && lookup != null)
 		{
+			linepaint.setStrokeWidth(1.0f*x_dpmm);
 			major_airfields=lookup.majorAirports.findall(bb13);
 			for (SigPoint sp : major_airfields) {
 				if (sp.extra!=null && sp.extra.runways!=null)
@@ -429,6 +464,7 @@ public class MapDrawer {
 					Vector v = tf.merc2screen(m);
 					vs.add(v);
 				}
+				linepaint.setStrokeWidth(0.5f*x_dpmm);
 				for (int i = 0; i < vs.size(); ++i) {
 					Vector a = vs.get(i);
 					Vector b = vs.get((i + 1) % vs.size());
@@ -591,14 +627,57 @@ public class MapDrawer {
 			}
 		}
 		boolean havefix = lastpos.getTime() > 3600 * 24 * 10 * 1000
-				&& SystemClock.uptimeMillis() - last_real_position < 5000;
+				&& SystemClock.uptimeMillis() - last_real_position < 10000;
 
 		if (!havefix) {
-			linepaint.setStrokeWidth(15);
-			linepaint.setARGB(190, 255, 200, 128);
+			
+			if (!isDragging)
+			{
+				linepaint.setStrokeWidth((int)(5*x_dpmm));
+				linepaint.setARGB(200, 255, 255, 0);
+				canvas.drawLine(left, top, right, bottom, linepaint);
+				canvas.drawLine(left, bottom, right, top, linepaint);
+			}
+			
+			if (isDragging)
+			{
+				linepaint.setStrokeWidth((int)(2.2*x_dpmm));
+				linepaint.setARGB(100, 255, 0, 0);
+			}
+			else
+			{
+				linepaint.setStrokeWidth((int)(2.5*x_dpmm));
+				linepaint.setARGB(255, 255, 0, 0);
+			}
+			
 			canvas.drawLine(left, top, right, bottom, linepaint);
 			canvas.drawLine(left, bottom, right, top, linepaint);
-			linepaint.setStrokeWidth(5);
+				
+			if (!isDragging)
+			{
+				
+				bigtextpaint.setTextSize((right-left)*0.2f);
+				bigtextpaint.setTypeface(Typeface.DEFAULT_BOLD);
+				String t="NO GPS";
+				Rect bounds=new Rect();
+				bigtextpaint.getTextBounds(t, 0, t.length(), bounds);
+				bigtextpaint.setARGB(255, 255, 255, 0);
+				bigtextpaint.setStyle(Paint.Style.FILL);
+				canvas.drawText(t, left+0.5f*(right-left)-0.5f*bounds.width()-bounds.left, top+0.5f*(bottom-top)-bounds.top-0.5f*bounds.height(), bigtextpaint);
+				bigtextpaint.setARGB(255, 255, 0, 0);
+				bigtextpaint.setStyle(Paint.Style.STROKE);
+				bigtextpaint.setStrokeWidth((right-left)/75);
+
+				canvas.drawText(t, left+0.5f*(right-left)-0.5f*bounds.width()-bounds.left, top+0.5f*(bottom-top)-bounds.top-0.5f*bounds.height(), bigtextpaint);
+				bigtextpaint.setStyle(Paint.Style.FILL);
+	
+				
+				bigtextpaint.setTextSize(bigtextsize);
+				bigtextpaint.setColor(Color.WHITE);
+				bigtextpaint.setTypeface(Typeface.DEFAULT);
+				
+			}
+			linepaint.setStrokeWidth(2.5f*x_dpmm);
 			linepaint.setColor(Color.RED);
 		}
 
@@ -708,9 +787,16 @@ public class MapDrawer {
 					// float
 					// py=(float)rot_y(p.getx()-center.x,p.gety()-center.y)+oy;
 					Vector p = tf.merc2screen(me);
-					thinlinepaint.setColor(Color.BLUE);
-					canvas.drawCircle((float) p.x, (float) p.y, 10.0f,
+					thinlinepaint.setARGB(180, 40, 40, 255);
+					thinlinepaint.setStrokeWidth(1*x_dpmm);
+					canvas.drawCircle((float) p.x, (float) p.y, 2*x_dpmm,
 							thinlinepaint);
+					thinlinepaint.setStrokeWidth(0.7f*x_dpmm);
+					canvas.drawLine((float) p.x+1.7f*x_dpmm, (float) p.y,(float) p.x+2.5f*x_dpmm, (float) p.y,thinlinepaint);
+					canvas.drawLine((float) p.x-1.7f*x_dpmm, (float) p.y,(float) p.x-2.5f*x_dpmm, (float) p.y,thinlinepaint);
+					canvas.drawLine((float) p.x, (float) p.y+1.7f*x_dpmm,(float) p.x, (float) p.y+2.5f*x_dpmm,thinlinepaint);
+					canvas.drawLine((float) p.x, (float) p.y-1.7f*x_dpmm,(float) p.x, (float) p.y-2.5f*x_dpmm,thinlinepaint);
+					thinlinepaint.setStrokeWidth(1f*x_dpmm);
 				}
 			}
 
@@ -936,106 +1022,113 @@ public class MapDrawer {
 		{
 			float y = bottom-(bigtextpaint.getTextSize()*1.5f + 2);
 			
-			final Rect tr3 = drawButton(canvas, right,y, "Waypoints",-1,left,right,false);
-			clickables.add(new GuiSituation.Clickable() {
-				@Override
-				public Rect getRect() {
-					return tr3;
-				}
-				@Override
-				public void onClick() {
-					gui.onShowWaypoints();
-				}
-			});
-			int rightedge=tr3.left-5;
-			if (zoom_in_text==null)
+			final Rect tr3 = drawButton(canvas, right,y, "Wpts",-1,left,right,false);
+			if (tr3!=null)
 			{
-				Rect tr1 = drawButton(canvas, left,y, "Zoom +",1,left,rightedge,true);
-				int edge = tr1.right+5;
-				Rect tr2 = drawButton(canvas, edge,y, "Zoom -",1,edge,rightedge,true);
-				if (tr2==null)
+				clickables.add(new GuiSituation.Clickable() {
+					@Override
+					public Rect getRect() {
+						return tr3;
+					}
+					@Override
+					public void onClick() {
+						gui.onShowWaypoints();
+					}
+				});
+				int rightedge=tr3.left-5;
+				if (zoom_in_text==null)
 				{
-					tr1 = drawButton(canvas, left,y, "+",1,left,rightedge,true);
-					edge = tr1.right+5;
-					tr2 = drawButton(canvas, edge,y, "-",1,edge,rightedge,true);
-					if (tr2!=null)
+					Rect tr1 = drawButton(canvas, left,y, "Zoom +",1,left,rightedge,true);
+					
+					int edge = (tr1!=null) ? tr1.right+5 : right;
+					Rect tr2 = drawButton(canvas, edge,y, "Zoom -",1,edge,rightedge,true);
+					if (tr2==null)
 					{
-						zoom_buttons=true;
-						zoom_in_text="+";
-						zoom_out_text="-";
+						tr1 = drawButton(canvas, left,y, "+",1,left,rightedge,true);
+						edge = tr1.right+5;
+						tr2 = drawButton(canvas, edge,y, "-",1,edge,rightedge,true);
+						if (tr2!=null)
+						{
+							zoom_buttons=true;
+							zoom_in_text="+";
+							zoom_out_text="-";
+						}
+						else
+						{
+							zoom_buttons=false;
+							zoom_in_text="none";
+							zoom_out_text="none";						
+						}
 					}
 					else
 					{
-						zoom_buttons=false;
-						zoom_in_text="none";
-						zoom_out_text="none";						
+						zoom_buttons=true;
+						zoom_in_text="Zoom +";
+						zoom_out_text="Zoom -";					
 					}
+					
 				}
-				else
+				if (zoom_buttons)
 				{
-					zoom_buttons=true;
-					zoom_in_text="Zoom +";
-					zoom_out_text="Zoom -";					
+					final Rect tr1 = drawButton(canvas, left,y, zoom_in_text,1,left,rightedge,false);
+					clickables.add(new GuiSituation.Clickable() {
+						@Override
+						public Rect getRect() {
+							return tr1;
+						}
+						@Override
+						public void onClick() {
+							gui.changeZoom(+1);
+						}
+					});
+					int edge = tr1.right+5;
+		
+					final Rect tr2 = drawButton(canvas, edge,y, zoom_out_text,1,edge,rightedge,false);
+					clickables.add(new GuiSituation.Clickable() {
+						@Override
+						public Rect getRect() {
+							return tr2;
+						}
+						@Override
+						public void onClick() {
+							gui.changeZoom(-1);
+						}
+					});
 				}
-				
 			}
-			if (zoom_buttons)
-			{
-				final Rect tr1 = drawButton(canvas, left,y, zoom_in_text,1,left,rightedge,false);
-				clickables.add(new GuiSituation.Clickable() {
-					@Override
-					public Rect getRect() {
-						return tr1;
-					}
-					@Override
-					public void onClick() {
-						gui.changeZoom(+1);
-					}
-				});
-				int edge = tr1.right+5;
-	
-				final Rect tr2 = drawButton(canvas, edge,y, zoom_out_text,1,edge,rightedge,false);
-				clickables.add(new GuiSituation.Clickable() {
-					@Override
-					public Rect getRect() {
-						return tr2;
-					}
-					@Override
-					public void onClick() {
-						gui.changeZoom(-1);
-					}
-				});
-			}
-			
 		}
 
 		linepaint.setColor(Color.RED);
-		float y = bigtextpaint.getTextSize();
+		float y = hugetextpaint.getTextSize()*0.85f;
 		bigtextpaint.setColor(Color.WHITE);
-		RectF r = new RectF(0, 0, right, y + 2);
-		canvas.drawRect(r, backgroundpaint);
+		RectF r = new RectF(0, 0, right, y + 4);
+		canvas.drawRect(r, blackgroundpaint);
 		addTextIfFits(canvas, "222°.", r,
-				String.format("%03.0f°", lastpos.getBearing()), y, bigtextpaint);
-		addTextIfFits(canvas, "222kt", r,
+				String.format("%03.0f°", lastpos.getBearing()), y, hugetextpaint);
+		addTextIfFits(canvas, "222kti", r,
 				String.format("%.0fkt", lastpos.getSpeed() * 3.6 / 1.852), y,
-				bigtextpaint);
+				hugetextpaint);
 
 		// canvas.drawText(String.format("%03.0f°",lastpos.getBearing()), 40, y,
 		// bigtextpaint);
 		// canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),100,y,bigtextpaint);
 		int td = tripstate.get_time_to_destination();
 		// canvas.drawText(fmttime(td),150,y,bigtextpaint);
-		addTextIfFits(canvas, "122:22", r, MapDrawer.fmttime(td), y,
+		addTextIfFits(canvas, "2222:22", r, MapDrawer.fmttime(td), y,
 				bigtextpaint);
 		if (havefix) // if significantly after 1970-0-01
 		{
 			Date d = new Date(lastpos.getTime());
 			// canvas.drawText("FIX:"+formatter.format(d)+"Z",220,y,bigtextpaint);
-			addTextIfFits(canvas, "FIX:222222Z", r,
-					"FIX:" + formatter.format(d) + "Z", y, bigtextpaint);
+			if (!addTextIfFits(canvas, "FIX:2222(11/12)", r,
+					"FIX" + formatter2.format(d) +"("+gps_sat_cnt+"/"+gps_sat_fix_cnt+")", y, bigtextpaint))
+				addTextIfFits(canvas, "FIX:2222", r,
+					"FIX" + formatter2.format(d) , y, bigtextpaint);
+			
 		} else {
 			// canvas.drawText("NOFIX",220,y,bigtextpaint);
-			addTextIfFits(canvas, "FIX:222222Z", r, "NOFIX", y, bigtextpaint);
+			if (!addTextIfFits(canvas, "FIX:2222(11/12)", r, "NOFIX("+gps_sat_cnt+"/"+gps_sat_fix_cnt+")", y, bigtextpaint))
+				addTextIfFits(canvas, "FIX:2222", r, "NOFIX", y, bigtextpaint);
 		}
 		// /canvas.drawText(String.format("Z%d",zoomlevel), 0,y,bigtextpaint);
 		addTextIfFits(canvas, "Z13", r, String.format("Z%d", zoomlevel), y,
@@ -1105,7 +1198,7 @@ public class MapDrawer {
 				
 			}
 		}
-		Log.i("fplan","prox warning coords " +airspace_button_space_left+".."+airspace_button_space_right);
+		//Log.i("fplan","prox warning coords " +airspace_button_space_left+".."+airspace_button_space_right);
 		if (prox_warning!=null && airspace_button_space_right>airspace_button_space_left)
 		{
 			final Rect tr1 = drawAirspaceAhead(canvas, (y*3)/2, prox_warning, airspace_button_space_left,airspace_button_space_right);
@@ -1163,6 +1256,7 @@ public class MapDrawer {
 		if (!measureOnly)
 		{
 			canvas.drawRect(tr1, backgroundpaint);
+			thinlinepaint.setStrokeWidth(0.25f*x_dpmm);
 			canvas.drawRect(tr1, thinlinepaint);
 	
 			canvas.drawText(text, tr1.left + 0.4f * h2, tr1.bottom - 0.4f * h2,
@@ -1171,33 +1265,46 @@ public class MapDrawer {
 		return tr1;
 	}
 	
-	private Rect drawAirspaceAhead(Canvas canvas, float y, String text2,int x1lim, int x2lim) {
+	private Rect drawAirspaceAhead(Canvas canvas, float y, String[] texts2,int x1lim, int x2lim) {
 		float x=x1lim;
 		Rect totrect=new Rect();
-		Rect bounds1=new Rect();
-		int textsize1=30;
 	
-		String text1="Airspace Ahead";
-		for(;textsize1>10;textsize1-=(textsize1/8+1))
+		String[] texts=new String[texts2.length+1];
+		texts[0]="Airspace Ahead";
+		for(int i=0;i<texts2.length;++i)
+			texts[i+1]=texts2[i];
+		
+		int[] textsizes=new int[texts.length];
+		Rect[] bounds=new Rect[texts.length];
+		int maxx=0;
+		int sy=0;
+		for(int i=0;i<texts.length;++i)
 		{
-			ahtextpaint.setTextSize(textsize1);
-			ahtextpaint.getTextBounds(text1, 0, text1.length(), bounds1);
-			if (bounds1.width()<(x2lim-x1lim))
-				break;
-		}
-		Rect bounds2=new Rect();
-		int textsize2=25;
-		for(;textsize2>10;textsize2-=(textsize2/8+1))
-		{
-			ahtextpaint.setTextSize(textsize2);
-			ahtextpaint.getTextBounds(text2, 0, text2.length(), bounds2);
-			if (bounds2.width()<(x2lim-x1lim))
-				break;
+			if (i==0)
+				textsizes[i]=(int)(2.8f*y_dpmm);
+			else if (i==1)
+				textsizes[i]=(int)(3.3f*y_dpmm);
+			else
+				textsizes[i]=(int)(3.5f*y_dpmm);
+			
+			if (textsizes[i]<y_dpmm)
+				textsizes[i]=(int)y_dpmm;
+			bounds[i]=new Rect();
+			for(;textsizes[i]>10;textsizes[i]-=(textsizes[i]/8+1))
+			{
+				ahtextpaint.setTextSize(textsizes[i]);
+				ahtextpaint.getTextBounds(texts[i], 0, texts[i].length(), bounds[i]);
+				if (bounds[i].width()<(x2lim-x1lim))
+					break;
+			}
+			if (bounds[i].width()>maxx)
+				maxx=bounds[i].width();
+			sy+=bounds[i].height()+4;
 		}
 		totrect.left=(int)x;
 		totrect.top=(int)y;
-		totrect.right=(int)x+Math.max(bounds1.width(),bounds2.width())+25;		
-		totrect.bottom=(int)y+bounds1.height()+4+bounds2.height()+4;
+		totrect.right=(int)x+maxx+25;		
+		totrect.bottom=(int)(y+sy);
 		totrect.offset(((x2lim-x1lim)-totrect.width())/2,0);
 		if (totrect.right>x2lim) totrect.right=x2lim;
 		if (totrect.left<x1lim) totrect.left=x1lim;
@@ -1206,11 +1313,13 @@ public class MapDrawer {
 		canvas.drawRect(totrect, backgroundpaint);
 		canvas.drawRect(totrect, thinlinepaint);
 		
-		canvas.clipRect(totrect);
-		ahtextpaint.setTextSize(textsize1);
-		canvas.drawText(text1, totrect.left-bounds1.left+1+totrect.width()/2-bounds1.width()/2, y-bounds1.top+1, ahtextpaint);
-		ahtextpaint.setTextSize(textsize2);
-		canvas.drawText(text2, totrect.left-bounds2.left+1+totrect.width()/2-bounds2.width()/2, y-bounds2.top+2+bounds1.height(), ahtextpaint);
+		canvas.clipRect(totrect);		
+		for(int i=0;i<texts.length;++i)
+		{
+			ahtextpaint.setTextSize(textsizes[i]);
+			canvas.drawText(texts[i], totrect.left-bounds[i].left+1+totrect.width()/2-bounds[i].width()/2, y-bounds[i].top+1, ahtextpaint);
+			y+=bounds[i].height()+2;
+		}
 		canvas.restore();
 		return totrect;
 	}
@@ -1295,19 +1404,22 @@ public class MapDrawer {
 
 	}
 
-	void addTextIfFits(Canvas canvas, String sizetext, RectF r,
+	boolean addTextIfFits(Canvas canvas, String sizetext, RectF r,
 			String realtext, float y, Paint tp) {
 		if (sizetext == null) {
 			canvas.drawText(realtext, r.left, y, tp);
 			r.left = r.right + 1;
+			return true;
 		} else {
 			Rect rect = new Rect();
 			tp.getTextBounds(sizetext, 0, sizetext.length(), rect);
 			if (r.left + (rect.right - rect.left) < r.right) {
 				canvas.drawText(realtext, r.left, y, tp);
 				r.left += (rect.right - rect.left) + 1.0f * x_dpmm;
+				return true;
 			} else {
-				r.left = r.right + 1; // definitely out of space now!
+				//r.left = r.right + 1; // definitely out of space now!
+				return false;
 			}
 		}
 

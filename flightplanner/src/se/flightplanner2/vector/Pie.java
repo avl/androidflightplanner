@@ -99,7 +99,7 @@ public class Pie
 			pie.a-=360;
 			pie.b-=360;
 		}
-		Log.i("fplan","Swung "+this+" right by "+x+" yielding "+pie);
+		//Log.i("fplan","Swung "+this+" right by "+x+" yielding "+pie);
 		return pie;
 	}
 	public Pie swingLeft(float x) {

@@ -24,6 +24,11 @@ public class AirspaceArea implements Serializable
 	public ArrayList<String> freqs;
 	public String floor;
 	public String ceiling;
+	
+	public String getIdentity()
+	{
+		return name+"/"+floor+"/"+ceiling+"/"+(int)poly.get_area();
+	}
 	public String toString()
 	{
 		return "AirspaceArea("+name+" size: "+poly.get_area()+" floor: "+floor+" ceiling: "+ceiling+")";
@@ -38,9 +43,9 @@ public class AirspaceArea implements Serializable
 	volatile public SpaceStats dyninfo; 
 	public short r,g,b,a;
 	/*!
-	 * True if we are cleared by ATC in this area.
+	 * Set to time when last cleared by ATC in this area, or 0 if never.
 	 */
-	public boolean cleared;
+	public long cleared;
 	
 	public void serialize(DataOutputStream os) throws IOException
 	{

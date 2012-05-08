@@ -29,7 +29,7 @@ public class SetupInfo extends Activity {
         edpwd.setText(getIntent().getExtras().getString("se.flightplanner2.password"));
         detail=getIntent().getExtras().getInt("se.flightplanner2.mapdetail",0)+1;
         boolean startchecked=getIntent().getExtras().getBoolean("se.flightplanner2.northup",false);
-        boolean startcheckedvibrate=getIntent().getExtras().getBoolean("se.flightplanner2.vibrate",true);
+        boolean startcheckedvibrate=getIntent().getExtras().getBoolean("se.flightplanner2.vibrate",false);
         final SetupInfo outer_this=this;
         final CheckBox northup=(CheckBox)findViewById(R.id.northup_default);
     	northup.setChecked(startchecked);

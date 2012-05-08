@@ -1,6 +1,7 @@
 package se.flightplanner2;
 
 import java.util.ArrayList;
+import java.util.Date;
 
 import android.location.Location;
 
@@ -17,11 +18,12 @@ import se.flightplanner2.vector.Polygon.SectorResult;
 public class AirspaceProximityDetector {
 
 	private AirspaceLookup lookup;
-	private String warning;
+	private String[] warning;
 	private float dist;
 	private float time;
 	private float warn_time;
 	private String[] areanames;
+	private ArrayList<AirspaceArea> areas;
 	public AirspaceProximityDetector(AirspaceLookup lookup,float warn_time)
 	{
 		this.warn_time=warn_time;
@@ -33,6 +35,42 @@ public class AirspaceProximityDetector {
 			f=f.substring(0,len)+"...";
 		return f;
 	}
+	private int digit(String alt)
+	{
+		String cur="";
+		int max=0;
+		boolean fl=false;
+		for(int i=0;i<alt.length();++i)
+		{
+			char c=alt.charAt(i);
+			
+			if (i+1<alt.length())
+			{
+				if (alt.substring(i,i+2).toUpperCase().equals("FL"))
+					fl=true;
+			}
+			if (i+2<alt.length())
+				if (alt.substring(i,i+3).toUpperCase().equals("UNL"))
+					return 10000000;
+			if (Character.isDigit(c))
+				cur=cur+c;
+			else
+				cur="";
+			if (cur.length()>0)
+				max=Math.max(Integer.parseInt(cur,10),max);	
+		}
+		if (fl)
+			max+=1000000;
+		return max;
+	}
+	private int compare(String a1,String a2)
+	{
+		int d1=digit(a1);
+		int d2=digit(a2);
+		if (d1<d2) return -1;		
+		if (d1>d2) return +1;
+		return 0;
+	}
 	public void run(Location loc)
 	{
 		final float gs=(float)(loc.getSpeed()*3.6/1.852);
@@ -40,10 +78,6 @@ public class AirspaceProximityDetector {
 		dist=-1;
 		time=1e10f;
 		areanames=null;
-		if (gs<2)
-		{
-			return;
-		}
 		float hdg=loc.getBearing();
 		LatLon pos=new LatLon(loc);
 		double dist_nm=Math.max(3, gs*(warn_time/60.0f));
@@ -56,12 +90,12 @@ public class AirspaceProximityDetector {
 		Pie aheadpie=new Pie(355,5);
 		aheadpie=aheadpie.swingRight(hdg);
 		BoundPie boundaheadpie=new BoundPie(mpos.toVector(),aheadpie);
-		
 		float closest_dist=1e10f;
 		ArrayList<AirspaceArea> areas=new ArrayList<AirspaceArea>();
+		long now=new Date().getTime();
 		for(AirspaceArea a:allareas)			
 		{
-			if (a.cleared) continue;		
+			if (now-a.cleared<Config.clearance_valid_time) continue;		
 		    SectorResult res=a.poly.sector(boundaheadpie,dist_merc);
 		    if (res.inside) continue; //Don't warn for airspaces we're already in.
 		    if (res==null) continue; 
@@ -83,8 +117,23 @@ public class AirspaceProximityDetector {
 		if (areas.size()>0)
 		{
 			areanames=new String[areas.size()];
+			String lowalt=null;
+			String hialt=null;
 			for(int i=0;i<areas.size();++i)
-				areanames[i]=areas.get(i).name;
+			{
+				AirspaceArea area=areas.get(i);
+				if (lowalt==null)
+				{
+					lowalt=area.floor;				
+					hialt=area.ceiling;
+				}
+				else
+				{
+					if (compare(area.floor,lowalt)<0) lowalt=area.floor;
+					if (compare(area.ceiling,hialt)>0) hialt=area.ceiling;
+				}
+				areanames[i]=area.name;
+			}
 			String when;
 	    	time=60.0f*closest_dist/gs;
 	    	
@@ -92,19 +141,28 @@ public class AirspaceProximityDetector {
 	    		when=String.format("<1min");
 	    	else
 	    		when=String.format("%.0fmin",Math.floor(time));
+	    	
+	    	
 		    if (areas.size()==1)
 		    {
-		    	warning=shortify(areas.get(0).name,20)+". "+when;
+		    	warning=new String[]{
+		    			shortify(areas.get(0).name,20),
+		    			when+": "+lowalt+" - "+hialt
+		    	};
 		    }
 		    else
 		    {
 		    	
-		    	warning=shortify(areas.get(0).name,10)+" + "+(areas.size()-1)+" more. "+when;
+		    	warning=new String[]{
+		    			shortify(areas.get(0).name,10)+" + "+(areas.size()-1)+" more",
+		    			when+": "+lowalt+" - "+hialt
+		    			
+		    	};
 		    }
 		    dist=closest_dist;
 		}
 	    		
-		
+		this.areas=areas;
 	}
 	public float getTimeLeft()
 	{
@@ -117,7 +175,7 @@ public class AirspaceProximityDetector {
 	public boolean isWarning() {
 		return warning!=null;
 	}
-	public String getWarning() {
+	public String[] getWarning() {
 		return warning;
 	}
 	public void update_lookup(AirspaceLookup lookup) {
@@ -128,5 +186,8 @@ public class AirspaceProximityDetector {
 	{
 		if (areanames==null) return new String[]{};
 		return areanames;
+	}
+	public ArrayList<AirspaceArea> getAreas() {
+		return areas;
 	}
 }

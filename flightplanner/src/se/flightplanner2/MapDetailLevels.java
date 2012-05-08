@@ -11,4 +11,14 @@ public class MapDetailLevels {
 		if (detail==3) return 13;
 		return 10;
 	}
+
+	public static boolean getHaveElevFromDetail(int detail) {
+		if (detail>=2 || DataDownloader.debugMode())
+			return true;
+		return false;
+	}
+
+	public static int getMaxElevLevelFromDetail(int mapdetail) {
+		return 8;
+	}
 }

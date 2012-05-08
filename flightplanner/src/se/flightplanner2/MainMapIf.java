@@ -33,6 +33,8 @@ public interface MainMapIf {
 
 	public abstract void releaseMemory();
 
-	public abstract void proxwarner_update(String warning);
+	public abstract void proxwarner_update(String[] warning);
+
+	public abstract void set_gps_sat_cnt(int satcnt, int satfixcnt);
 
 }

@@ -27,7 +27,7 @@ public class TestSimpler extends TestCase {
 
 	public void testSimple1()
 	{
-		ArrayList<AirspaceArea> areas=new ArrayList<AirspaceArea>();
+		final ArrayList<AirspaceArea> areas=new ArrayList<AirspaceArea>();
 
 		addArea(areas, new LatLon[]{
 				new LatLon(59,18),
@@ -49,6 +49,11 @@ public class TestSimpler extends TestCase {
 			@Override
 			public AirspaceAreaTree getAreas() {
 				return tree;
+			}
+
+			@Override
+			public ArrayList<AirspaceArea> getAllAirspace() {
+				return areas;
 			}
 		},new LatLon(58.5,18.5),0);
 		

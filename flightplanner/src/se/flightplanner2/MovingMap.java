@@ -36,6 +36,8 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	private TripState tripstate;
 	private AirspaceLookup lookup;
 	private Location lastpos;
+	private int gps_sat_cnt;
+	private int gps_sat_fix_cnt;
 	private long last_real_position;
 	private MapDrawer drawer;
 	private int lastcachesize; //bitmap cache
@@ -50,10 +52,12 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	private boolean defnorthup=false;
 	private float x_dpmm;
 	private float y_dpmm;
+	private float screen_size_x,screen_size_y;
 	private FlightPathLogger fplog;
 	private MovingMapOwner owner;
+	private ElevBitmapCache elevbmc;
 	private int detaillevel;
-	private String prox_warning; //about nearby airspaces
+	private String[] prox_warning; //about nearby airspaces
 	interface MovingMapOwner
 	{
 		public void cancelMapDownload();
@@ -74,11 +78,16 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		this.fplog=fplog;
 		dismiss_timeout=new Timeout();
 		bearingspeed=new BearingSpeedCalc();
+		
+		reinit_bmc();
+		
 		lastpos=bearingspeed.calcBearingSpeed(null);
 		float dot_per_mm_y=metrics.ydpi/25.4f;
 		y_dpmm=dot_per_mm_y;
 		float dot_per_mm_x=metrics.xdpi/25.4f;
 		x_dpmm=dot_per_mm_x;
+		screen_size_x=metrics.widthPixels/dot_per_mm_x;
+		screen_size_y=metrics.heightPixels/dot_per_mm_y;
 		
 		this.tripstate=ptripstate;
 		
@@ -118,7 +127,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		if (gui==null || drawer==null)
 		{
 				
-			drawer=new MapDrawer(x_dpmm,y_dpmm);
+			drawer=new MapDrawer(x_dpmm,y_dpmm,screen_size_x,screen_size_y);
 			if (getBottom()<50 || getRight()<50)
 				throw new RuntimeException("The screen is way too small");
 
@@ -171,7 +180,9 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 					download_status,
 					gui.getCurrentInfo(),
 					this,
-					prox_warning
+					prox_warning,
+					gps_sat_cnt,gps_sat_fix_cnt,
+					elevbmc
 					);
 			lastcachesize=res.lastcachesize;
 			if (mapcache!=null && mapcache.haveUnsatisfiedQueries())
@@ -267,7 +278,16 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			gui.updateTripState(tripstate);
 			gui.setnorthup(defnorthup);
 		}
+		reinit_bmc();
 		invalidate();
+	}
+	private void reinit_bmc() {
+		elevbmc=new ElevBitmapCache(new ElevBitmapCache.ClientIf() {			
+			@Override
+			public void updated() {
+				MovingMap.this.invalidate();				
+			}
+		});
 	}
 
 	public void onSideKey(int i) {
@@ -477,7 +497,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		
 	}
 	@Override
-	public void proxwarner_update(String warning) {
+	public void proxwarner_update(String[] warning) {
 		prox_warning=warning;		
 		
 	}
@@ -485,6 +505,16 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	public void showAirspaces()
 	{
 		this.owner.showAirspaces();
+	}
+	@Override
+	public void set_gps_sat_cnt(int satcnt,int satfixcnt) {
+		// TODO Auto-generated method stub
+		if (gps_sat_cnt!=satcnt)
+		{
+			gps_sat_cnt=satcnt;
+			gps_sat_fix_cnt=satfixcnt;
+			invalidate();
+		}		
 	}
 	
 }

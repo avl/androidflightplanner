@@ -44,10 +44,10 @@ public class BoundingBox implements Cloneable, Serializable
 		y2=py2;			
 	}
 	public BoundingBox(Vector lowerleft, Vector upperright) {
-		x1=lowerleft.getx();
-		y1=lowerleft.gety();
-		x2=upperright.getx();
-		y2=upperright.gety();
+		x1=Math.min(lowerleft.getx(),upperright.getx());
+		y1=Math.min(lowerleft.gety(),upperright.gety());
+		x2=Math.max(lowerleft.getx(),upperright.getx());
+		y2=Math.max(lowerleft.gety(),upperright.gety());
 	}
 	public BoundingBox clone()
 	{

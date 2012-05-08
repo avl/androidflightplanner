@@ -243,6 +243,12 @@ public class AirspaceLookup implements AirspaceLookupIf {
 		}
 
 	}
+	@Override
+	public ArrayList<AirspaceArea> getAllAirspace() {
+		if (airspace==null || airspace.spaces==null)
+			return new ArrayList<AirspaceArea>(); 
+		return airspace.spaces;
+	}
 
 	
 	
