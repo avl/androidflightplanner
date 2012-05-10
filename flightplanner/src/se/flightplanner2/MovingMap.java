@@ -58,6 +58,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	private ElevBitmapCache elevbmc;
 	private int detaillevel;
 	private String[] prox_warning; //about nearby airspaces
+	private boolean terrwarn;
 	interface MovingMapOwner
 	{
 		public void cancelMapDownload();
@@ -66,9 +67,13 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 
 		public void showAirspaces();
 	}
-	public void doInvalidate()
+	@Override
+	public void doInvalidate() //for GUI-client
 	{
 		invalidate();
+		Log.i("fplan.mmupd","doInvalidate called anyway");
+		handler.removeCallbacks(invalidate_within_runner);
+		next_invalidate_time=Long.MAX_VALUE; 
 	}
 	public MovingMap(Context context,DisplayMetrics metrics, FlightPathLogger fplog,MovingMapOwner owner,
 			TripState ptripstate)
@@ -116,7 +121,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			tripstate.updatemypos(lastpos);
 		if (gui!=null)
 			gui.updateTripState(tripstate);
-		invalidate();
+		doInvalidate();
 	}
 	
 	private int lastwidth,lastheight; 
@@ -182,7 +187,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 					this,
 					prox_warning,
 					gps_sat_cnt,gps_sat_fix_cnt,
-					elevbmc
+					elevbmc,terrwarn
 					);
 			lastcachesize=res.lastcachesize;
 			if (mapcache!=null && mapcache.haveUnsatisfiedQueries())
@@ -218,8 +223,9 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		//canvas.drawText("TRIP", 10, 100, textpaint);
 	}
 	
-	public void gps_update(Location loc)
+	public void gps_update(Location loc,boolean terrwarn)
 	{
+		this.terrwarn=terrwarn;
 		if (loc==null) return;
 		
 		//lastpos=bearingspeed.calcBearingSpeed(loc);
@@ -236,7 +242,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		invalidate();
+		doInvalidate();
 		if (curLostSignalRunnable!=null)
 			lostSignalTimer.removeCallbacks(curLostSignalRunnable);
 		curLostSignalRunnable=new Runnable() {			
@@ -251,7 +257,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	
 	public void gps_disabled() {
 		last_real_position=0;
-		invalidate();		
+		doInvalidate();		
 	}
 
 	public void zoom(int zd) {
@@ -279,15 +285,19 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			gui.setnorthup(defnorthup);
 		}
 		reinit_bmc();
-		invalidate();
+		doInvalidate();
 	}
 	private void reinit_bmc() {
 		elevbmc=new ElevBitmapCache(new ElevBitmapCache.ClientIf() {			
 			@Override
-			public void updated() {
-				MovingMap.this.invalidate();				
+			public void updated(boolean fully_updated) {
+				if (fully_updated)
+					MovingMap.this.doInvalidate();
+				else
+					MovingMap.this.invalidate_within(750);				
 			}
 		});
+		GlobalGetElev.get_elev=elevbmc;
 	}
 
 	public void onSideKey(int i) {
@@ -300,7 +310,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		{		
 			if (gui!=null)
 				gui.onInfoPanelBrowse(i);
-			invalidate();
+			doInvalidate();
 		}
 		
 	}
@@ -322,8 +332,11 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 				loader=new BackgroundMapLoader(blobs,mapcache,this,lastcachesize);
 				loader.run();
 			}
+			if (mapcache==null || !mapcache.haveUnsatisfiedQueries())
+				doInvalidate();
+			else
+				invalidate_within(750);
 		}
-		invalidate();
 	}
 	public void set_download_status(String prog, boolean dismissable) {
 		download_status=prog;
@@ -334,11 +347,11 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 				@Override
 				public void run() {
 					download_status="";
-					invalidate();
+					doInvalidate();
 				}
 			}, 10000);
 		}
-		invalidate();
+		doInvalidate();
 	}
 	public void enableTerrainMap(boolean b) {
 		if (b==false)
@@ -347,7 +360,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			mapcache=null;
 			blobs=null;
 			bitmaps=null;
-			invalidate();
+			doInvalidate();
 			//there may be a loader active, updating the mapcache we should have freed
 			//if this happens, there is no problem, the request will be ignored.
 		}
@@ -391,7 +404,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			if (blobs!=null)
 				Log.i("fplan","blobs loaded ok;"+blobs.size());					
 		}
-		invalidate();
+		doInvalidate();
 	}
 	
 	
@@ -448,7 +461,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 					loc.setAltitude(100.0*random.nextFloat());
 					Date d = new Date();
 					loc.setTime(d.getTime());
-					outer.gps_update(loc);					
+					outer.gps_update(loc,terrwarn);					
 					debugTimer.postDelayed(debugRunnable, 1000);
 				}
 			};
@@ -466,7 +479,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		if (download_dismissable)
 		{
 			download_status="";
-			invalidate();
+			doInvalidate();
 		}
 		else
 		{		
@@ -485,7 +498,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		this.defnorthup=northup;
 		if (gui!=null)
 			gui.setnorthup(defnorthup);		
-		invalidate();
+		doInvalidate();
 	}
 	@Override
 	public void thisSetContentView(Activity nav) {
@@ -506,14 +519,34 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	{
 		this.owner.showAirspaces();
 	}
+	
+	private Handler handler=new Handler();
+	private long next_invalidate_time=Long.MAX_VALUE;
+	private Runnable invalidate_within_runner=new Runnable()
+	{
+		@Override
+		public void run() {
+			MovingMap.this.invalidate();
+			next_invalidate_time=Long.MAX_VALUE;
+			Log.i("fplan.mmupd","Delayed invalidate running");			
+		}
+	};
+	private void invalidate_within(int ms)
+	{
+		long now=SystemClock.elapsedRealtime();
+		long scheduled_delta=next_invalidate_time-now;
+		if (scheduled_delta<ms) return;
+		next_invalidate_time=now+ms;
+		handler.postDelayed(invalidate_within_runner,ms);
+		Log.i("fplan.mmupd","Posting a delayed invalidate in "+ms+"ms");
+	}
 	@Override
 	public void set_gps_sat_cnt(int satcnt,int satfixcnt) {
-		// TODO Auto-generated method stub
 		if (gps_sat_cnt!=satcnt)
 		{
 			gps_sat_cnt=satcnt;
 			gps_sat_fix_cnt=satfixcnt;
-			invalidate();
+			invalidate_within(500);
 		}		
 	}
 	

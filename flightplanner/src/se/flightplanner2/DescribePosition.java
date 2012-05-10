@@ -72,9 +72,11 @@ public class DescribePosition extends Activity implements LocationListener{
 	private String getSigPointPosDescrFromEnsp(NextSigPoints nesp) {
 		Log.i("fplan.dp","Nesp:"+nesp);
 		if (nesp==null) return null;
-		SimpleDateFormat df=new SimpleDateFormat("mm",Locale.US);
-		df.setTimeZone(TimeZone.getTimeZone("UTC"));
-		
+		TripState tst=GlobalTripState.tripstate;
+		if (tst!=null)
+		{
+			tst.update_ensp(nesp);
+		}
 		Date either=nesp.passed!=null ? nesp.passed : nesp.eta;
 		Log.i("fplan.dp","Either date:"+either);
 		if (either!=null)
@@ -84,10 +86,39 @@ public class DescribePosition extends Activity implements LocationListener{
 				return nesp.name;
 		}
 		if (nesp.passed!=null)
-			return nesp.name+" "+df.format(nesp.passed);
+			return nesp.name+" "+aviation_format_time(nesp.passed);
 		if (nesp.eta!=null)		
-			return "ESTIMATING "+nesp.name+" "+df.format(nesp.eta);
+			return "ESTIMATING "+nesp.name+" "+aviation_format_time(nesp.eta);
 		return null;
+	}
+	private String aviation_format_time(Date when) {
+		Date now=new Date();
+		long lnow=now.getTime();
+		long lwhen=when.getTime();
+		long delta=lwhen-lnow;
+		long minute=60*1000l;
+		
+		if (Math.abs(delta)>20*minute)
+		{
+			if (Math.abs(delta)>10*60*minute)
+			{
+				SimpleDateFormat df=new SimpleDateFormat("MMM-dd HH:mm",Locale.US);
+				df.setTimeZone(TimeZone.getTimeZone("UTC"));
+				return df.format(when);				
+			}
+			else
+			{
+				SimpleDateFormat df=new SimpleDateFormat("HH:mm",Locale.US);
+				df.setTimeZone(TimeZone.getTimeZone("UTC"));
+				return df.format(when);
+			}			
+		}
+		else
+		{
+			SimpleDateFormat df=new SimpleDateFormat("mm",Locale.US);
+			df.setTimeZone(TimeZone.getTimeZone("UTC"));
+			return df.format(when);
+		}
 	}
 	TextView describer;
 	ListView spin;
@@ -211,6 +242,7 @@ public class DescribePosition extends Activity implements LocationListener{
 		}
 		describer=(TextView)findViewById(R.id.posdescr);
 		spin=(ListView)findViewById(R.id.relspinner);
+		
 		addLatLon("WGS84 Deg:MM:SS",false);
 		
 		Button sigp=(Button)findViewById(R.id.dp_sigp);
@@ -252,28 +284,33 @@ public class DescribePosition extends Activity implements LocationListener{
 	}
 	private void complete_update() {
 		items.clear();
-		ArrayList<SigPoint> all=new ArrayList<SigPoint>();		
-		if (GlobalLookup.lookup!=null)
-		{
-			Merc m=Project.latlon2merc(mypos, 13);
-			if (filter.equals("All") || filter.equals("Points"))
-				all.addAll(getAirports(m,GlobalLookup.lookup.allSigPoints));
-			if (filter.equals("All") || filter.equals("Airports"))
-				all.addAll(getAirports(m,GlobalLookup.lookup.majorAirports));
-			if (filter.equals("All") || filter.equals("Towns"))
-				all.addAll(getAirports(m,GlobalLookup.lookup.allCities));
-						
-					
-		}
+		ArrayList<SigPoint> all=new ArrayList<SigPoint>();
+		AirspaceLookup lookup=GlobalLookup.lookup;
 		TripState tst=GlobalTripState.tripstate;
-		if (tst!=null)
+		if (filter.equals("Route"))
 		{
-			if (filter.equals("Route"))
+			if (tst!=null)
 			{
 				for(NextSigPoints ensp:tst.get_remaining_ensps())
 				{
 					addEnsp(ensp);
 				}
+			}
+		}
+		else
+		{
+			if (lookup!=null)
+			{
+				Merc m=Project.latlon2merc(mypos, 13);
+				if (filter.equals("All") || filter.equals("Points"))
+					all.addAll(getAirports(m,lookup.allSigPoints));
+				if (filter.equals("All") || filter.equals("Airports"))
+					all.addAll(getAirports(m,lookup.majorAirports));
+				if (filter.equals("All") || filter.equals("Towns"))
+					all.addAll(getAirports(m,lookup.allCities));
+							
+				SigPoint.sort_nearest(all,mypos);
+						
 			}
 		}
 		//addLatLon("WGS84 Decimal",true);
@@ -304,16 +341,15 @@ public class DescribePosition extends Activity implements LocationListener{
 		update(mypos);
 	}
 	private ArrayList<SigPoint> getAirports(Merc m,AirspaceSigPointsTree airports) {
-		ArrayList<SigPoint> bigairfs=new ArrayList<SigPoint>();
+		ArrayList<SigPoint> founditems=new ArrayList<SigPoint>();
 		for(int wider_net=20;wider_net<300;wider_net=(wider_net*3)/2+1)
 		{
 
-			bigairfs=airports.findall(new BoundingBox(m.toVector(),Project.approx_scale(m, 13,wider_net)));
+			founditems=airports.findall(new BoundingBox(m.toVector(),Project.approx_scale(m, 13,wider_net)));
 			//Log.i("fplan","Looking around "+m.x+","+m.y+" size: "+Project.approx_scale(m, 13,wider_net)+" found: "+bigairfs.size());
-			if (bigairfs.size()>=10) break;
+			if (founditems.size()>=30) break;
 		}
-		SigPoint.sort_nearest(bigairfs,mypos);
-		return bigairfs;
+		return founditems;
 	}
 	@Override
 	public void onLocationChanged(Location location) {

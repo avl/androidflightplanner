@@ -10,4 +10,6 @@ public class Config {
 	public static int max_zoomlevel=13; //not likely to change
 
 	public static int max_elev_zoomlevel=8;
+	
+	public static boolean skip_download=true;
 }

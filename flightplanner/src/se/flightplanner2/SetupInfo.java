@@ -30,12 +30,16 @@ public class SetupInfo extends Activity {
         detail=getIntent().getExtras().getInt("se.flightplanner2.mapdetail",0)+1;
         boolean startchecked=getIntent().getExtras().getBoolean("se.flightplanner2.northup",false);
         boolean startcheckedvibrate=getIntent().getExtras().getBoolean("se.flightplanner2.vibrate",false);
+        boolean startcheckedterrwarn=getIntent().getExtras().getBoolean("se.flightplanner2.terrwarn",false);
         final SetupInfo outer_this=this;
         final CheckBox northup=(CheckBox)findViewById(R.id.northup_default);
     	northup.setChecked(startchecked);
 
     	final CheckBox vibrate=(CheckBox)findViewById(R.id.vibrate_default);
     	vibrate.setChecked(startcheckedvibrate);
+
+    	final CheckBox terrwarn=(CheckBox)findViewById(R.id.terrain_warning_default);
+    	terrwarn.setChecked(startcheckedterrwarn);
         
         button.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
@@ -45,6 +49,7 @@ public class SetupInfo extends Activity {
             	ret.putExtra("se.flightplanner2.mapdetail",outer_this.detail-1);
             	ret.putExtra("se.flightplanner2.northup",northup.isChecked());
             	ret.putExtra("se.flightplanner2.vibrate",vibrate.isChecked());
+            	ret.putExtra("se.flightplanner2.terrwarn",terrwarn.isChecked());
             	
             	ret.putExtra("se.flightplanner2.thenopen", getIntent().getExtras().getString("se.flightplanner2.thenopen"));
             	setup.setResult(RESULT_OK,ret);

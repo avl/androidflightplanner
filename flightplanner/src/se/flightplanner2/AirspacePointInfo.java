@@ -6,6 +6,7 @@ import java.util.Date;
 import android.location.Location;
 
 import se.flightplanner2.AirspaceLookup.AirspaceDetails;
+import se.flightplanner2.GlobalGetElev.GetElevation;
 import se.flightplanner2.Project.LatLon;
 import se.flightplanner2.Project.Merc;
 import se.flightplanner2.vector.Vector;
@@ -20,6 +21,7 @@ public class AirspacePointInfo implements InformationPanel
 	private boolean hasextra;
 	private Place[] extended;
 	private Location lastloc;
+	private int elev;
 	
 	/**
 	 * 
@@ -68,6 +70,11 @@ public class AirspacePointInfo implements InformationPanel
 		details=details2.toArray(new String[details2.size()]);
 		extra=extra2.toArray(new String[extra2.size()]);
 		
+		GetElevation gete=GlobalGetElev.get_elev;
+		if (gete!=null)
+		{
+			elev=gete.get_elev_ft(about);
+		}		
 	}
 	
 	/**
@@ -90,7 +97,7 @@ public class AirspacePointInfo implements InformationPanel
 	@Override
 	public String getPointTitle()
 	{
-		return "Airspace";
+		return "Elev "+elev+"ft";
 	}
 	@Override
 	public String getLegTitle()

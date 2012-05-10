@@ -11,6 +11,7 @@ import java.util.TimeZone;
 
 import se.flightplanner2.ElevBitmapCache.BMResult;
 import se.flightplanner2.GetMapBitmap.BitmapRes;
+import se.flightplanner2.GlobalGetElev.GetElevation;
 import se.flightplanner2.GuiSituation.Clickable;
 import se.flightplanner2.Project.LatLon;
 import se.flightplanner2.Project.Merc;
@@ -39,6 +40,7 @@ public class MapDrawer {
 
 	private Paint neutralpaint;
 	private Paint bigtextpaint;
+	private Paint smalltextpaint;
 	private Paint hugetextpaint;
 	private Paint ahtextpaint;
 	private Paint linepaint;
@@ -52,47 +54,53 @@ public class MapDrawer {
 	private float x_dpmm, y_dpmm;
 	private SimpleDateFormat formatter = new SimpleDateFormat("kkmmss");
 	private SimpleDateFormat formatter2 = new SimpleDateFormat("kkmm");
-	private String zoom_in_text=null;
-	private String zoom_out_text=null;
+	private String zoom_in_text = null;
+	private String zoom_out_text = null;
 	private boolean zoom_buttons;
 
-	private class CacheKey
-	{
+	private class CacheKey {
 		String text;
 		int color;
-		public CacheKey(String t,int col)
-		{
-			text=t;
-			color=col;
-		}
-		@Override
-		public boolean equals(Object o)
-		{
-			CacheKey ko=(CacheKey)o;
-			return ko.text.equals(text) && color==ko.color;			
-		}
-		@Override
-		public int hashCode()
-		{
-			return text.hashCode()+color;
-		}		
-	}
-	HashMap<CacheKey,Bitmap> cached=new HashMap<MapDrawer.CacheKey, Bitmap>();	
-	HashMap<CacheKey,Bitmap> used=new HashMap<MapDrawer.CacheKey, Bitmap>();	
-	private float bigtextsize;
-	public MapDrawer(float x_dpmm, float y_dpmm,float screen_size_x,float screen_size_y) {
-		 formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
-		 formatter2.setTimeZone(TimeZone.getTimeZone("UTC"));
 
-		this.x_dpmm = x_dpmm;
-		this.y_dpmm = y_dpmm;
-		float factor=(float)Math.sqrt(Math.max(screen_size_x,screen_size_y)/92.0f);
-		if (factor<1.0f)
-			factor=1.0f;
-		x_dpmm*=factor;
-		y_dpmm*=factor;
+		public CacheKey(String t, int col) {
+			text = t;
+			color = col;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			CacheKey ko = (CacheKey) o;
+			return ko.text.equals(text) && color == ko.color;
+		}
+
+		@Override
+		public int hashCode() {
+			return text.hashCode() + color;
+		}
+	}
+
+	HashMap<CacheKey, Bitmap> cached = new HashMap<MapDrawer.CacheKey, Bitmap>();
+	HashMap<CacheKey, Bitmap> used = new HashMap<MapDrawer.CacheKey, Bitmap>();
+	private float bigtextsize;
+
+	public MapDrawer(float px_dpmm, float py_dpmm, float screen_size_x,
+			float screen_size_y) {
+		formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+		formatter2.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+		this.x_dpmm = px_dpmm;
+		this.y_dpmm = py_dpmm;
+		float factor = (float) Math
+				.sqrt(Math.max(screen_size_x, screen_size_y) / 92.0f);
+		if (factor < 1.0f)
+			factor = 1.0f;
+		Log.i("fplan.factor", "Factor: " + factor + " screen size x; "
+				+ screen_size_x + " screen size Y: " + screen_size_y);
+		x_dpmm *= factor;
+		y_dpmm *= factor;
 		int foreground = Color.WHITE;
 		float textsize = y_dpmm * 2.4f;
+		float smalltextsize = y_dpmm * 2.2f;
 		bigtextsize = y_dpmm * 3.1f; // 6.5 mm text size
 		float hugetextsize = y_dpmm * 3.7f; // 6.5 mm text size
 
@@ -110,47 +118,53 @@ public class MapDrawer {
 		bigtextpaint.setTypeface(Typeface.create(Typeface.SANS_SERIF,
 				Typeface.NORMAL));
 
+		smalltextpaint = new Paint();
+		smalltextpaint.setAntiAlias(true);
+		smalltextpaint.setColor(foreground);
+		smalltextpaint.setTextSize(smalltextsize);
+		smalltextpaint.setTypeface(Typeface.create(Typeface.SANS_SERIF,
+				Typeface.NORMAL));
+
 		hugetextpaint = new Paint();
 		hugetextpaint.setAntiAlias(true);
 		hugetextpaint.setColor(foreground);
 		hugetextpaint.setTextSize(hugetextsize);
 		hugetextpaint.setTypeface(Typeface.create(Typeface.SANS_SERIF,
 				Typeface.NORMAL));
-		
+
 		ahtextpaint = new Paint();
 		ahtextpaint.setAntiAlias(true);
-		ahtextpaint.setColor(Color.rgb(255,190,190));
+		ahtextpaint.setColor(Color.rgb(255, 190, 190));
 		ahtextpaint.setTextSize(15);
 		ahtextpaint.setTypeface(Typeface.create(Typeface.SANS_SERIF,
 				Typeface.NORMAL));
-		
+
 		linepaint = new Paint();
 		linepaint.setAntiAlias(false);
-		linepaint.setStrokeWidth(1f*x_dpmm);
+		linepaint.setStrokeWidth(1f * x_dpmm);
 		linepaint.setColor(Color.RED);
 		linepaint.setStrokeCap(Paint.Cap.ROUND);
 
-		neutralpaint=new Paint();
+		neutralpaint = new Paint();
 		thinlinepaint = new Paint();
 		thinlinepaint.setAntiAlias(false);
-		thinlinepaint.setStrokeWidth(0.5f*x_dpmm);
+		thinlinepaint.setStrokeWidth(0.5f * x_dpmm);
 		thinlinepaint.setStyle(Style.STROKE);
 		thinlinepaint.setColor(Color.RED);
 		thinlinepaint.setStrokeCap(Paint.Cap.ROUND);
 
 		trippaint = new Paint();
 		trippaint.setAntiAlias(false);
-		trippaint.setStrokeWidth(0.5f*x_dpmm);
-		trippaint.setARGB(0xff,0xff,0xff,0xff);
-		trippaint.setColor(Color.rgb(0xff,0xff,0xff));
+		trippaint.setStrokeWidth(0.5f * x_dpmm);
+		trippaint.setARGB(0xff, 0xff, 0xff, 0xff);
+		trippaint.setColor(Color.rgb(0xff, 0xff, 0xff));
 		trippaint.setStrokeCap(Paint.Cap.ROUND);
 
 		widetrippaint = new Paint();
 		widetrippaint.setAntiAlias(false);
-		widetrippaint.setStrokeWidth(0.75f*x_dpmm);
-		widetrippaint.setARGB(0x70,0x80,0x80,0xff);
+		widetrippaint.setStrokeWidth(0.75f * x_dpmm);
+		widetrippaint.setARGB(0x70, 0x80, 0x80, 0xff);
 		widetrippaint.setStrokeCap(Paint.Cap.ROUND);
-
 
 		backgroundpaint = new Paint();
 		backgroundpaint.setStyle(Style.FILL);
@@ -162,100 +176,102 @@ public class MapDrawer {
 		arrowpaint = new Paint();
 		arrowpaint.setAntiAlias(false);
 		arrowpaint.setStyle(Style.FILL);
-		arrowpaint.setStrokeWidth(1.5f*x_dpmm);
+		arrowpaint.setStrokeWidth(1.5f * x_dpmm);
 		arrowpaint.setColor(Color.WHITE);
 		arrowpaint.setStrokeCap(Paint.Cap.ROUND);
 	}
 
-	private void renderText(Canvas mcanvas, Vector p, String text, DeclutterTree declutter,int color) {
-		
-		//if (p!=null) return;
-		int bm_off_x=(int)(3.0f*x_dpmm);
-		int bm_off_y=(int)(3.0f*x_dpmm);
-		CacheKey ck=new CacheKey(text,color);
+	private void renderText(Canvas mcanvas, Vector p, String text,
+			DeclutterTree declutter, int color) {
+
+		// if (p!=null) return;
+		int bm_off_x = (int) (3.0f * x_dpmm);
+		int bm_off_y = (int) (3.0f * x_dpmm);
+		CacheKey ck = new CacheKey(text, color);
 		{
-			Bitmap bm=cached.get(ck);
-			if (bm!=null)
-			{
-				used.put(ck,bm);
-				Rect rect=new Rect();
-				rect.right=bm.getWidth();
-				rect.bottom=bm.getHeight();
-				rect.offset((int)p.x,(int)p.y);
-				if (declutter==null || declutter.checkAndAdd(rect))
-				{
-					//Log.i("fplan.fps","Drawing cached bm in: "+rect);
-					mcanvas.drawBitmap(bm, (float)p.x-bm_off_x,(float)p.y-bm_off_y,neutralpaint);
+			Bitmap bm = cached.get(ck);
+			if (bm != null) {
+				used.put(ck, bm);
+				Rect rect = new Rect();
+				rect.right = bm.getWidth();
+				rect.bottom = bm.getHeight();
+				rect.offset((int) p.x, (int) p.y);
+				if (declutter == null || declutter.checkAndAdd(rect)) {
+					// Log.i("fplan.fps","Drawing cached bm in: "+rect);
+					mcanvas.drawBitmap(bm, (float) p.x - bm_off_x, (float) p.y
+							- bm_off_y, neutralpaint);
 				}
 				return;
 			}
 		}
-		
+
 		Rect rect = new Rect();
 		textpaint.getTextBounds(text, 0, text.length(), rect);
-		int xadj=-rect.left;
-		int yadj=-rect.top;
-		rect.left-=2;
+		int xadj = -rect.left;
+		int yadj = -rect.top;
+		rect.left -= 2;
 		rect.right += 2;
 		rect.bottom += 2;
-		rect.top-=2;
-		
-		Bitmap bm=Bitmap.createBitmap(rect.width()+bm_off_x,rect.height()+bm_off_y,Bitmap.Config.ARGB_4444);
-		Canvas canvas=new Canvas(bm);
-		rect.offset(xadj+bm_off_x, yadj+bm_off_y);
-		
-		Rect globrect=new Rect(rect);
-		globrect.offset((int)p.x,(int)p.y);
-		RectF globrectf=new RectF(globrect);
-		if (!mcanvas.quickReject(globrectf, Canvas.EdgeType.BW) && (declutter==null || declutter.checkAndAdd(globrect)))
-		{
+		rect.top -= 2;
+
+		Bitmap bm = Bitmap.createBitmap(rect.width() + bm_off_x, rect.height()
+				+ bm_off_y, Bitmap.Config.ARGB_4444);
+		Canvas canvas = new Canvas(bm);
+		rect.offset(xadj + bm_off_x, yadj + bm_off_y);
+
+		Rect globrect = new Rect(rect);
+		globrect.offset((int) p.x, (int) p.y);
+		RectF globrectf = new RectF(globrect);
+		if (!mcanvas.quickReject(globrectf, Canvas.EdgeType.BW)
+				&& (declutter == null || declutter.checkAndAdd(globrect))) {
 			canvas.drawRect(rect, backgroundpaint);
 			textpaint.setColor(color);
-			canvas.drawText(text, rect.left+xadj+2, rect.top+yadj+2, textpaint);
-			linepaint.setStrokeWidth(1.2f*x_dpmm);
+			canvas.drawText(text, rect.left + xadj + 2, rect.top + yadj + 2,
+					textpaint);
+			linepaint.setStrokeWidth(1.2f * x_dpmm);
 			linepaint.setColor(Color.BLACK);
 			canvas.drawPoint(bm_off_x, bm_off_y, linepaint);
 
 			linepaint.setColor(color);
-			linepaint.setStrokeWidth(0.6f*x_dpmm);
-			canvas.drawPoint(bm_off_x,bm_off_y, linepaint);
+			linepaint.setStrokeWidth(0.6f * x_dpmm);
+			canvas.drawPoint(bm_off_x, bm_off_y, linepaint);
 
-			cached.put(ck,bm);
-			used.put(ck,bm);
-			//Log.i("fplan.fps","Caching bm in: "+rect);
-			///canvas.
-			mcanvas.drawBitmap(bm, (float)p.x-bm_off_x,(float)p.y-bm_off_y,neutralpaint);
-			
-		}
-		else
-		{
+			cached.put(ck, bm);
+			used.put(ck, bm);
+			// Log.i("fplan.fps","Caching bm in: "+rect);
+			// /canvas.
+			mcanvas.drawBitmap(bm, (float) p.x - bm_off_x, (float) p.y
+					- bm_off_y, neutralpaint);
+
+		} else {
 			linepaint.setColor(color);
-			linepaint.setStrokeWidth(0.6f*x_dpmm);
-			mcanvas.drawPoint((float)p.x, (float)p.y, linepaint);
-			
+			linepaint.setStrokeWidth(0.6f * x_dpmm);
+			mcanvas.drawPoint((float) p.x, (float) p.y, linepaint);
+
 		}
-		
+
 	}
 
 	static public class DrawResult {
 		int lastcachesize;
 	}
-	
+
 	long redraw_start;
 	View redraw_view;
-	Handler handler=new Handler();
-	Runnable schedule_redraw=new Runnable()
-	{
+	Handler handler = new Handler();
+	Runnable schedule_redraw = new Runnable() {
 		@Override
 		public void run() {
 			redraw_view.invalidate();
 		}
 	};
-	boolean onlyWithin(long ms,boolean dragging)
-	{
-		if (!dragging) return true;
-		long en=SystemClock.elapsedRealtime()-redraw_start;
-		if (en<ms)return true;
+
+	boolean onlyWithin(long ms, boolean dragging) {
+		if (!dragging)
+			return true;
+		long en = SystemClock.elapsedRealtime() - redraw_start;
+		if (en < ms)
+			return true;
 		handler.removeCallbacks(schedule_redraw);
 		handler.postDelayed(schedule_redraw, 300);
 		return false;
@@ -268,25 +284,38 @@ public class MapDrawer {
 	private int last_zoomlevel;
 	private double last_mypos_y;
 	private double last_mypos_x;
+
 	public DrawResult draw_actual_map(TripData tripdata, TripState tripstate,
 			AirspaceLookup lookup, Canvas canvas, Rect screen_extent,
 			Location lastpos, GetMapBitmap bitmaps, final GuiSituation gui,
 			long last_real_position, String download_status,
-			InformationPanel panel,View view,String[] prox_warning,int gps_sat_cnt, int gps_sat_fix_cnt,
-			ElevBitmapCache elevbmc) {
-		
-		
-		long bef=SystemClock.elapsedRealtime();
-		
-		redraw_start=bef;
-		redraw_view=view;
-		int elev_ft=(int)(lastpos.getAltitude()/0.3048f);
+			InformationPanel panel, View view, String[] prox_warning,
+			int gps_sat_cnt, int gps_sat_fix_cnt, ElevBitmapCache elevbmc,
+			boolean terrwarn) {
+
+		long bef = SystemClock.elapsedRealtime();
+
+		redraw_start = bef;
+		redraw_view = view;
+		int elev_ft = (int) (lastpos.getAltitude() / 0.3048f);
 		if (DataDownloader.debugMode())
-			elev_ft=1500;
+			elev_ft = 7000 - (int) ((long) ((SystemClock.elapsedRealtime() * 0.001f * 75f)) % 7000);
+		
+		int agnd=Integer.MAX_VALUE;								
+		GetElevation gelev=GlobalGetElev.get_elev;
+		if (gelev!=null)
+		{
+			agnd=elev_ft-gelev.get_elev_ft(new LatLon(lastpos));
+		}
+
+		double gs_kt = lastpos.getSpeed() * 3.6 / 1.852;
+		if (gs_kt < 10)
+			terrwarn = false;
+
 		elevbmc.start_frame(gui.getZoomlevel(), elev_ft);
 		Transform tf = gui.getTransform();
 		boolean extrainfo = gui.getExtraInfo();
-		
+
 		int extrainfolineoffset = gui.getExtrainfolineoffset();
 		boolean isDragging = (gui.getDrag_center13() != null);
 		int zoomlevel = gui.getZoomlevel();
@@ -306,13 +335,14 @@ public class MapDrawer {
 		// Project.latlon2merc(new
 		// LatLon(lastpos.getLatitude(),lastpos.getLongitude()),13);
 		Merc mypos = tf.getPos();
-		float delta=(float)(Math.abs(last_mypos_x-mypos.x)+Math.abs(last_mypos_y-mypos.y));
-		last_mypos_x=mypos.x;
-		last_mypos_y=mypos.y;
-		boolean isUserPresentlyMovingMap=gui.getFingerDown();
-		if (delta<20)
-			isUserPresentlyMovingMap=false;
-		
+		float delta = (float) (Math.abs(last_mypos_x - mypos.x) + Math
+				.abs(last_mypos_y - mypos.y));
+		last_mypos_x = mypos.x;
+		last_mypos_y = mypos.y;
+		boolean isUserPresentlyMovingMap = gui.getFingerDown();
+		if (delta < 20)
+			isUserPresentlyMovingMap = false;
+
 		Merc mypos13 = Project.merc2merc(tf.getPos(), zoomlevel, 13);
 
 		Vector arrow = gui.getArrow();
@@ -336,48 +366,54 @@ public class MapDrawer {
 		if (bitmaps != null) {
 			iMerc centertile = new iMerc((int) screen_center.x & (~255),
 					(int) screen_center.y & (~255));
-			//int diagonal = (int) Math.sqrt((sizex / 2) * (sizey / 2))+1;
-			//Log.i("fplan.bitmap","Diagonal: "+diagonal+" sizex:"+sizex+" sizey: "+sizey);
-			//int minus = (diagonal + 255) / 256;
-			//minus=2;
-			//int tot = 2 * minus + 1;
-			
+			// int diagonal = (int) Math.sqrt((sizex / 2) * (sizey / 2))+1;
+			// Log.i("fplan.bitmap","Diagonal: "+diagonal+" sizex:"+sizex+" sizey: "+sizey);
+			// int minus = (diagonal + 255) / 256;
+			// minus=2;
+			// int tot = 2 * minus + 1;
+
 			int tot;
 			int minus;
 			{
-				float smallres=Math.min(sizex,sizey);
-				float bigres=Math.max(sizex,sizey);
-				double diag_length=Math.sqrt(smallres*smallres+bigres*bigres);
-				double diag_angle=Math.atan2(smallres,bigres);
-				//double hdiag_length=diag_length/2.0;
-				final int tilesize=256;
-				float base=bigres;
-				//b= 180 - 90 - diag_angle
-				double ba=Math.PI-Math.PI/2-diag_angle;
-				//maxh/base = sin(b)
-				//maxh = sin(b)*base
-				double maxh=Math.sin(ba)*base;
-				//print "diag_length:",diag_length
-				//print "max height:",maxh
-				int iu=(int)(Math.floor((diag_length)/tilesize))+2;
-				//print "diag tiles",u
-				int iv=(int)(Math.floor((maxh)/tilesize))+2;
-				
-				tot=iu*iv;
-				tot=(tot*5+1)/4; //because of how zoom past max zoomlevel works - it always keeps the max zoomlevel bitmaps in memory as well, needing on average 0.25 less detailed bitmaps per zoomed in bitmap
-				minus=((int)diag_length+256)/256;
+				float smallres = Math.min(sizex, sizey);
+				float bigres = Math.max(sizex, sizey);
+				double diag_length = Math.sqrt(smallres * smallres + bigres
+						* bigres);
+				double diag_angle = Math.atan2(smallres, bigres);
+				// double hdiag_length=diag_length/2.0;
+				final int tilesize = 256;
+				float base = bigres;
+				// b= 180 - 90 - diag_angle
+				double ba = Math.PI - Math.PI / 2 - diag_angle;
+				// maxh/base = sin(b)
+				// maxh = sin(b)*base
+				double maxh = Math.sin(ba) * base;
+				// print "diag_length:",diag_length
+				// print "max height:",maxh
+				int iu = (int) (Math.floor((diag_length) / tilesize)) + 2;
+				// print "diag tiles",u
+				int iv = (int) (Math.floor((maxh) / tilesize)) + 2;
+
+				tot = iu * iv;
+				tot = (tot * 5 + 1) / 4; // because of how zoom past max
+											// zoomlevel works - it always keeps
+											// the max zoomlevel bitmaps in
+											// memory as well, needing on
+											// average 0.25 less detailed
+											// bitmaps per zoomed in bitmap
+				minus = ((int) diag_length + 256) / 256;
 			}
-			//Log.i("fplan.drawmap","Total tiles needed:"+tot);
-			
+			// Log.i("fplan.drawmap","Total tiles needed:"+tot);
+
 			iMerc topleft = new iMerc(centertile.getX() - (256 * minus),
 					centertile.getY() - 256 * minus);
 			int cachesize = tot;
 			float hdg = (float) (tf.hdgrad * (180.0 / Math.PI));
-			int tilesused=0;
-			for (int j = 0; j < 2*minus; ++j) {
+			int tilesused = 0;
+			for (int j = 0; j < 2 * minus; ++j) {
 
-				for (int i = 0; i < 2*minus; ++i) {
-					
+				for (int i = 0; i < 2 * minus; ++i) {
+
 					iMerc cur = new iMerc(topleft.getX() + 256 * i,
 							topleft.getY() + 256 * j);
 					if (cur.getX() < 0 || cur.getY() < 0)
@@ -388,7 +424,7 @@ public class MapDrawer {
 					BitmapRes b = null;
 					// Log.i("fplan","Bitmap for "+cur);
 					b = bitmaps.getBitmap(cur, zoomlevel);
-					tilesused+=1;
+					tilesused += 1;
 					if (b != null && b.b != null) {
 						// float px=(float)(v.x+i*256);
 						// float py=(float)(v.y+j*256);
@@ -400,191 +436,202 @@ public class MapDrawer {
 						Rect src = b.rect;
 						canvas.rotate(-hdg, (float) v.x, (float) v.y);
 						canvas.drawBitmap(b.b, src, trg, null);
-						Log.i("fplan.terr","Queried "+cur);
-						BMResult elevbm=elevbmc.query2(cur);
-						if (elevbm!=null && elevbm.bm!=null)
-							canvas.drawBitmap(elevbm.bm, elevbm.r,trg,null);
-						
+						// Log.i("fplan.terr","Queried "+cur);
+						if (terrwarn && !isUserPresentlyMovingMap) {
+							BMResult elevbm = elevbmc.query2(cur);
+							if (elevbm != null && elevbm.bm != null)
+								canvas.drawBitmap(elevbm.bm, elevbm.r, trg,
+										null);
+						}
+
 						canvas.restore();
 					}
-					
-					
-					
+
 				}
 			}
-			//Log.i("fplan.drawmap","Tiles used:"+tilesused);
+			// Log.i("fplan.drawmap","Tiles used:"+tilesused);
 			res.lastcachesize = cachesize;
 		}
-		
+
 		elevbmc.delete_all_unused();
 		elevbmc.schedule_background_tasks();
-		
 
-		ArrayList<SigPoint> major_airfields=null;
+		ArrayList<SigPoint> major_airfields = null;
 		if (onlyWithin(60, isUserPresentlyMovingMap))
-		if (zoomlevel >= 9 && lookup != null)
-		{
-			linepaint.setStrokeWidth(1.0f*x_dpmm);
-			major_airfields=lookup.majorAirports.findall(bb13);
-			for (SigPoint sp : major_airfields) {
-				if (sp.extra!=null && sp.extra.runways!=null)
-				{
-					for(Runway runway:sp.extra.runways)
-					{
-						Merc m1 = Project.latlon2merc(runway.ends[0].pos, zoomlevel);
-						Merc m2 = Project.latlon2merc(runway.ends[1].pos, zoomlevel);
-						Vector p1 = tf.merc2screen(m1);
-						Vector p2 = tf.merc2screen(m2);
-						//linepaint.setStrokeWidth(10);
-						linepaint.setColor(Color.BLACK);
-						canvas.drawLine((float)p1.x,(float)p1.y,(float)p2.x,(float)p2.y,linepaint);
+			if (zoomlevel >= 9 && lookup != null) {
+				linepaint.setStrokeWidth(1.0f * x_dpmm);
+				major_airfields = lookup.majorAirports.findall(bb13);
+				for (SigPoint sp : major_airfields) {
+					if (sp.extra != null && sp.extra.runways != null) {
+						for (Runway runway : sp.extra.runways) {
+							Merc m1 = Project.latlon2merc(runway.ends[0].pos,
+									zoomlevel);
+							Merc m2 = Project.latlon2merc(runway.ends[1].pos,
+									zoomlevel);
+							Vector p1 = tf.merc2screen(m1);
+							Vector p2 = tf.merc2screen(m2);
+							// linepaint.setStrokeWidth(10);
+							linepaint.setColor(Color.BLACK);
+							canvas.drawLine((float) p1.x, (float) p1.y,
+									(float) p2.x, (float) p2.y, linepaint);
+						}
 					}
 				}
 			}
-		}
-		
+
 		// sigPointTree.verify();
 		if (onlyWithin(60, isUserPresentlyMovingMap))
-		if (zoomlevel >= 8 && lookup != null) {
-			ArrayList<AirspaceArea> areas=lookup.areas.get_areas(bb13);
-			Collections.sort(areas,new Comparator<AirspaceArea>() {
-				@Override
-				public int compare(AirspaceArea object1, AirspaceArea object2) {
-					if ((object1.r&0xff)>(object2.r&0xff)) return -1;
-					if ((object1.r&0xff)<(object2.r&0xff)) return 1;
-					if ((object1.g&0xff)<(object2.g&0xff)) return 1;
-					if ((object1.g&0xff)>(object2.g&0xff)) return -1;
-					return 0;
-				}
-			});
-			for (AirspaceArea as : areas) {
-				ArrayList<Vector> vs = new ArrayList<Vector>();
-				for (LatLon latlon : as.points) {
-					Merc m = Project.latlon2merc(latlon, zoomlevel);
-					Vector v = tf.merc2screen(m);
-					vs.add(v);
-				}
-				linepaint.setStrokeWidth(0.5f*x_dpmm);
-				for (int i = 0; i < vs.size(); ++i) {
-					Vector a = vs.get(i);
-					Vector b = vs.get((i + 1) % vs.size());
-					
-					linepaint.setColor(Color.rgb(as.r,as.g,as.b));
-					
-					canvas.drawLine((float) a.getx(), (float) a.gety(),
-							(float) b.getx(), (float) b.gety(), linepaint);
+			if (zoomlevel >= 8 && lookup != null) {
+				ArrayList<AirspaceArea> areas = lookup.areas.get_areas(bb13);
+				Collections.sort(areas, new Comparator<AirspaceArea>() {
+					@Override
+					public int compare(AirspaceArea object1,
+							AirspaceArea object2) {
+						if ((object1.r & 0xff) > (object2.r & 0xff))
+							return -1;
+						if ((object1.r & 0xff) < (object2.r & 0xff))
+							return 1;
+						if ((object1.g & 0xff) < (object2.g & 0xff))
+							return 1;
+						if ((object1.g & 0xff) > (object2.g & 0xff))
+							return -1;
+						return 0;
+					}
+				});
+				for (AirspaceArea as : areas) {
+					ArrayList<Vector> vs = new ArrayList<Vector>();
+					for (LatLon latlon : as.points) {
+						Merc m = Project.latlon2merc(latlon, zoomlevel);
+						Vector v = tf.merc2screen(m);
+						vs.add(v);
+					}
+					linepaint.setStrokeWidth(0.5f * x_dpmm);
+					for (int i = 0; i < vs.size(); ++i) {
+						Vector a = vs.get(i);
+						Vector b = vs.get((i + 1) % vs.size());
+
+						linepaint.setColor(Color.rgb(as.r, as.g, as.b));
+
+						canvas.drawLine((float) a.getx(), (float) a.gety(),
+								(float) b.getx(), (float) b.gety(), linepaint);
+					}
 				}
 			}
-		}
+
+		// if (declutter==null)
+		DeclutterTree declutter = new DeclutterTree(
+				(int) (textpaint.getTextSize() * 1.4f));
+		/*
+		 * else declutter.clearIfNeeded(); if (last_zoomlevel!=zoomlevel) {
+		 * declutter.clear(); last_zoomlevel=zoomlevel; }
+		 */
+		if (onlyWithin(60, isUserPresentlyMovingMap))
+			if (zoomlevel >= 8 && lookup != null) {
+				if (major_airfields == null)
+					major_airfields = lookup.majorAirports.findall(bb13);
+
+				for (SigPoint sp : major_airfields) {
+					Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
+					Vector p = tf.merc2screen(m);
+					String text;
+					text = sp.name;
+					if (zoomlevel <= 8
+							&& (sp.extra == null | sp.extra.runways == null || sp.extra.runways.length == 0))
+						continue; // only draw really big afs on zoomlevel 8
+
+					textpaint.setColor(Color.GREEN);
+					linepaint.setColor(Color.GREEN);
+					renderText(canvas, p, text, declutter, Color.GREEN);
+				}
+			}
+
+		if (onlyWithin(60, isUserPresentlyMovingMap))
+			if (zoomlevel >= 9 && lookup != null) {
+				for (SigPoint sp : lookup.minorAirfields.findall(bb13)) {
+					// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
+					Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
+					Vector p = tf.merc2screen(m);
+					String text;
+					text = sp.name;
+					textpaint.setColor(Color.GREEN);
+					linepaint.setColor(Color.GREEN);
+					renderText(canvas, p, text, declutter, Color.GREEN);
+				}
+			}
+		if (onlyWithin(60, isUserPresentlyMovingMap))
+			if (lookup != null) {
+				for (SigPoint sp : lookup.allCities.findall(bb13)) {
+					Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
+					Vector p = tf.merc2screen(m);
+					textpaint.setARGB(0xff, 0xff, 0xff, 0xb0);
+					linepaint.setARGB(0xff, 0xff, 0xff, 0xb0);
+					renderText(canvas, p, "[" + sp.name + "]", declutter,
+							Color.rgb(0xff, 0xff, 0xb0));
+				}
+			}
+		if (onlyWithin(60, isUserPresentlyMovingMap))
+			if (lookup != null && zoomlevel > 8) {
+				for (SigPoint sp : lookup.allTowns.findall(bb13)) {
+					Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
+					Vector p = tf.merc2screen(m);
+					textpaint.setARGB(0xff, 0xff, 0xff, 0xb0);
+					linepaint.setARGB(0xff, 0xff, 0xff, 0xb0);
+					renderText(canvas, p, "[" + sp.name + "]", declutter,
+							Color.rgb(0xff, 0xff, 0xb0));
+				}
+			}
+
+		if (onlyWithin(60, isUserPresentlyMovingMap))
+			if (zoomlevel >= 10 && lookup != null) {
+				for (SigPoint sp : lookup.allOthers.findall(bb13)) {
+					// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
+					Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
+					// new Merc(sp.pos.x/(1<<zoomgap),
+					// sp.pos.y/(1<<zoomgap));
+					Vector p = tf.merc2screen(m);
+					// Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
+					// textpaint.setARGB(0, 255,255,255);
+					String t;
+					{
+						textpaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
+						linepaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
+						t = sp.name;
+					}
+					renderText(canvas, p, t, declutter,
+							Color.rgb(0xff, 0xa0, 0xa0));
+				}
+
+				for (SigPoint sp : lookup.allObst.findall(smbb13)) {
+					/*
+					 * double x=sp.pos.x/(1<<zoomgap); double
+					 * y=sp.pos.y/(1<<zoomgap);
+					 * //Log.i("fplan",String.format("sigp: %s: %f %f"
+					 * ,sp.name,sp.pos.x,sp.pos.y)); double
+					 * px=rot_x(x-center.x,y-center.y)+ox; double
+					 * py=rot_y(x-center.x,y-center.y)+oy;
+					 */
+					// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
+					Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
+					Vector p = tf.merc2screen(m);
+
+					// Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
+					// textpaint.setARGB(0, 255,255,255);
+					textpaint.setARGB(0xff, 0xff, 0xa0, 0xff);
+					linepaint.setARGB(0xff, 0xff, 0xa0, 0xff);
+					renderText(canvas, p, String.format("%.0fft", sp.alt),
+							null, Color.rgb(0xff, 0xa0, 0xff));
+					// canvas.drawText(String.format("%.0fft",sp.alt),
+					// (float)(p.x),
+					// (float)(p.y), textpaint);
+					// canvas.drawPoint((float)p.x,(float)p.y,linepaint);
+				}
+			}
+
 		
-		//if (declutter==null)		
-		DeclutterTree declutter=new DeclutterTree((int)(textpaint.getTextSize()*1.4f));
-		/*else
-			declutter.clearIfNeeded();
-		if (last_zoomlevel!=zoomlevel)
-		{
-			declutter.clear();
-			last_zoomlevel=zoomlevel;
-		}*/
-		if (onlyWithin(60, isUserPresentlyMovingMap))
-		if (zoomlevel >= 8 && lookup != null) {
-			if (major_airfields==null)		
-				major_airfields=lookup.majorAirports.findall(bb13);
-						
-			for (SigPoint sp : major_airfields) {
-				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
-				Vector p = tf.merc2screen(m);
-				String text;
-				text = sp.name;
-				if (zoomlevel<=8 && (sp.extra==null | sp.extra.runways==null || sp.extra.runways.length==0))
-					continue; //only draw really big afs on zoomlevel 8
-				
-				textpaint.setColor(Color.GREEN);
-				linepaint.setColor(Color.GREEN);
-				renderText(canvas, p, text, declutter,Color.GREEN);
-			}
-		}
-
-		if (onlyWithin(60, isUserPresentlyMovingMap))
-		if (zoomlevel >= 9 && lookup != null) {
-			for (SigPoint sp : lookup.minorAirfields.findall(bb13)) {
-				// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
-				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
-				Vector p = tf.merc2screen(m);
-				String text;
-				text = sp.name;
-				textpaint.setColor(Color.GREEN);
-				linepaint.setColor(Color.GREEN);
-				renderText(canvas, p, text, declutter,Color.GREEN);
-			}
-		}
-		if (onlyWithin(60, isUserPresentlyMovingMap))
-		if (lookup!=null)
-		{
-			for (SigPoint sp : lookup.allCities.findall(bb13)) {
-				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
-				Vector p = tf.merc2screen(m);
-				textpaint.setARGB(0xff, 0xff, 0xff, 0xb0);
-				linepaint.setARGB(0xff, 0xff, 0xff, 0xb0);
-				renderText(canvas, p, "["+sp.name+"]", declutter,Color.rgb(0xff,0xff,0xb0));
-			}			
-		}
-		if (onlyWithin(60, isUserPresentlyMovingMap))
-		if (lookup!=null && zoomlevel>8)
-		{
-			for (SigPoint sp : lookup.allTowns.findall(bb13)) {
-				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
-				Vector p = tf.merc2screen(m);
-				textpaint.setARGB(0xff, 0xff, 0xff, 0xb0);
-				linepaint.setARGB(0xff, 0xff, 0xff, 0xb0);
-				renderText(canvas, p, "["+sp.name+"]", declutter,Color.rgb(0xff,0xff,0xb0));
-			}			
-		}
-		
-		if (onlyWithin(60, isUserPresentlyMovingMap))
-		if (zoomlevel >= 10 && lookup != null) {
-			for (SigPoint sp : lookup.allOthers.findall(bb13)) {
-				// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
-				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
-				// new Merc(sp.pos.x/(1<<zoomgap),
-				// sp.pos.y/(1<<zoomgap));
-				Vector p = tf.merc2screen(m);
-				// Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
-				// textpaint.setARGB(0, 255,255,255);
-				String t;
-				{
-					textpaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
-					linepaint.setARGB(0xff, 0xff, 0xa0, 0xa0);
-					t=sp.name;
-				}
-				renderText(canvas, p, t, declutter,Color.rgb(0xff,0xa0,0xa0));
-			}
-
-			for (SigPoint sp : lookup.allObst.findall(smbb13)) {
-				/*
-				 * double x=sp.pos.x/(1<<zoomgap); double
-				 * y=sp.pos.y/(1<<zoomgap);
-				 * //Log.i("fplan",String.format("sigp: %s: %f %f"
-				 * ,sp.name,sp.pos.x,sp.pos.y)); double
-				 * px=rot_x(x-center.x,y-center.y)+ox; double
-				 * py=rot_y(x-center.x,y-center.y)+oy;
-				 */
-				// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
-				Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
-				Vector p = tf.merc2screen(m);
-
-				// Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
-				// textpaint.setARGB(0, 255,255,255);
-				textpaint.setARGB(0xff, 0xff, 0xa0, 0xff);
-				linepaint.setARGB(0xff, 0xff, 0xa0, 0xff);
-				renderText(canvas, p, String.format("%.0fft", sp.alt),null,Color.rgb(0xff,0xa0,0xff));
-				// canvas.drawText(String.format("%.0fft",sp.alt), (float)(p.x),
-				// (float)(p.y), textpaint);
-				// canvas.drawPoint((float)p.x,(float)p.y,linepaint);
-			}
-		}
-
 		if (tripdata != null && tripdata.waypoints.size() >= 2) {
+			
+			
+			
 			float[] lines = new float[4 * (tripdata.waypoints.size() - 1)];
 			for (int i = 0; i < tripdata.waypoints.size() - 1; ++i) {
 				// String part=tripdata.waypoints.get(i+1).legpart;
@@ -606,7 +653,7 @@ public class MapDrawer {
 
 			}
 
-			for (int i = tripdata.waypoints.size() - 2; i >=0; --i) {
+			for (int i = tripdata.waypoints.size() - 2; i >= 0; --i) {
 				canvas.drawLine(lines[4 * i + 0], lines[4 * i + 1],
 						lines[4 * i + 2], lines[4 * i + 3], widetrippaint);
 				canvas.drawLine(lines[4 * i + 0], lines[4 * i + 1],
@@ -623,73 +670,78 @@ public class MapDrawer {
 				// double py=rot_y(m.x-center.x,m.y-center.y)+oy;
 				textpaint.setColor(Color.WHITE);
 				linepaint.setColor(Color.WHITE);
-				renderText(canvas, p, wp.name,null,Color.WHITE);
+				renderText(canvas, p, wp.name, null, Color.WHITE);
 			}
 		}
 		boolean havefix = lastpos.getTime() > 3600 * 24 * 10 * 1000
-				&& SystemClock.uptimeMillis() - last_real_position < 10000;
+				&& SystemClock.uptimeMillis() - last_real_position < 15000;
 
 		if (!havefix) {
-			
-			if (!isDragging)
-			{
-				linepaint.setStrokeWidth((int)(5*x_dpmm));
+
+			if (!isDragging) {
+				linepaint.setStrokeWidth((int) (5 * x_dpmm));
 				linepaint.setARGB(200, 255, 255, 0);
 				canvas.drawLine(left, top, right, bottom, linepaint);
 				canvas.drawLine(left, bottom, right, top, linepaint);
 			}
-			
-			if (isDragging)
-			{
-				linepaint.setStrokeWidth((int)(2.2*x_dpmm));
+
+			if (isDragging) {
+				linepaint.setStrokeWidth((int) (2.2 * x_dpmm));
 				linepaint.setARGB(100, 255, 0, 0);
-			}
-			else
-			{
-				linepaint.setStrokeWidth((int)(2.5*x_dpmm));
+			} else {
+				linepaint.setStrokeWidth((int) (2.5 * x_dpmm));
 				linepaint.setARGB(255, 255, 0, 0);
 			}
-			
+
 			canvas.drawLine(left, top, right, bottom, linepaint);
 			canvas.drawLine(left, bottom, right, top, linepaint);
-				
-			if (!isDragging)
-			{
-				
-				bigtextpaint.setTextSize((right-left)*0.2f);
+
+			if (!isDragging) {
+
+				bigtextpaint.setTextSize((right - left) * 0.2f);
 				bigtextpaint.setTypeface(Typeface.DEFAULT_BOLD);
-				String t="NO GPS";
-				Rect bounds=new Rect();
-				bigtextpaint.getTextBounds(t, 0, t.length(), bounds);
+				String t = "NO GPS";
 				bigtextpaint.setARGB(255, 255, 255, 0);
 				bigtextpaint.setStyle(Paint.Style.FILL);
-				canvas.drawText(t, left+0.5f*(right-left)-0.5f*bounds.width()-bounds.left, top+0.5f*(bottom-top)-bounds.top-0.5f*bounds.height(), bigtextpaint);
+				Rect bounds = new Rect();
+				bigtextpaint.getTextBounds(t, 0, t.length(), bounds);
+				float tx=left + 0.5f * (right - left) - 0.5f * bounds.width() - bounds.left;
+				float ty=top + 0.5f * (bottom - top) - bounds.top - 0.5f * bounds.height();
+				
+				drawBigText(canvas, t, tx, ty,bigtextpaint);
+				//public voidgetTextPath (String text, int start, int end, float x, float y, Path path)
+				
+				
+				//canvas.drawText(t,
+														
 				bigtextpaint.setARGB(255, 255, 0, 0);
 				bigtextpaint.setStyle(Paint.Style.STROKE);
-				bigtextpaint.setStrokeWidth((right-left)/75);
+				bigtextpaint.setStrokeWidth((right - left) / 75);
 
-				canvas.drawText(t, left+0.5f*(right-left)-0.5f*bounds.width()-bounds.left, top+0.5f*(bottom-top)-bounds.top-0.5f*bounds.height(), bigtextpaint);
-				bigtextpaint.setStyle(Paint.Style.FILL);
-	
+				tx=left + 0.5f * (right - left) - 0.5f * bounds.width() - bounds.left;
+				ty=top + 0.5f * (bottom - top) - bounds.top - 0.5f * bounds.height();
 				
+				drawBigText(canvas, t, tx, ty, bigtextpaint);
+				bigtextpaint.setStyle(Paint.Style.FILL);
+
 				bigtextpaint.setTextSize(bigtextsize);
 				bigtextpaint.setColor(Color.WHITE);
 				bigtextpaint.setTypeface(Typeface.DEFAULT);
-				
+
 			}
-			linepaint.setStrokeWidth(2.5f*x_dpmm);
+			linepaint.setStrokeWidth(2.5f * x_dpmm);
 			linepaint.setColor(Color.RED);
 		}
 
-		boolean northup=false;
-		if (gui!=null)
-			northup=gui.getnorthup();
+		boolean northup = false;
+		if (gui != null)
+			northup = gui.getnorthup();
 		if (!isDragging && !northup) {
 			arrowpaint.setColor(Color.BLACK);
 			Path path = new Path();
-			path.moveTo((int) arrow.x - 10, (int) arrow.y + 2);
-			path.lineTo((int) arrow.x + 10, (int) arrow.y + 2);
-			path.lineTo((int) arrow.x, (int) arrow.y - 15);
+			path.moveTo((int) arrow.x - 1.5f*x_dpmm, (int) arrow.y + 0.3f*x_dpmm);
+			path.lineTo((int) arrow.x + 1.5f*x_dpmm, (int) arrow.y + 0.3f*x_dpmm);
+			path.lineTo((int) arrow.x, (int) arrow.y - 2.25f*x_dpmm);
 			path.close();
 			canvas.drawPath(path, arrowpaint);
 			int fivenm = (int) Project.approx_scale(mypos.y, zoomlevel, 5);
@@ -708,9 +760,9 @@ public class MapDrawer {
 					(int) arrow.y, arrowpaint);
 			arrowpaint.setColor(Color.WHITE);
 			path = new Path();
-			path.moveTo((int) arrow.x - 7, (int) arrow.y);
-			path.lineTo((int) arrow.x + 7, (int) arrow.y);
-			path.lineTo((int) arrow.x, (int) arrow.y - 12);
+			path.moveTo((int) arrow.x - 1.0f*x_dpmm, (int) arrow.y);
+			path.lineTo((int) arrow.x + 1.0f*x_dpmm, (int) arrow.y);
+			path.lineTo((int) arrow.x, (int) arrow.y - 1.5f*x_dpmm);
 			path.close();
 			canvas.drawPath(path, arrowpaint);
 			canvas.drawRect((int) arrow.x, (int) arrow.y - fivenm + 1,
@@ -777,9 +829,8 @@ public class MapDrawer {
 		if (we != null) {
 			float tsy = bigtextpaint.getTextSize() + 2;
 			final int maxlines = getNumInfoLines(bottom - top);
-			Vector point=we.getPoint();
-			if (point!=null)
-			{
+			Vector point = we.getPoint();
+			if (point != null) {
 				Merc me = Project.merc2merc(new Merc(point), 13, zoomlevel);
 				if (me != null) {
 					// float
@@ -788,57 +839,57 @@ public class MapDrawer {
 					// py=(float)rot_y(p.getx()-center.x,p.gety()-center.y)+oy;
 					Vector p = tf.merc2screen(me);
 					thinlinepaint.setARGB(180, 40, 40, 255);
-					thinlinepaint.setStrokeWidth(1*x_dpmm);
-					canvas.drawCircle((float) p.x, (float) p.y, 2*x_dpmm,
+					thinlinepaint.setStrokeWidth(1 * x_dpmm);
+					canvas.drawCircle((float) p.x, (float) p.y, 2 * x_dpmm,
 							thinlinepaint);
-					thinlinepaint.setStrokeWidth(0.7f*x_dpmm);
-					canvas.drawLine((float) p.x+1.7f*x_dpmm, (float) p.y,(float) p.x+2.5f*x_dpmm, (float) p.y,thinlinepaint);
-					canvas.drawLine((float) p.x-1.7f*x_dpmm, (float) p.y,(float) p.x-2.5f*x_dpmm, (float) p.y,thinlinepaint);
-					canvas.drawLine((float) p.x, (float) p.y+1.7f*x_dpmm,(float) p.x, (float) p.y+2.5f*x_dpmm,thinlinepaint);
-					canvas.drawLine((float) p.x, (float) p.y-1.7f*x_dpmm,(float) p.x, (float) p.y-2.5f*x_dpmm,thinlinepaint);
-					thinlinepaint.setStrokeWidth(1f*x_dpmm);
+					thinlinepaint.setStrokeWidth(0.7f * x_dpmm);
+					canvas.drawLine((float) p.x + 1.7f * x_dpmm, (float) p.y,
+							(float) p.x + 2.5f * x_dpmm, (float) p.y,
+							thinlinepaint);
+					canvas.drawLine((float) p.x - 1.7f * x_dpmm, (float) p.y,
+							(float) p.x - 2.5f * x_dpmm, (float) p.y,
+							thinlinepaint);
+					canvas.drawLine((float) p.x, (float) p.y + 1.7f * x_dpmm,
+							(float) p.x, (float) p.y + 2.5f * x_dpmm,
+							thinlinepaint);
+					canvas.drawLine((float) p.x, (float) p.y - 1.7f * x_dpmm,
+							(float) p.x, (float) p.y - 2.5f * x_dpmm,
+							thinlinepaint);
+					thinlinepaint.setStrokeWidth(1f * x_dpmm);
 				}
 			}
 
 			thinlinepaint.setColor(Color.WHITE);
 			float y = bottom - 3.0f * y_dpmm;//
 			bigtextpaint.setColor(Color.WHITE);
-			//long when = we.getWhen();
-			double dist=we.getDistance();
-			boolean skipped=we.getSkipped();
-			boolean empty=we.getEmpty();
+			// long when = we.getWhen();
+			double dist = we.getDistance();
+			boolean skipped = we.getSkipped();
+			boolean empty = we.getEmpty();
 			String whenstr;
 			String whentempl;
 			// Log.i("fplan","When: "+when);
-			Date passed=we.getPassed();
-			Date eta2=we.getETA2();
-			if (eta2!=null)
-			{
-				int when=(int)((eta2.getTime()-new Date().getTime())/1000l);
-				whenstr = fmttime((int)when);
-				//whenstr="T:"+formatter.format(eta2)+"Z";
-				whentempl="T:WW:WW ";
-			}
-			else
-			{
-				if (empty)
-				{
-					whenstr="";
-					whentempl="";					
-				}
-				else if (skipped)
-				{
-					whenstr="Skipped";
-					whentempl=whenstr;
-				}
-				else
-				{
-					if (passed!=null)
-						whenstr="Passed "+formatter.format(passed)+"Z";
+			Date passed = we.getPassed();
+			Date eta2 = we.getETA2();
+			if (eta2 != null) {
+				int when = (int) ((eta2.getTime() - new Date().getTime()) / 1000l);
+				whenstr = fmttime((int) when);
+				// whenstr="T:"+formatter.format(eta2)+"Z";
+				whentempl = "T:WW:WW ";
+			} else {
+				if (empty) {
+					whenstr = "";
+					whentempl = "";
+				} else if (skipped) {
+					whenstr = "Skipped";
+					whentempl = whenstr;
+				} else {
+					if (passed != null)
+						whenstr = "Passed " + formatter.format(passed) + "Z";
 					else
-						whenstr="--:--";
-					whentempl="Passed WW:WWZ";
-				}			
+						whenstr = "--:--";
+					whentempl = "Passed WW:WWZ";
+				}
 			}
 
 			/*
@@ -847,18 +898,18 @@ public class MapDrawer {
 			 * distance, just store position. #Let moving map calculate time,
 			 * based on distance (or even based on position?)
 			 */
-			boolean extrainfo_available=we.getHasExtraInfo();
-			
+			boolean extrainfo_available = we.getHasExtraInfo();
+
 			String[] details;
 			if (extrainfo)
 				details = we.getExtraDetails();
 			else
 				details = we.getDetails();
-			
-			final Place[] extended_available=we.getHasExtendedInfo();
+
+			final Place[] extended_available = we.getHasExtendedInfo();
 
 			int actuallines = details.length;
-			//Log.i("fplan", "details.length 1 : " + details.length);
+			// Log.i("fplan", "details.length 1 : " + details.length);
 			if (extrainfolineoffset >= actuallines)
 				extrainfolineoffset = actuallines - 1;
 			if (extrainfolineoffset < 0)
@@ -873,20 +924,21 @@ public class MapDrawer {
 			int totpage = 1 + details.length / maxlines;
 			actuallines += 1;
 			int y1 = (int) (y - tsy * (actuallines - 1)) - 2;
-			
-			float topy1=y - tsy * actuallines - 4;
-			
-			
-			final Rect tr3 = drawButton(canvas, right-5,topy1-tsy*1.4f, "Close",-1,left,right,false);
-			if (extended_available.length>0)
-			{
-				final Rect tr4 = drawButton(canvas, left+5,topy1-tsy*1.4f, "More",1,left,right,false);
-				
+
+			float topy1 = y - tsy * actuallines - 4;
+
+			final Rect tr3 = drawButton(canvas, right - 5, topy1 - tsy * 1.4f,
+					"Close", -1, left, right, false);
+			if (extended_available.length > 0) {
+				final Rect tr4 = drawButton(canvas, left + 5, topy1 - tsy
+						* 1.4f, "More", 1, left, right, false);
+
 				clickables.add(new GuiSituation.Clickable() {
 					@Override
 					public Rect getRect() {
 						return tr4;
 					}
+
 					@Override
 					public void onClick() {
 						gui.onShowExtended(extended_available);
@@ -898,30 +950,31 @@ public class MapDrawer {
 				public Rect getRect() {
 					return tr3;
 				}
+
 				@Override
 				public void onClick() {
 					gui.onCloseInfoPanel();
 				}
 			});
-			
 
 			RectF r = new RectF(0, topy1, right, bottom);
-			canvas.drawLine(0,topy1,right,topy1,thinlinepaint);
+			canvas.drawLine(0, topy1, right, topy1, thinlinepaint);
 			canvas.drawRect(r, backgroundpaint);
-			if (dist>=0)
-				addTextIfFits(canvas, "1222.2nm", r,
-					String.format("%.1fnm", dist), y1, bigtextpaint);
+			if (dist >= 0)
+				addTextIfFits(canvas, "1222.2nm", "",
+						r, String.format("%.1fnm", dist), "", y1, bigtextpaint, smalltextpaint);
 			// canvas.drawText(String.format("%.1fnm",we.getDistance()),
 			// 2,y1,bigtextpaint);
-			addTextIfFits(canvas, whentempl, r, whenstr, y1, bigtextpaint);
+			addTextIfFits(canvas, whentempl, "", r, whenstr, "", y1, bigtextpaint, smalltextpaint);
 			// canvas.drawText(String.format("T:%s",whenstr),
 			// 70,y1,bigtextpaint);
-			addTextIfFits(canvas, null, r, we.getPointTitle(), y1, bigtextpaint);
+			addTextIfFits(canvas, null, "", r, we.getPointTitle(), "", y1, bigtextpaint, smalltextpaint);
 			// canvas.drawText(we.getTitle(), 140,y1,bigtextpaint);
 			for (int i = 0; i < actuallines - 1; ++i) {
-				/*Log.i("fplan", "Actuallines:" + actuallines + " offset: "
-						+ extrainfolineoffset + " details length:"
-						+ details.length);*/
+				/*
+				 * Log.i("fplan", "Actuallines:" + actuallines + " offset: " +
+				 * extrainfolineoffset + " details length:" + details.length);
+				 */
 				if (extrainfolineoffset + i < details.length)
 					canvas.drawText(details[extrainfolineoffset + i], 2, y1
 							+ tsy + i * tsy, bigtextpaint);
@@ -935,17 +988,19 @@ public class MapDrawer {
 						(int) (bottom - 1.5f * y_dpmm),
 						(int) (0 + 2.8f * x_dpmm),
 						(int) (bottom - 2.3f * y_dpmm), thinlinepaint);
-				
+
 				canvas.drawRect((int) (0.2f * x_dpmm),
 						(int) (bottom - 2.8f * y_dpmm), (int) (4.8f * x_dpmm),
 						(int) (bottom - 0.2f * y_dpmm), thinlinepaint);
 			}
-			final Rect leftrect=new Rect(left,(int)topy1,(right-left)/4,bottom);
+			final Rect leftrect = new Rect(left, (int) topy1,
+					(right - left) / 4, bottom);
 			clickables.add(new GuiSituation.Clickable() {
 				@Override
 				public Rect getRect() {
 					return leftrect;
 				}
+
 				@Override
 				public void onClick() {
 					gui.onInfoPanelBrowse(-1);
@@ -966,25 +1021,26 @@ public class MapDrawer {
 						(int) (4.8f * x_dpmm + off),
 						(int) (bottom - 0.2f * y_dpmm), thinlinepaint);
 			}
-			final Rect rightrect=new Rect(right-(right-left)/4,(int)topy1,right,bottom);
+			final Rect rightrect = new Rect(right - (right - left) / 4,
+					(int) topy1, right, bottom);
 			clickables.add(new GuiSituation.Clickable() {
 				@Override
 				public Rect getRect() {
 					return rightrect;
 				}
+
 				@Override
 				public void onClick() {
 					gui.onInfoPanelBrowse(+1);
 				}
 			});
-			
+
 			{
 				canvas.drawRect((int) (5.2f * x_dpmm),
 						(int) (bottom - 2.8f * y_dpmm),
 						(int) (-0.2f * x_dpmm + off),
 						(int) (bottom - 0.2f * y_dpmm), thinlinepaint);
-				if (extrainfo_available)
-				{
+				if (extrainfo_available) {
 					String t;
 					if (extrainfo) {
 						if (totpage > 1)
@@ -996,99 +1052,100 @@ public class MapDrawer {
 					}
 					Rect tbounds = new Rect();
 					textpaint.getTextBounds(t, 0, t.length(), tbounds);
-					canvas.drawText(t, (right - left) * 0.5f - tbounds.width() / 2,
-							(int) (bottom - 1.0 * y_dpmm), textpaint);
+					canvas.drawText(t, (right - left) * 0.5f - tbounds.width()
+							/ 2, (int) (bottom - 1.0 * y_dpmm), textpaint);
 				}
-				int w=(right-left)/4;
-				final Rect midrect=new Rect(left+w,(int)topy1,right-w,bottom);
+				int w = (right - left) / 4;
+				final Rect midrect = new Rect(left + w, (int) topy1, right - w,
+						bottom);
 				clickables.add(new GuiSituation.Clickable() {
 					@Override
 					public Rect getRect() {
 						return midrect;
 					}
+
 					@Override
 					public void onClick() {
 						gui.cycleextrainfo();
 					}
 				});
-			
+
 			}
 			// canvas.drawText(String.format("%03.0f°",lastpos.getBearing()),
 			// 50, y, bigtextpaint);
 			// canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),150,y,textpaint);
 
-		}
-		else
-		{
-			float y = bottom-(bigtextpaint.getTextSize()*1.5f + 2);
-			
-			final Rect tr3 = drawButton(canvas, right,y, "Wpts",-1,left,right,false);
-			if (tr3!=null)
-			{
+		} else {
+			float y = bottom - (bigtextpaint.getTextSize() * 1.5f + 2);
+
+			final Rect tr3 = drawButton(canvas, right, y, "Wpts", -1, left,
+					right, false);
+			if (tr3 != null) {
 				clickables.add(new GuiSituation.Clickable() {
 					@Override
 					public Rect getRect() {
 						return tr3;
 					}
+
 					@Override
 					public void onClick() {
 						gui.onShowWaypoints();
 					}
 				});
-				int rightedge=tr3.left-5;
-				if (zoom_in_text==null)
-				{
-					Rect tr1 = drawButton(canvas, left,y, "Zoom +",1,left,rightedge,true);
-					
-					int edge = (tr1!=null) ? tr1.right+5 : right;
-					Rect tr2 = drawButton(canvas, edge,y, "Zoom -",1,edge,rightedge,true);
-					if (tr2==null)
-					{
-						tr1 = drawButton(canvas, left,y, "+",1,left,rightedge,true);
-						edge = tr1.right+5;
-						tr2 = drawButton(canvas, edge,y, "-",1,edge,rightedge,true);
-						if (tr2!=null)
-						{
-							zoom_buttons=true;
-							zoom_in_text="+";
-							zoom_out_text="-";
+				int rightedge = tr3.left - 5;
+				if (zoom_in_text == null) {
+					Rect tr1 = drawButton(canvas, left, y, "Zoom +", 1, left,
+							rightedge, true);
+
+					int edge = (tr1 != null) ? tr1.right + 5 : right;
+					Rect tr2 = drawButton(canvas, edge, y, "Zoom -", 1, edge,
+							rightedge, true);
+					if (tr2 == null) {
+						tr1 = drawButton(canvas, left, y, "+", 1, left,
+								rightedge, true);
+						edge = tr1.right + 5;
+						tr2 = drawButton(canvas, edge, y, "-", 1, edge,
+								rightedge, true);
+						if (tr2 != null) {
+							zoom_buttons = true;
+							zoom_in_text = "+";
+							zoom_out_text = "-";
+						} else {
+							zoom_buttons = false;
+							zoom_in_text = "none";
+							zoom_out_text = "none";
 						}
-						else
-						{
-							zoom_buttons=false;
-							zoom_in_text="none";
-							zoom_out_text="none";						
-						}
+					} else {
+						zoom_buttons = true;
+						zoom_in_text = "Zoom +";
+						zoom_out_text = "Zoom -";
 					}
-					else
-					{
-						zoom_buttons=true;
-						zoom_in_text="Zoom +";
-						zoom_out_text="Zoom -";					
-					}
-					
+
 				}
-				if (zoom_buttons)
-				{
-					final Rect tr1 = drawButton(canvas, left,y, zoom_in_text,1,left,rightedge,false);
+				if (zoom_buttons) {
+					final Rect tr1 = drawButton(canvas, left, y, zoom_in_text,
+							1, left, rightedge, false);
 					clickables.add(new GuiSituation.Clickable() {
 						@Override
 						public Rect getRect() {
 							return tr1;
 						}
+
 						@Override
 						public void onClick() {
 							gui.changeZoom(+1);
 						}
 					});
-					int edge = tr1.right+5;
-		
-					final Rect tr2 = drawButton(canvas, edge,y, zoom_out_text,1,edge,rightedge,false);
+					int edge = tr1.right + 5;
+
+					final Rect tr2 = drawButton(canvas, edge, y, zoom_out_text,
+							1, edge, rightedge, false);
 					clickables.add(new GuiSituation.Clickable() {
 						@Override
 						public Rect getRect() {
 							return tr2;
 						}
+
 						@Override
 						public void onClick() {
 							gui.changeZoom(-1);
@@ -1099,51 +1156,101 @@ public class MapDrawer {
 		}
 
 		linepaint.setColor(Color.RED);
-		float y = hugetextpaint.getTextSize()*0.85f;
+		float y = hugetextpaint.getTextSize() * 0.85f;
 		bigtextpaint.setColor(Color.WHITE);
 		RectF r = new RectF(0, 0, right, y + 4);
 		canvas.drawRect(r, blackgroundpaint);
-		addTextIfFits(canvas, "222°.", r,
-				String.format("%03.0f°", lastpos.getBearing()), y, hugetextpaint);
-		addTextIfFits(canvas, "222kti", r,
-				String.format("%.0fkt", lastpos.getSpeed() * 3.6 / 1.852), y,
-				hugetextpaint);
+		addTextIfFits(canvas, "hdg:", "223-",r, "hdg:",String.format("%03.0f°", lastpos.getBearing()),
+				y, smalltextpaint,hugetextpaint);
+
+		addTextIfFits(canvas, "gs:","222", r, "gs:",String.format("%.0f", gs_kt),
+				y, smalltextpaint,hugetextpaint);
 
 		// canvas.drawText(String.format("%03.0f°",lastpos.getBearing()), 40, y,
 		// bigtextpaint);
 		// canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),100,y,bigtextpaint);
 		int td = tripstate.get_time_to_destination();
 		// canvas.drawText(fmttime(td),150,y,bigtextpaint);
-		addTextIfFits(canvas, "2222:22", r, MapDrawer.fmttime(td), y,
-				bigtextpaint);
+		String agnd_txt="--";
+		if (agnd>-9999)
+			agnd_txt=""+agnd;
+		addTextIfFits(canvas, "gnd:", "2000", r, "gnd:",agnd_txt,  y, smalltextpaint,bigtextpaint);
+		
 		if (havefix) // if significantly after 1970-0-01
 		{
-			Date d = new Date(lastpos.getTime());
-			// canvas.drawText("FIX:"+formatter.format(d)+"Z",220,y,bigtextpaint);
-			if (!addTextIfFits(canvas, "FIX:2222(11/12)", r,
-					"FIX" + formatter2.format(d) +"("+gps_sat_cnt+"/"+gps_sat_fix_cnt+")", y, bigtextpaint))
-				addTextIfFits(canvas, "FIX:2222", r,
-					"FIX" + formatter2.format(d) , y, bigtextpaint);
-			
+			addTextIfFits(canvas, "GPS:","NOK100%", 
+					r, "GPS:",String.format("OK%d%%",gps_sat_fix_cnt), y, smalltextpaint, bigtextpaint);
 		} else {
-			// canvas.drawText("NOFIX",220,y,bigtextpaint);
-			if (!addTextIfFits(canvas, "FIX:2222(11/12)", r, "NOFIX("+gps_sat_cnt+"/"+gps_sat_fix_cnt+")", y, bigtextpaint))
-				addTextIfFits(canvas, "FIX:2222", r, "NOFIX", y, bigtextpaint);
+			addTextIfFits(canvas, "GPS:","NOK100%", 
+					r, "GPS:",String.format("NOK%d%%",gps_sat_fix_cnt), y, smalltextpaint, bigtextpaint);
 		}
-		// /canvas.drawText(String.format("Z%d",zoomlevel), 0,y,bigtextpaint);
-		addTextIfFits(canvas, "Z13", r, String.format("Z%d", zoomlevel), y,
-				bigtextpaint);
-
 		
-		int airspace_button_space_left=left;
-		int airspace_button_space_right=right;
+		// /canvas.drawText(String.format("Z%d",zoomlevel), 0,y,bigtextpaint);
+		if (DataDownloader.debugMode())
+			addTextIfFits(canvas, "Z13", "", r, String.format("Z%d", zoomlevel),
+				"", y, bigtextpaint, smalltextpaint);
+		
+		if (havefix && !isDragging)
+		{
+			try
+			{
+				if (tripstate!=null) 
+				{
+					Float hdg=tripstate.getBug();
+					if (hdg!=null)
+					{
+						canvas.save();
+						float hdgdelta=(float)(hdg-lastpos.getBearing());
+						if (hdgdelta<-180) hdgdelta+=360;
+						if (hdgdelta>180) hdgdelta-=360;
+						hdgdelta/=30;
+						arrowpaint.setColor(Color.WHITE);
+						Vector bug;
+						if (hdgdelta>1)
+						{
+							bug=new Vector(right,y+1.25f*x_dpmm);
+							canvas.rotate(90,(float)bug.x,(float)bug.y);
+						}
+						else if (hdgdelta<-1)
+						{
+							bug=new Vector(0,y+1.25f*x_dpmm);
+							canvas.rotate(270,(float)bug.x,(float)bug.y);
+						}
+						else
+						{
+							bug=new Vector(right/2+(right/2)*hdgdelta,y);
+						}
+						
+						Path path = new Path();
+						path.moveTo((int) bug.x - 1.2f*x_dpmm, (int) bug.y + 2.5f*x_dpmm);
+						path.lineTo((int) bug.x + 1.2f*x_dpmm, (int) bug.y + 2.5f*x_dpmm);
+						path.lineTo((int) bug.x, (int) bug.y);
+						path.close();
+						
+						canvas.drawPath(path, arrowpaint);
+						arrowpaint.setColor(Color.BLACK);
+						canvas.restore();
+						canvas.drawLine((float)0.5f*right, (float)bug.y, 0.5f*right, (float)bug.y+2.5f*x_dpmm, arrowpaint);
+					}
+				}
+			}catch(Throwable e)
+			{
+				e.printStackTrace();
+			}
+			
+		}
+		
+
+		int airspace_button_space_left = left;
+		int airspace_button_space_right = right;
 		if (isDragging) {
 			float h = bigtextpaint.getTextSize();
-			float topbutton_y = y+h;
+			float topbutton_y = y + h;
 
 			String text = "Center";
-			final Rect tr1 = drawButton(canvas, right,topbutton_y, text,-1,0,right,false);
-			airspace_button_space_right=tr1.left-4;
+			final Rect tr1 = drawButton(canvas, right, topbutton_y, text, -1,
+					0, right, false);
+			airspace_button_space_right = tr1.left - 4;
 			clickables.add(new GuiSituation.Clickable() {
 				@Override
 				public Rect getRect() {
@@ -1157,18 +1264,18 @@ public class MapDrawer {
 			});
 			int edge = tr1.left;
 
-			if (gui!=null && gui.getnorthup()==false)
-			{
+			if (gui != null && gui.getnorthup() == false) {
 				text = "Set North Up";
-				final Rect tr2 = drawButton(canvas, 0,topbutton_y, text,1,0,edge,false);
-				if (tr2!=null) {				
-					airspace_button_space_left=tr2.right+4;
+				final Rect tr2 = drawButton(canvas, 0, topbutton_y, text, 1, 0,
+						edge, false);
+				if (tr2 != null) {
+					airspace_button_space_left = tr2.right + 4;
 					clickables.add(new GuiSituation.Clickable() {
 						@Override
 						public Rect getRect() {
 							return tr2;
 						}
-	
+
 						@Override
 						public void onClick() {
 							gui.onNorthUp();
@@ -1180,9 +1287,10 @@ public class MapDrawer {
 		} else {
 			if (download_status != null && !download_status.equals("")) {
 				float y2 = (y + bigtextpaint.getTextSize() * 1.1f);
-				
-				String text = "Load:"+download_status;
-				final Rect tr1 = drawButton(canvas, 0,y2, text,1,0,Integer.MAX_VALUE,false);
+
+				String text = "Load:" + download_status;
+				final Rect tr1 = drawButton(canvas, 0, y2, text, 1, 0,
+						Integer.MAX_VALUE, false);
 				clickables.add(new GuiSituation.Clickable() {
 					@Override
 					public Rect getRect() {
@@ -1191,17 +1299,20 @@ public class MapDrawer {
 
 					@Override
 					public void onClick() {
-						Log.i("fplan","Cancel download");
+						Log.i("fplan", "Cancel download");
 						gui.cancelMapDownload();
 					}
 				});
-				
+
 			}
 		}
-		//Log.i("fplan","prox warning coords " +airspace_button_space_left+".."+airspace_button_space_right);
-		if (prox_warning!=null && airspace_button_space_right>airspace_button_space_left)
-		{
-			final Rect tr1 = drawAirspaceAhead(canvas, (y*3)/2, prox_warning, airspace_button_space_left,airspace_button_space_right);
+		// Log.i("fplan","prox warning coords "
+		// +airspace_button_space_left+".."+airspace_button_space_right);
+		if (prox_warning != null
+				&& airspace_button_space_right > airspace_button_space_left) {
+			final Rect tr1 = drawAirspaceAhead(canvas, (y * 3) / 2,
+					prox_warning, airspace_button_space_left,
+					airspace_button_space_right);
 			clickables.add(new GuiSituation.Clickable() {
 				@Override
 				public Rect getRect() {
@@ -1213,117 +1324,123 @@ public class MapDrawer {
 					gui.showAirspaces();
 				}
 			});
-			
-				
+
 		}
 
-		long aft=SystemClock.elapsedRealtime();
-		
-		if (cached.size()>120)
-		{
-			int was=cached.size();
-			for(Entry<CacheKey, Bitmap> e:cached.entrySet())
-			{
-				if (!used.containsKey(e.getKey()))
-				{
+		long aft = SystemClock.elapsedRealtime();
+
+		if (cached.size() > 120) {
+			int was = cached.size();
+			for (Entry<CacheKey, Bitmap> e : cached.entrySet()) {
+				if (!used.containsKey(e.getKey())) {
 					e.getValue().recycle();
 				}
-			}		
-			cached=used;
-			//Log.i("fplan.fps","Clear cache with "+was+" items new size: "+cached.size());			
+			}
+			cached = used;
+			// Log.i("fplan.fps","Clear cache with "+was+" items new size: "+cached.size());
 		}
-		used=new HashMap<MapDrawer.CacheKey, Bitmap>();
-		//Log.i("fplan.fps","Time to draw: "+(aft-bef)+"ms");
+		used = new HashMap<MapDrawer.CacheKey, Bitmap>();
+		// Log.i("fplan.fps","Time to draw: "+(aft-bef)+"ms");
 		return res;
 	}
 
-	private Rect drawButton(Canvas canvas, float x,float topbutton_y, String text,int layoutdir, int x1lim, int x2lim,boolean measureOnly) {
+	private void drawBigText(Canvas canvas, String t, float tx, float ty,Paint paint) {
+		Path path=new Path();
+		paint.getTextPath(t, 0, t.length(), tx, ty, path);
+		path.close();
+		canvas.drawPath(path, paint);
+	}
+
+	private Rect drawButton(Canvas canvas, float x, float topbutton_y,
+			String text, int layoutdir, int x1lim, int x2lim,
+			boolean measureOnly) {
 		float h2 = bigtextpaint.getTextSize();
 		thinlinepaint.setColor(Color.WHITE);
 		final Rect tr1 = new Rect();
 		bigtextpaint.getTextBounds(text, 0, text.length(), tr1);
 		tr1.bottom = (int) (tr1.top + h2);
-		
+
 		int xpos;
-		if (layoutdir<0)
-			xpos=(int) (x - tr1.width() - h2);
-		else				
-			xpos=(int) (x+h2);
+		if (layoutdir < 0)
+			xpos = (int) (x - tr1.width() - h2);
+		else
+			xpos = (int) (x + h2);
 		tr1.offsetTo(xpos, (int) topbutton_y);
 		MapDrawer.grow(tr1, (int) (0.4f * h2));
-		if (tr1.left<x1lim || tr1.right>x2lim)
+		if (tr1.left < x1lim || tr1.right > x2lim)
 			return null;
-		if (!measureOnly)
-		{
+		if (!measureOnly) {
 			canvas.drawRect(tr1, backgroundpaint);
-			thinlinepaint.setStrokeWidth(0.25f*x_dpmm);
+			thinlinepaint.setStrokeWidth(0.25f * x_dpmm);
 			canvas.drawRect(tr1, thinlinepaint);
-	
+
 			canvas.drawText(text, tr1.left + 0.4f * h2, tr1.bottom - 0.4f * h2,
 					bigtextpaint);
 		}
 		return tr1;
 	}
-	
-	private Rect drawAirspaceAhead(Canvas canvas, float y, String[] texts2,int x1lim, int x2lim) {
-		float x=x1lim;
-		Rect totrect=new Rect();
-	
-		String[] texts=new String[texts2.length+1];
-		texts[0]="Airspace Ahead";
-		for(int i=0;i<texts2.length;++i)
-			texts[i+1]=texts2[i];
-		
-		int[] textsizes=new int[texts.length];
-		Rect[] bounds=new Rect[texts.length];
-		int maxx=0;
-		int sy=0;
-		for(int i=0;i<texts.length;++i)
-		{
-			if (i==0)
-				textsizes[i]=(int)(2.8f*y_dpmm);
-			else if (i==1)
-				textsizes[i]=(int)(3.3f*y_dpmm);
+
+	private Rect drawAirspaceAhead(Canvas canvas, float y, String[] texts2,
+			int x1lim, int x2lim) {
+		float x = x1lim;
+		Rect totrect = new Rect();
+
+		String[] texts = new String[texts2.length + 1];
+		texts[0] = "Airspace Ahead";
+		for (int i = 0; i < texts2.length; ++i)
+			texts[i + 1] = texts2[i];
+
+		int[] textsizes = new int[texts.length];
+		Rect[] bounds = new Rect[texts.length];
+		int maxx = 0;
+		int sy = 0;
+		for (int i = 0; i < texts.length; ++i) {
+			if (i == 0)
+				textsizes[i] = (int) (2.8f * y_dpmm);
+			else if (i == 1)
+				textsizes[i] = (int) (3.3f * y_dpmm);
 			else
-				textsizes[i]=(int)(3.5f*y_dpmm);
-			
-			if (textsizes[i]<y_dpmm)
-				textsizes[i]=(int)y_dpmm;
-			bounds[i]=new Rect();
-			for(;textsizes[i]>10;textsizes[i]-=(textsizes[i]/8+1))
-			{
+				textsizes[i] = (int) (3.5f * y_dpmm);
+
+			if (textsizes[i] < y_dpmm)
+				textsizes[i] = (int) y_dpmm;
+			bounds[i] = new Rect();
+			for (; textsizes[i] > 10; textsizes[i] -= (textsizes[i] / 8 + 1)) {
 				ahtextpaint.setTextSize(textsizes[i]);
-				ahtextpaint.getTextBounds(texts[i], 0, texts[i].length(), bounds[i]);
-				if (bounds[i].width()<(x2lim-x1lim))
+				ahtextpaint.getTextBounds(texts[i], 0, texts[i].length(),
+						bounds[i]);
+				if (bounds[i].width() < (x2lim - x1lim))
 					break;
 			}
-			if (bounds[i].width()>maxx)
-				maxx=bounds[i].width();
-			sy+=bounds[i].height()+4;
+			if (bounds[i].width() > maxx)
+				maxx = bounds[i].width();
+			sy += bounds[i].height() + 4;
 		}
-		totrect.left=(int)x;
-		totrect.top=(int)y;
-		totrect.right=(int)x+maxx+25;		
-		totrect.bottom=(int)(y+sy);
-		totrect.offset(((x2lim-x1lim)-totrect.width())/2,0);
-		if (totrect.right>x2lim) totrect.right=x2lim;
-		if (totrect.left<x1lim) totrect.left=x1lim;
-				
+		totrect.left = (int) x;
+		totrect.top = (int) y;
+		totrect.right = (int) x + maxx + 25;
+		totrect.bottom = (int) (y + sy);
+		totrect.offset(((x2lim - x1lim) - totrect.width()) / 2, 0);
+		if (totrect.right > x2lim)
+			totrect.right = x2lim;
+		if (totrect.left < x1lim)
+			totrect.left = x1lim;
+
 		canvas.save();
 		canvas.drawRect(totrect, backgroundpaint);
 		canvas.drawRect(totrect, thinlinepaint);
-		
-		canvas.clipRect(totrect);		
-		for(int i=0;i<texts.length;++i)
-		{
+
+		canvas.clipRect(totrect);
+		for (int i = 0; i < texts.length; ++i) {
 			ahtextpaint.setTextSize(textsizes[i]);
-			canvas.drawText(texts[i], totrect.left-bounds[i].left+1+totrect.width()/2-bounds[i].width()/2, y-bounds[i].top+1, ahtextpaint);
-			y+=bounds[i].height()+2;
+			canvas.drawText(texts[i], totrect.left - bounds[i].left + 1
+					+ totrect.width() / 2 - bounds[i].width() / 2, y
+					- bounds[i].top + 1, ahtextpaint);
+			y += bounds[i].height() + 2;
 		}
 		canvas.restore();
 		return totrect;
 	}
-	
 
 	public int getNumInfoLines(int ysize) {
 		float tsy = bigtextpaint.getTextSize() + 2;
@@ -1331,13 +1448,13 @@ public class MapDrawer {
 		if (maxlines <= 1)
 			throw new RuntimeException(
 					"The screen is too small for this program");
-		//Log.i("fplan", "numinfolines:" + maxlines);
+		// Log.i("fplan", "numinfolines:" + maxlines);
 		return maxlines;
 	}
 
 	private boolean tileOnScreen(float cx, float cy, Transform tf) {
 		float maxdiag = 363;
-		if (left!=0 || top!=0)
+		if (left != 0 || top != 0)
 			return false;
 		if (cx + maxdiag < 0)
 			return false;
@@ -1352,18 +1469,18 @@ public class MapDrawer {
 		Vector v = new Vector();
 		int sidex = 0;
 		int sidey = 0;
-		Vector[] tilecorners=new Vector[4];
+		Vector[] tilecorners = new Vector[4];
 		for (int j = 0; j < 2; ++j) {
 			for (int i = 0; i < 2; ++i) {
 				v.x = 256 * i;
-				v.y = 256 * j;				
-				Vector r = v.rot(-tf.hdgrad);			
+				v.y = 256 * j;
+				Vector r = v.rot(-tf.hdgrad);
 				r.x += base.x;
 				r.y += base.y;
-				int idx=i;
-				if (j==1)
-					idx=3-i;
-				tilecorners[idx]=r.copy();
+				int idx = i;
+				if (j == 1)
+					idx = 3 - i;
+				tilecorners[idx] = r.copy();
 				int cursidex = 0;
 				int cursidey = 0;
 				if (r.x < 0)
@@ -1375,7 +1492,7 @@ public class MapDrawer {
 				if (r.y > bottom)
 					cursidey = 1;
 				if (cursidex == 0 && cursidey == 0)
-					return true; //corner is actually on screen
+					return true; // corner is actually on screen
 				if (i == 0 && j == 0) {
 					sidex = cursidex;
 					sidey = cursidey;
@@ -1388,37 +1505,48 @@ public class MapDrawer {
 		}
 		if (sidex != 0 || sidey != 0)
 			return false;
-		//If we get here, the tile is either outside of screen,
-		//or one of its lines is intersecting, but no vertex is on screen.
-		//this means that if the polygon is on the screen, one of
-		//the screen corners has to be in the polygon.
-		//(Since the tile/polygon is known to be smaller than screen)
-		ConvexPolygon tilepol=new ConvexPolygon(tilecorners);
-		
-		if (tilepol.inside(new Vector(0,0))) return true;
-		if (tilepol.inside(new Vector(right,0))) return true;
-		if (tilepol.inside(new Vector(right,bottom))) return true;
-		if (tilepol.inside(new Vector(0,bottom))) return true;
-		
+		// If we get here, the tile is either outside of screen,
+		// or one of its lines is intersecting, but no vertex is on screen.
+		// this means that if the polygon is on the screen, one of
+		// the screen corners has to be in the polygon.
+		// (Since the tile/polygon is known to be smaller than screen)
+		ConvexPolygon tilepol = new ConvexPolygon(tilecorners);
+
+		if (tilepol.inside(new Vector(0, 0)))
+			return true;
+		if (tilepol.inside(new Vector(right, 0)))
+			return true;
+		if (tilepol.inside(new Vector(right, bottom)))
+			return true;
+		if (tilepol.inside(new Vector(0, bottom)))
+			return true;
+
 		return false;
 
 	}
 
-	boolean addTextIfFits(Canvas canvas, String sizetext, RectF r,
-			String realtext, float y, Paint tp) {
+	boolean addTextIfFits(Canvas canvas, String sizetext, String sizetext2,
+			RectF r, String realtext, String realtext2, float y, Paint tp, Paint tp2) {
 		if (sizetext == null) {
+			Rect rect = new Rect();
+			tp.getTextBounds(realtext, 0, realtext.length(), rect);
 			canvas.drawText(realtext, r.left, y, tp);
+			canvas.drawText(realtext2, (float)(r.left+rect.width()), y, tp2);
 			r.left = r.right + 1;
 			return true;
 		} else {
+			Rect rect2 = new Rect();
+			tp2.getTextBounds(sizetext2, 0, sizetext2.length(), rect2);
 			Rect rect = new Rect();
 			tp.getTextBounds(sizetext, 0, sizetext.length(), rect);
-			if (r.left + (rect.right - rect.left) < r.right) {
+			
+			if (r.left + rect.width() + rect2.width() < r.right) {
 				canvas.drawText(realtext, r.left, y, tp);
-				r.left += (rect.right - rect.left) + 1.0f * x_dpmm;
+				canvas.drawText(realtext2, r.left+rect.width()+0.25f*x_dpmm, y, tp2);
+				r.left += (rect.width()+rect2.width()) + 1.0f * x_dpmm;
 				return true;
 			} else {
-				//r.left = r.right + 1; // definitely out of space now!
+				// r.left = r.right + 1; // definitely out of space now!
 				return false;
 			}
 		}

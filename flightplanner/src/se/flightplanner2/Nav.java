@@ -69,7 +69,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	final static int VIEW_RECORDINGS=3;
 	final static int VIEW=4;
 	
-	final static int MENU_DOWNLOAD_TERRAIN=3;
+	final static int MENU_SYNC=3;
 	final static int MENU_FINISH=4;
 	final static int MENU_SETTINGS=5;
 	final static int MENU_VIEW_RECORDINGS=6;
@@ -144,7 +144,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
     }
 	public boolean onCreateOptionsMenu(Menu menu) {
 	    menu.add(0, MENU_LOGIN, 0, "Select Trip");
-	    menu.add(0, MENU_DOWNLOAD_TERRAIN, 0, "Sync");
+	    menu.add(0, MENU_SYNC, 0, "Sync");
 	    menu.add(0, MENU_VIEW_CHARTS, 0, "Airports");
 	    menu.add(0, MENU_FINISH, 0, "Exit");
 	    menu.add(0, MENU_SETTINGS, 0, "Settings");
@@ -179,6 +179,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			final int mapdetail=data.getIntExtra("se.flightplanner2.mapdetail", 0);
 			final boolean northup=data.getBooleanExtra("se.flightplanner2.northup", false);
 			final boolean vibrate=data.getBooleanExtra("se.flightplanner2.vibrate", false);
+			final boolean terrwarn=data.getBooleanExtra("se.flightplanner2.terrwarn", false);
 			//RookieHelper.showmsg(this,"mapdetail now:"+mapdetail);
 			SharedPreferences prefs=getPreferences(MODE_PRIVATE);
 			SharedPreferences.Editor pedit=prefs.edit();			
@@ -187,6 +188,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 			pedit.putInt("mapdetail", mapdetail);
 			pedit.putBoolean("northup", northup);
 			pedit.putBoolean("vibrate", vibrate);
+			pedit.putBoolean("terrwarn", terrwarn);
 			pedit.commit();
 			
 			
@@ -195,7 +197,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 					getPreferences(MODE_PRIVATE).getBoolean("northup", false));
 			if (then!=null && then.equals("loadterrain"))
 			{
-				loadTerrain();
+				sync();
 				return;
 			}
 			else if (then!=null && then.equals("viewrec"))
@@ -229,7 +231,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 				    public void onClick(DialogInterface dialog, int id) {
 				         dialog.dismiss();
 						do_load_trips=true;
-						loadTerrain();			
+						sync();			
 				    }
 				})
 				.setNegativeButton("Select trip", new DialogInterface.OnClickListener() {
@@ -305,7 +307,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 				{
 					Log.i("fplan.gps","Sat: "+sat.getSnr()+" fix: "+sat.usedInFix()+" ");
 					if (sat.usedInFix())						
-						satfixcnt+=1;
+						satfixcnt+=sat.getSnr();
 					satcnt+=1;
 				}
 				map.set_gps_sat_cnt(satcnt,satfixcnt);
@@ -369,9 +371,9 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	    	//showDialog(SETTINGS_DIALOG);
 	    	return true;
 	    }
-    case MENU_DOWNLOAD_TERRAIN:
+    case MENU_SYNC:
     	try {
-    		do_load_terrain();    				        
+    		do_sync();    				        
 		} catch (Exception e) {
 			RookieHelper.showmsg(this,e.toString());
 		}
@@ -469,7 +471,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		AlertDialog diag=builder.create();
 		diag.show();
 	}
-	private void do_load_terrain() {
+	private void do_sync() {
 		if (terraindownloader!=null)
 		{
 			RookieHelper.showmsg(this,"Already in progress!");
@@ -483,7 +485,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		    	startActivityForResult(intent,SETUP_INFO);
 			}
 			else	    			
-				loadTerrain();
+				sync();
 		}
 	}
 	private void viewRecordings() {
@@ -550,6 +552,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		intent.putExtra("se.flightplanner2.mapdetail", mapd);
 		intent.putExtra("se.flightplanner2.northup", getPreferences(MODE_PRIVATE).getBoolean("northup", false));
 		intent.putExtra("se.flightplanner2.vibrate", getPreferences(MODE_PRIVATE).getBoolean("vibrate", false));
+		intent.putExtra("se.flightplanner2.terrwarn", getPreferences(MODE_PRIVATE).getBoolean("terrwarn", false));
 		//RookieHelper.showmsg(this,"Got mapd"+mapd);
 		return intent;
 	}
@@ -566,15 +569,60 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 	}
 
 
-	private void loadTerrain() {
-		String user=getPreferences(MODE_PRIVATE).getString("user","user");
-		String pass=getPreferences(MODE_PRIVATE).getString("password","password");
+	private void sync() {
+		final String user=getPreferences(MODE_PRIVATE).getString("user","user");
+		final String pass=getPreferences(MODE_PRIVATE).getString("password","password");
 		map.enableTerrainMap(false);
-		int detail=getPreferences(MODE_PRIVATE).getInt("mapdetail",0);
+		final int detail=getPreferences(MODE_PRIVATE).getInt("mapdetail",0);
 		
-		terraindownloader=new BackgroundMapDownloader(this,user,pass,detail);
-		Log.i("fplan","Previous airspace: "+airspace);
-		terraindownloader.execute(airspace);
+		
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		Date last=BackgroundMapDownloader.get_last_sync();
+		long now=new Date().getTime();
+		String minago;
+		if (last==null)
+			minago="This is the first time a sync is made. This will download large ammounts of data. Go ahead?";
+		else
+		{
+			long delta=now-last.getTime();
+			if (delta>3600000l*24*60)
+				minago="This is the first time a sync is made in a very long time. This will possibly download large ammounts of data. Go ahead?";
+			else
+			{
+				long minutes=delta/60000l;
+				if (minutes<90)
+					minago="Last sync was "+minutes+" minutes ago. Sync now?";
+				else
+				{
+					long hours=delta/(3600000l);
+					if (hours<36)
+						minago="Last sync was "+hours+" hours ago. Sync now?";
+					else
+					{
+						long days=delta/(3600000l*24l);
+						minago="Last sync was "+days+" days ago. Sync now?";
+					}
+				}
+			}
+		}
+					
+		builder.setMessage(minago)
+		.setCancelable(true)
+		.setPositiveButton("Yes, Sync", new DialogInterface.OnClickListener() {
+		    public void onClick(DialogInterface dialog, int id) {
+		         dialog.dismiss();
+		 		terraindownloader=new BackgroundMapDownloader(Nav.this,user,pass,detail);
+				Log.i("fplan","Previous airspace: "+airspace);
+				terraindownloader.execute(airspace);
+		    }
+		})
+		.setNegativeButton("No, Don't", new DialogInterface.OnClickListener() {
+		    public void onClick(DialogInterface dialog, int id) {
+	         dialog.dismiss();
+		    }
+		});
+		AlertDialog diag=builder.create();
+		diag.show();
 	}
 	/*
 	protected Dialog onCreateDialog(int id)
@@ -662,7 +710,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		requestGpsUpdates();
         
 		map.thisSetContentView(this);
-		map.gps_update(null);
+		map.gps_update(null,false);
 		
 		proxdet=new AirspaceProximityDetector(lookup,5);
 		clearper=new ClearancePersistence();
@@ -718,7 +766,7 @@ public class Nav extends Activity implements LocationListener,BackgroundMapDownl
 		warner.run(location, (getPreferences(MODE_PRIVATE).getBoolean("vibrate", false)) ?  vibrator : null,this);
 		clearper.update(location,lookup);
 		map.proxwarner_update(warner.getWarning());
-		map.gps_update(location);
+		map.gps_update(location,getPreferences(MODE_PRIVATE).getBoolean("terrwarn", false));
 		last_location=location;
 		//RookieHelper.showmsg(this, ""+location.getLatitude()+","+location.getLongitude());
 		//locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500,5, this);

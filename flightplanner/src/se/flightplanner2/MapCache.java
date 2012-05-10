@@ -163,7 +163,7 @@ public class MapCache {
 		{
 			if (l==null || (l.fake && !l.only_fake_available))
 			{
-				Log.i("fplan.adchart","Missing, adding to queryhistory: "+m.getX()+","+m.getY()+" zoom: "+zoomlevel+" curr size: "+mapsize()+" history size: "+queryhistory.size());
+				//Log.i("fplan.adchart","Missing, adding to queryhistory: "+m.getX()+","+m.getY()+" zoom: "+zoomlevel+" curr size: "+mapsize()+" history size: "+queryhistory.size());
 				queryhistory.add(key);
 			}
 		}

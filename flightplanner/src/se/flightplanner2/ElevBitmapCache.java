@@ -18,13 +18,16 @@ import android.graphics.Color;
 import android.graphics.Rect;
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.os.SystemClock;
 import android.util.Log;
+import se.flightplanner2.GlobalGetElev.GetElevation;
+import se.flightplanner2.Project.LatLon;
 import se.flightplanner2.Project.iMerc;
 
-public class ElevBitmapCache {
+public class ElevBitmapCache implements GetElevation {
 	public static interface ClientIf
 	{
-		public void updated(); //Called when background loading of a requested tile has finished.
+		public void updated(boolean fully_updated); //Called when background loading of a requested tile has finished.
 	}
 
 	private ClientIf client;
@@ -47,7 +50,7 @@ public class ElevBitmapCache {
 			{				
 				try{
 					blobs[i]=new Blob(path.getAbsolutePath(),tilesize);
-					Log.i("fplan.terr","Success initializing elev blob zoomlevel "+i);
+					//Log.i("fplan.terr","Success initializing elev blob zoomlevel "+i);
 				}
 				catch(Throwable e)
 				{
@@ -57,7 +60,7 @@ public class ElevBitmapCache {
 			}				
 			else			
 			{
-				Log.i("fplan.terr","Couldn't load zoomlevel: "+i+" path "+path+" doesn't exist");				
+				//Log.i("fplan.terr","Couldn't load zoomlevel: "+i+" path "+path+" doesn't exist");				
 			}
 		}
 		cur_elev=0;
@@ -93,13 +96,13 @@ public class ElevBitmapCache {
 		{
 			BMResult bmr=new BMResult(); 
 			bmr.bm=query(upperleft);
-			bmr.r=new Rect(0,0,256,256);			
+			bmr.r=new Rect(0,0,tilesize,tilesize);			
 			return bmr;
 		}
 		if (orig_zoomlevel<zoomlevel)
 			return null; //unexpected
 		int gap=orig_zoomlevel-zoomlevel;
-		int ts=256>>gap;
+		int ts=tilesize>>gap;
 		iMerc in_parent_ref=Project.imerc2imerc(upperleft,orig_zoomlevel,zoomlevel);
 		int parent_corner_x=in_parent_ref.getX()&(~0xff);
 		int parent_corner_y=in_parent_ref.getY()&(~0xff);
@@ -121,22 +124,22 @@ public class ElevBitmapCache {
 		CachedItem res=items.get(m);
 		if (res==null || tooBigElevDiff(res))
 		{
-			Log.i("fplan.terr","No hit for "+m+" or too big elev diff");
+			//Log.i("fplan.terr","No hit for "+m+" or too big elev diff");
 			backlog.add(m);
 			return null;
 		}
 		res.used=true;
-		Log.i("fplan.terr","Found cache hit for "+m+" res: "+res);
+		//Log.i("fplan.terr","Found cache hit for "+m+" res: "+res);
 		if (nearlyTooBigElevDiff(res))
 		{
-			Log.i("fplan.terr","But elev diff is growing big for "+m);
+			//Log.i("fplan.terr","But elev diff is growing big for "+m);
 			backlog.add(m);
 		}
 		return res.bm;
 	}
 	
 	private boolean tooBigElevDiff(CachedItem res) {
-		if (Math.abs(res.elev-cur_elev)>50)
+		if (Math.abs(res.elev-cur_elev)>500)
 			return true;
 		return false;
 	}
@@ -154,8 +157,11 @@ public class ElevBitmapCache {
 		if (stopping) return;
 		if (this.zoomlevel!=zoomlevel)
 		{
-			Log.i("fplan.terr","Zoomlevel change detected, new level: "+zoomlevel);
+			//Log.i("fplan.terr","Zoomlevel change detected, new level: "+zoomlevel);
 			this.zoomlevel=zoomlevel;
+			for(CachedItem item:items.values())
+				if (item.bm!=null)
+					item.bm.recycle();
 			items.clear();
 		}
 		this.cur_elev=cur_elev;
@@ -173,12 +179,14 @@ public class ElevBitmapCache {
 			CachedItem ci=items.get(k);
 			if (ci!=null && !ci.used)
 			{
-				Log.i("fplan.terr","Item unused: "+ci.pos);
+				//Log.i("fplan.terr","Item unused: "+ci.pos);
+				if (ci.bm!=null)
+					ci.bm.recycle();
 				items.remove(k);
 			}
 			else
 			{
-				Log.i("fplan.terr","Item was used: "+ci.pos);				
+				//Log.i("fplan.terr","Item was used: "+ci.pos);				
 			}
 		}
 	}
@@ -200,41 +208,45 @@ public class ElevBitmapCache {
 			
 			try {				
 				int[] output=new int[tilesize*tilesize];
-				byte[] bytes=blob.get_tile(params[0]);
+				byte[] bytes=blob.get_tile(params[0],2*tilesize*tilesize);
+				
 				short[] shorts;
 				if (bytes==null) 
 				{
-					shorts=new short[tilesize*tilesize*2];
+					shorts=new short[tilesize*tilesize];
 					for(int i=0;i<shorts.length;++i)
 						shorts[i]=0x7fff;					
 				}
 				else
 				{
-					Log.i("fplan.err","Bytes for tile: "+bytes.length);
+					if (bytes.length!=tilesize*tilesize*2)
+					{
+						Log.i("fplan.terr","Unexpected size of elev blob read: "+bytes.length);
+						throw new IOException("Bad size of elev blob: "+bytes.length);
+					}					//Log.i("fplan.err","Bytes for tile: "+bytes.length);
 					ByteBuffer buffer = ByteBuffer.wrap( bytes );
 					buffer.order( ByteOrder.BIG_ENDIAN );
 					ShortBuffer shortbuf = buffer.asShortBuffer( );
 					if (!shortbuf.hasArray())
 					{
-						shorts=new short[tilesize*tilesize*2];
-						Log.i("fplan.terr","Could not view bytebuffer directly as short[]");
+						shorts=new short[tilesize*tilesize];
+						//Log.i("fplan.terr","Could not view bytebuffer directly as short[]");
 						shortbuf.get(shorts);
 					}
 					else
 					{
-						Log.i("fplan.terr","Yes, Could view bytebuffer directly as short[]");
+						//Log.i("fplan.terr","Yes, Could view bytebuffer directly as short[]");
 						shorts=shortbuf.array();
 					}
 				}
 				int outi=0;
-				for(int i=1;i<shorts.length;i+=2)
+				for(int i=0;i<shorts.length;i+=1)
 				{
-					short celev1=shorts[i];
-					short celev2dummy=shorts[i-1];
-					if (i<10)
+					short celev1=shorts[i]; 
+					/*if (i<10)
 					{
 						Log.i("fplan.terr","Read alts: "+celev1+" and "+celev2dummy);
-					}
+					}*/					
 					if (celev1<0)
 					{
 						output[outi]=Color.argb(0x80,0xff,0,0);
@@ -255,12 +267,18 @@ public class ElevBitmapCache {
 				ret.pos=params[0];
 				ret.used=true;
 				ret.zoomlevel=zoomlevel;
-				Log.i("fplan.terr","Created a bitmap for: "+ret.pos);				
+				//Log.i("fplan.terr","Created a bitmap for: "+ret.pos);				
 				return ret;
 				
 			} catch (IOException e) {
 				e.printStackTrace();
-				return null;
+				CachedItem ret=new CachedItem();
+				ret.bm=null;
+				ret.elev=this.curelev;
+				ret.pos=params[0];
+				ret.used=true;
+				ret.zoomlevel=zoomlevel;
+				return ret;
 			}						
 		}	
 		private int colorize_margin(int margin) {
@@ -283,13 +301,13 @@ public class ElevBitmapCache {
 		@Override
 		protected void onPostExecute(CachedItem result)
 		{
-			if (result.zoomlevel==ElevBitmapCache.this.zoomlevel)
+			if (result!=null && result.zoomlevel==ElevBitmapCache.this.zoomlevel)
 			{
-				Log.i("fplan.terr","Injecting: "+result);				
+				//Log.i("fplan.terr","Injecting: "+result);				
 				items.put(result.pos, result);
-				if (result.bm!=null)
-					client.updated();
 				backlog.remove(result.pos);
+				if (result.bm!=null)
+					client.updated(backlog.size()==0);
 			}
 			cur_bg=null;
 			schedule_background_tasks();
@@ -298,7 +316,7 @@ public class ElevBitmapCache {
 	private boolean stopping=false;
 	public void scheduleStop()
 	{
-		Log.i("fplan.terr","Stopping");				
+		//Log.i("fplan.terr","Stopping");				
 		stopping=true;
 		cur_bg.cancel(false);
 		cur_bg=null;
@@ -309,30 +327,90 @@ public class ElevBitmapCache {
 	{
 		if (stopping) return;
 		if (cur_bg!=null)
-			Log.i("fplan.terr","Background task already running");				
+			{}//Log.i("fplan.terr","Background task already running");				
 		if (cur_bg==null && backlog.size()>0)
 		{
-			Iterator<iMerc> it=backlog.iterator();
-			if (it.hasNext())
+			iMerc worst=null;
+			int worstdiff=0;
+			for(iMerc bl:backlog)
 			{
-				iMerc cur=it.next();
+				CachedItem item=items.get(bl);
+				if (item==null)
+				{
+					worst=bl;break;
+				}
+				int diff=Math.abs(item.elev-cur_elev);
+				if (worst==null || diff>worstdiff)
+				{
+					worstdiff=diff;
+					worst=bl;
+				}
+			}			
+			if (worst!=null)
+			{
+				iMerc cur=worst;
 				if (zoomlevel>=0 && zoomlevel<blobs.length && blobs[zoomlevel]!=null)
 				{
-					Log.i("fplan.terr","Starting new loader for "+cur);												
+					//Log.i("fplan.terr","Starting new loader for "+cur);												
 					cur_bg=new BackgroundLoader(blobs[zoomlevel],cur_elev,zoomlevel);
 					cur_bg.execute(cur);
 				}
 				else
+										
 				{
-					Log.i("fplan.terr","Zoomlevel out of range: "+zoomlevel);												
+					//Log.i("fplan.terr","Zoomlevel out of range: "+zoomlevel);												
 				}
 			}
 		}
 		else
 		{
-			Log.i("fplan.terr","Nothing can/needs be done. Backlog: "+backlog.size());							
+			//Log.i("fplan.terr","Nothing can/needs be done. Backlog: "+backlog.size());							
 		}
 	}
+	
+	
+	HashMap<iMerc,Short> pt_elev_cache=new HashMap<iMerc,Short>();
 	//setPixels (int[] pixels, int offset, int stride, int x, int y, int width, int height)
+	@Override
+	public short get_elev_ft(LatLon pos) {
+		iMerc m=Project.latlon2imerc(pos, 8);
+		Short cval=pt_elev_cache.get(m);
+		if (cval!=null) return cval;
+		short val=get_elev_ft_uncached(m);
+		cval=val;
+		if (pt_elev_cache.size()>50)
+			pt_elev_cache.clear();
+		pt_elev_cache.put(m,cval);
+		return val;		
+	}	
+	private short get_elev_ft_uncached(iMerc m) {
+		int zoom=8;
+		long bef=SystemClock.elapsedRealtime();
+		int x=m.getX()&(~0xff);
+		int y=m.getY()&(~0xff);
+		int xoff=m.getX()&0xff;
+		int yoff=m.getY()&0xff;
+		if (zoom<0 || zoom>=blobs.length)
+			return Short.MAX_VALUE;
+		
+		Blob blob=blobs[zoom];
+		if (blob==null) return Short.MAX_VALUE;
+		byte[] bs;
+		try {
+			bs = blob.get_data_at(new iMerc(x,y),2*(xoff+256*yoff),2);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return Short.MAX_VALUE;
+		}
+		if (bs==null)
+			return Short.MAX_VALUE;
+		int lsb=bs[1]&0xff;
+		int msb=bs[0]&0xff;
+		short elev=(short)(lsb+(msb<<8));
+		long aft=SystemClock.elapsedRealtime();
+		Log.i("fplan.mmupd","Time to get elev ft: "+(aft-bef)+"ms");
+		return elev;
+	}
 	
 }

@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.TimeZone;
 
 
+import se.flightplanner2.GlobalGetElev.GetElevation;
 import se.flightplanner2.Project.LatLon;
 import android.app.Activity;
 import android.content.Context;
@@ -84,7 +85,7 @@ public class DetailedPlaceActivity extends Activity{
 	private TextView planned_fuel;
 	private TextView planned_gs;
 	private Location last_location;
-	
+	private TextView terr_elev;
 	private TextView planned_field;
 	private TextView waypoint_hdg;
 	private CompassRoseView compass;
@@ -97,6 +98,7 @@ public class DetailedPlaceActivity extends Activity{
 		if (d!=null) d.setText("--");
 		gs.setText("--");
 		hdg.setText("--");
+		if (terr_elev!=null) terr_elev.setText("--");
 		
 		SimpleDateFormat df=new SimpleDateFormat("HH:mm",Locale.US);
 		df.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -117,6 +119,8 @@ public class DetailedPlaceActivity extends Activity{
 	}*/
 	
 	private BearingSpeedCalc bsca=new BearingSpeedCalc();
+	private LatLon last_elev_placepos;
+	private short last_elev;
 	private void update_location(Location location)
 	{
 		if (location==null || place==null)
@@ -226,6 +230,23 @@ public class DetailedPlaceActivity extends Activity{
 			if (waypoint_hdg!=null) waypoint_hdg.setText(String.format("%03.0f°", brg));
 			if (compass!=null)
 				compass.set(hdg, brg);
+			
+			GetElevation gelv=GlobalGetElev.get_elev;
+			if (gelv!=null)
+			{
+				
+				int elev;
+				if (last_elev_placepos!=null && last_elev_placepos.equals(placepos))
+					elev=last_elev;
+				else
+					elev=gelv.get_elev_ft(placepos);
+				terr_elev.setText(""+elev+"ft");
+			}
+			else
+			{
+				terr_elev.setText("--");				
+			}
+			
 		}
 		else
 		{
@@ -294,6 +315,11 @@ public class DetailedPlaceActivity extends Activity{
 		main.setText("Info for "+place.getName());		
 		
 		mytable=(TableLayout)findViewById(R.id.dettable);
+		if (place.hasPrevNext())
+		{
+			addPrevNext(place);			
+		}
+		
 		hdg=addRow("Our Heading");
 		tod=addRow("UTC Time");
 		gs=addRow("Our GS");
@@ -315,11 +341,9 @@ public class DetailedPlaceActivity extends Activity{
 			planned_fuel=addRow("Planned Fuel");
 			planned_gs=addRow("Planned GS");
 		}
-		if (place.hasPrevNext())
-		{
-			addPrevNext(place);
-			
-		}
+		
+		terr_elev=addRow("Terrain Elev.");
+		
 		update_location(last_location);
 	}
 	

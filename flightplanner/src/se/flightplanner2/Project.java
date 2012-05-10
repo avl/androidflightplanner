@@ -32,6 +32,14 @@ public class Project {
 		private static final long serialVersionUID = 591341378114851064L;
 		public double lat;
 		public double lon;
+		
+		@Override
+		public boolean equals(Object o)
+		{
+			if (!(o instanceof LatLon)) return false;
+			LatLon oo=(LatLon)o;
+			return Math.abs(oo.lat-lat)<1e-7 && Math.abs(oo.lon-lon)<1e-7;  
+		}
 		public String toString()
 		{
 			return "LatLon("+lat+","+lon+")";

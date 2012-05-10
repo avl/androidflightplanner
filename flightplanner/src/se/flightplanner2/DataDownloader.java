@@ -54,8 +54,9 @@ public class DataDownloader {
 			//addr="http://192.168.1.160:5000";
 			//addr="http://192.168.1.101:5000";
 			//String addr="http://79.99.0.86:5000";
-			addr="http://192.168.1.160:5000";
+			//addr="http://192.168.1.160:5000";
 			//addr="http://192.168.43.251:5000";
+			addr="http://www.swflightplanner.se";
 			
 		}
 		else

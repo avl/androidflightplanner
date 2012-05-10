@@ -399,9 +399,12 @@ public class AdChartView extends View implements UpdatableUI {
 	}
 	@Override
 	public void updateUI(boolean done) {
-		loader=null;
-		//Log.i("fplan.adchart","Background task finished");
-		invalidate();
+		if (done)
+		{
+			loader=null;
+			//Log.i("fplan.adchart","Background task finished");
+			invalidate();
+		}
 	}
 
 	double offlat,offlon;

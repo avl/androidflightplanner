@@ -4,11 +4,13 @@
   android:orientation="vertical"
   android:layout_width="fill_parent"
   android:layout_height="fill_parent">
+  
     <TextView android:id="@+id/textView1" android:layout_height="wrap_content" android:text="Describe my position using:" android:layout_width="wrap_content" android:textAppearance="?android:attr/textAppearanceMedium" android:layout_gravity="center"></TextView>
-
+   
 <HorizontalScrollView 
   android:layout_width="fill_parent"
   android:layout_height="wrap_content">    
+  
 <LinearLayout
   xmlns:android="http://schemas.android.com/apk/res/android"
   android:orientation="horizontal"
@@ -48,16 +50,26 @@
     </LinearLayout>
 </HorizontalScrollView>
        
-	<LinearLayout
-	android:layout_width="fill_parent"
-	android:layout_height="2dip"
-	android:background="#FFFFFFFF" />
-    <ListView android:prompt="@string/relto" android:id="@+id/relspinner" android:layout_height="0dp" android:layout_weight="1" android:layout_width="fill_parent"></ListView>
-	<LinearLayout
-	android:layout_width="fill_parent"
-	android:layout_height="2dip"
-	android:background="#FFFFFFFF" />
+	
+	<ListView android:prompt="@string/relto" android:id="@+id/relspinner" android:layout_height="0dp" android:layout_weight="1" android:layout_width="fill_parent"></ListView>
+	
+	<LinearLayout 
+	    android:layout_width="fill_parent"
+		android:layout_height="2dip"
+		android:background="#FFFFFFFF" />
     
-    <TextView android:id="@+id/posdescr" android:text="TextView" android:layout_width="wrap_content" android:textAppearance="?android:attr/textAppearanceLarge" android:layout_height="0dp" android:layout_weight="1"></TextView>
-    
+<ScrollView
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="fill_parent"
+  android:layout_height="0dp"
+  android:layout_weight="1">
+	<TextView android:id="@+id/posdescr" android:text="TextView" android:layout_width="wrap_content" android:textAppearance="?android:attr/textAppearanceLarge" android:layout_height="wrap_content"></TextView>
+		
+</ScrollView>
+	<LinearLayout 
+	    android:layout_width="fill_parent"
+		android:layout_height="2dip"
+		android:background="#FFFFFFFF" />
+
+
 </LinearLayout>

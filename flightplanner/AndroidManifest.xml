@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="se.flightplanner2"
       android:versionCode="1"
-      android:largeHeap="true"
       android:versionName="3.1">
       
 	<supports-screens android:anyDensity="true"/> 
@@ -15,6 +14,8 @@
       
     	<!--...application  android:debuggable="true" --> 
     <application    	
+        android:largeHeap="true"
+        android:hardwareAccelerated="true"        
  		android:theme="@android:style/Theme.NoTitleBar"     
     	android:icon="@drawable/icon" android:label="@string/app_name">
   	<provider android:name=".Local"

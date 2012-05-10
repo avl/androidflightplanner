@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.Date;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
@@ -105,7 +106,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		String terrain;
 		public String error;
 	}
-	private DownloadedAirspaceData downloadAirspace(Airspace previous)
+	private DownloadedAirspaceData downloadAirspace(Airspace previous) throws FatalBackgroundException
 	{
     	try {
     		publishProgress("Searching Updates");
@@ -130,7 +131,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		} catch (Exception e) {
 			e.printStackTrace();
 			publishProgress(e.toString());
-			return null;
+			throw new FatalBackgroundException(e.getMessage());
 		}
 		
 	}
@@ -175,13 +176,28 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				return res;
 			} catch (Exception e) {
 				e.printStackTrace();
-				res.error="Failed";
+				res.error=e.getMessage();
 				return res;
 			}						
 			
 			downloadBlobs(res,MapDetailLevels.getMaxLevelFromDetail(mapdetail),"nolabel");
 			if (MapDetailLevels.getHaveElevFromDetail(mapdetail))
 				downloadBlobs(res,MapDetailLevels.getMaxElevLevelFromDetail(mapdetail),"elev");
+			
+			
+			try {
+				File extpath = Environment.getExternalStorageDirectory();
+				File syncpath = new File(extpath,
+						Config.path+"lastsync.dat");
+				FileOutputStream foup=new FileOutputStream(syncpath);
+				DataOutputStream doup=new DataOutputStream(foup);
+				doup.writeLong(new Date().getTime());
+				doup.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
 			return res;
 			
 		} 
@@ -194,6 +210,21 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			return ret;			
 		}
 		
+	}
+	static public Date get_last_sync()
+	{
+		try {
+			File extpath = Environment.getExternalStorageDirectory();
+			File syncpath = new File(extpath,
+					Config.path+"lastsync.dat");
+			FileInputStream foup=new FileInputStream(syncpath);
+			DataInputStream doup=new DataInputStream(foup);
+			long when=doup.readLong();
+			doup.close();
+			return new Date(when);
+		} catch (IOException e) {
+			return new Date(0);
+		}		
 	}
 	private void downloadBlobs(DownloadedAirspaceData res,int maxlevel,String kind)
 			throws FatalBackgroundException {
@@ -409,6 +440,8 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 	}
 	private long downloadLevel(long totprog, int level, int maxlevel, String kind)
 			throws InterruptedException, BackgroundException, FatalBackgroundException {
+		if (DataDownloader.debugMode() && Config.skip_download)
+			return 0;
 		long startversion = -1;
 		boolean first=true;
 		for (;;) {

@@ -71,15 +71,53 @@ public class TripState implements InformationPanel {
 		public LatLon latlon;
 		public String name;
 	}
+	
+	/*!
+	 * Based on time to cur wp, not on position
+	 */
 	public float cur_wp_along()
 	{
 		if (target_wp<=0 || target_wp>=tripdata.waypoints.size()) return 0;
 		Waypoint w1=tripdata.waypoints.get(target_wp-1);
 		Waypoint w2=tripdata.waypoints.get(target_wp);
 		float along_a=(float)Project.exacter_distance(w1.latlon, lastpos);
-		float along_b=(float)Project.exacter_distance(w2.latlon, lastpos);
-		float along=along_a/(along_a+along_b);		
+		//float along_b=(float)Project.exacter_distance(w2.latlon, lastpos);
+		float along=along_a/((float)w2.d);		
 		return along;
+	}
+	/*!
+	 * Based on closest point on line (target_wp-1) -> (target_wp)
+	 */
+	public float cur_wp_along2()
+	{
+		if (target_wp<=0 || target_wp>=tripdata.waypoints.size()) return 0;
+		Waypoint w1=tripdata.waypoints.get(target_wp-1);
+		Waypoint w2=tripdata.waypoints.get(target_wp);
+		Vector m1=Project.latlon2mercvec(w1.latlon, 13);
+		Vector m2=Project.latlon2mercvec(w2.latlon, 13);		
+		Line line=new Line(m1,m2);
+		Vector merc=Project.latlon2mercvec(lastpos, 13);					
+		Vector closest=line.closest(merc);
+		
+		float along_a=(float)Project.exacter_distance(w1.latlon, Project.mercvec2latlon(closest,13));
+		//float along_b=(float)Project.exacter_distance(w2.latlon, lastpos);
+		float along=along_a/((float)w2.d);		
+		return along;
+	}
+	
+	public void update_ensp(NextSigPoints nesp)
+	{
+		for(EnrouteSigPoints ensp:enroute)
+		{
+			if (ensp.nesp==nesp)
+			{
+				nesp.eta=getEta(ensp);
+				nesp.passed=ensp.passed;
+				return;
+			}
+		}
+		nesp.eta=null;
+		nesp.passed=null;
 	}
 	public ArrayList<NextSigPoints> get_remaining_ensps()
 	{
@@ -139,12 +177,69 @@ public class TripState implements InformationPanel {
 		ret.eta=getEta(ensp);
 		return ret;
 	}
+	public Float getBug() {
+		if (target_wp<0 || target_wp>=tripdata.waypoints.size()) return null;		
+		if (target_wp==0)
+		{
+			return Project.bearing(lastpos, tripdata.waypoints.get(0).latlon);
+		}
+		int i=target_wp;
+		//Waypoint w1=tripdata.waypoints.get(i-1);
+		Waypoint w2=tripdata.waypoints.get(i);
+		Vector merc=Project.latlon2mercvec(lastpos, 13);
+
+		float remain_advance=3;
+		float along=cur_wp_along2();
+		int curi=target_wp;
+		Log.i("fplan.hdg","target_wp: "+target_wp+" along: "+along);
+		while(remain_advance>=0f)
+		{
+			Log.i("fplan.hdg","iterate target_wp: "+curi+" along: "+along);
+			if (w2.d<1e-3)
+				along=10;
+			else
+			{				
+				float new_along=along+(float)(remain_advance/w2.d);
+				if (new_along>1) new_along=1;
+				float advance_along=new_along-along;
+				remain_advance-=advance_along*w2.d;
+				along=new_along;
+			}
+			Log.i("fplan.hdg","iterate-step target_wp: "+curi+" along: "+along);
+			if (along>=1.0f-1e-4)
+			{
+				if (curi+1>=tripdata.waypoints.size())
+				{
+					along=1;
+					break;
+				}
+				along=0;
+				curi+=1;
+				w2=tripdata.waypoints.get(curi);
+				continue;
+			}
+			else
+			{
+				break;
+			}
+		}
+		Waypoint w1=tripdata.waypoints.get(curi-1);
+		Vector m1=Project.latlon2mercvec(w1.latlon, 13);
+		Vector m2=Project.latlon2mercvec(w2.latlon, 13);
+		Vector respos=new Vector(
+				(1.0f-along)*m1.x+along*m2.x,
+				(1.0f-along)*m1.y+along*m2.y);
+			
+		float hdg=(float)Project.vector2heading(respos.minus(merc));
+		Log.i("fplan.hdg","Heading bug at: "+hdg);
+		return hdg;		
+	}
 	private Date getEta(EnrouteSigPoints ensp) {
 		if (target_wp<=1 || target_wp>=tripdata.waypoints.size()) return null;		
-		Waypoint w1=tripdata.waypoints.get(target_wp-1);
-		Waypoint w2=tripdata.waypoints.get(target_wp);
 		if (ensp.target_wp==target_wp)
 		{
+			Waypoint w1=tripdata.waypoints.get(target_wp-1);
+			Waypoint w2=tripdata.waypoints.get(target_wp);
 			Log.i("fplan.dp","not been pased, cur leg, w2 gs"+w2.gs);
 			
 			float dist=(float)Project.exacter_distance(lastpos, ensp.latlon);
@@ -155,13 +250,15 @@ public class TripState implements InformationPanel {
 		}
 		if (waypointEvents.size()!=tripdata.waypoints.size())
 			return null; //should never happen
-		
-		Date eta;
-		WaypointInfo we1=waypointEvents.get(target_wp-1);
-		WaypointInfo we2=waypointEvents.get(target_wp);
+		if (ensp.target_wp>=tripdata.waypoints.size() || ensp.target_wp<1)
+			return null;
+		Date eta;		
+		WaypointInfo we1=waypointEvents.get(ensp.target_wp-1);
+		WaypointInfo we2=waypointEvents.get(ensp.target_wp);
 		Log.i("fplan.dp","not been pased, future legs: "+we1.eta2+" - "+we2.eta2);
 		if (we1.eta2==null || we2.eta2==null)
 		{
+			Log.i("fplan.dp","we1.eta2==null || we2.eta2==null");
 			eta=null;
 		}
 		else
@@ -216,13 +313,16 @@ public class TripState implements InformationPanel {
 						enroute.add(ensp);
 					}
 				}
-				EnrouteSigPoints ensp2=new EnrouteSigPoints();
-				ensp2.nesp=new NextSigPoints();
-				ensp2.ratio=1;
-				ensp2.target_wp=i;
-				ensp2.name=w2.name;			
-				ensp2.latlon=w2.latlon;
-				enroute.add(ensp2);
+				if (w2.lastsub!=0)
+				{
+					EnrouteSigPoints ensp2=new EnrouteSigPoints();
+					ensp2.nesp=new NextSigPoints();
+					ensp2.ratio=1;
+					ensp2.target_wp=i;
+					ensp2.name=w2.name;			
+					ensp2.latlon=w2.latlon;
+					enroute.add(ensp2);
+				}
 			}
 		}
 		

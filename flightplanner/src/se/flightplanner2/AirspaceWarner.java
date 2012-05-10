@@ -72,7 +72,7 @@ public class AirspaceWarner {
 				{
 					vibrator.vibrate(fivemin_pattern, -1);
 				}
-				Toast.makeText(context, "Airspace Ahead: "+report_warning[0], Toast.LENGTH_SHORT).show();
+				Toast.makeText(context, "Airspace Ahead: "+report_warning[0], Toast.LENGTH_LONG).show();
 				state=State.FIVE_MIN_WARNED;
 			}
 		}

@@ -82,6 +82,10 @@ public class Blob {
 	}
 	private int seekright(iMerc coords) throws IOException
 	{
+		return seekright(coords,0);
+	}
+	private int seekright(iMerc coords,int offset) throws IOException
+	{
 	    TileNumber t=get_tile_number(coords);
 	    if (t==null)
 	    	return -1;
@@ -96,7 +100,7 @@ public class Blob {
 	    if (datapos<0)
 	    	datapos+=(1L<<32L);
 	    if (datapos>size-4)
-	    	throw new RuntimeException("Bad size"); 
+	    	throw new IOException("Bad size"); 
 	    raf.seek(datapos);
 	    if (datapos<=0)
 	    {
@@ -105,14 +109,23 @@ public class Blob {
 	    }
 	    int imagesize=raf.readInt();
 	    if (imagesize<0)
-	    	throw new RuntimeException("Unexpected imagesize");
+	    	throw new IOException("Unexpected imagesize");
+	    if (offset!=0)
+	    {
+		    if (offset>imagesize)
+		    	throw new IOException("Bad offset: "+offset+" imagesize: "+imagesize);	    
+		    raf.seek(datapos+4+offset);
+		    return imagesize-offset;
+	    }
 	    return imagesize;
 	}
-    byte[] get_tile(iMerc coords) throws IOException
+    byte[] get_tile(iMerc coords,int expected_maxsize) throws IOException
     {    	
     	int imagesize=seekright(coords);
     	if (imagesize==-1)
     		return null;
+    	if (imagesize>expected_maxsize)
+    		throw new IOException("Tile was bigger than expected max: "+expected_maxsize+", it was: "+imagesize);
         
         byte[] ret=new byte[imagesize];
         raf.readFully(ret);
@@ -127,13 +140,14 @@ public class Blob {
 		Log.i("fplan","Ready to read out bitmap, size "+imagesize);
 		*/
 		BitmapFactory.Options opts = new BitmapFactory.Options();
+		opts.inPreferredConfig=Bitmap.Config.RGB_565;
 		try {
 			Field f = opts.getClass().getField("inScaled");
 			f.setBoolean(opts,false);
 		} catch (Throwable e) {
 			e.printStackTrace();
 		} 		
-		byte[] data=get_tile(coords);
+		byte[] data=get_tile(coords,200000);
 		if (data==null)
 			return null;
 		Bitmap bm=BitmapFactory.decodeByteArray(data,0,data.length);		
@@ -144,4 +158,14 @@ public class Blob {
     {
     	raf.close();
     }
+	public byte[] get_data_at(iMerc coords, int offset, int size) throws IOException{
+		
+    	int imagesize=seekright(coords,offset);
+    	if (imagesize<size)
+    		return null;
+        
+        byte[] ret=new byte[size];
+        raf.readFully(ret);
+        return ret;
+	}
 }

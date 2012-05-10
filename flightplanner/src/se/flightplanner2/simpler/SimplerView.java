@@ -296,7 +296,7 @@ public class SimplerView extends View {
 
 	private boolean clear(float x, float y, boolean cleared) {
 		FoundAirspace fb = findSpace(x, y);
-		if (fb.area != null) {
+		if (fb!=null && fb.area != null) {
 			long oldclearval=fb.area.cleared;
 			if (cleared)
 				fb.area.cleared=new Date().getTime();
