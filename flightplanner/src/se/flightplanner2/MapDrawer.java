@@ -18,6 +18,7 @@ import se.flightplanner2.Project.Merc;
 import se.flightplanner2.Project.iMerc;
 import se.flightplanner2.SigPoint.Runway;
 import se.flightplanner2.TripData.Waypoint;
+import se.flightplanner2.TripState.BugInfo;
 import se.flightplanner2.vector.BoundingBox;
 import se.flightplanner2.vector.ConvexPolygon;
 import se.flightplanner2.vector.Vector;
@@ -299,7 +300,7 @@ public class MapDrawer {
 		redraw_view = view;
 		int elev_ft = (int) (lastpos.getAltitude() / 0.3048f);
 		if (DataDownloader.debugMode())
-			elev_ft = 7000 - (int) ((long) ((SystemClock.elapsedRealtime() * 0.001f * 75f)) % 7000);
+			;//elev_ft = 7000 - (int) ((long) ((SystemClock.elapsedRealtime() * 0.001f * 75f)) % 7000);
 		
 		int agnd=Integer.MAX_VALUE;								
 		GetElevation gelev=GlobalGetElev.get_elev;
@@ -559,8 +560,10 @@ public class MapDrawer {
 				}
 			}
 		if (onlyWithin(60, isUserPresentlyMovingMap))
-			if (lookup != null) {
+			if (lookup != null && zoomlevel>6) {
 				for (SigPoint sp : lookup.allCities.findall(bb13)) {
+					if (sp.name==null || sp.name.length()==0)
+						continue; //this should never happen, but might due to a temporary server bug.
 					Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
 					Vector p = tf.merc2screen(m);
 					textpaint.setARGB(0xff, 0xff, 0xff, 0xb0);
@@ -1196,41 +1199,85 @@ public class MapDrawer {
 			{
 				if (tripstate!=null) 
 				{
-					Float hdg=tripstate.getBug();
-					if (hdg!=null)
+					BugInfo bug=tripstate.getBug();
+					if (bug!=null)
 					{
 						canvas.save();
-						float hdgdelta=(float)(hdg-lastpos.getBearing());
+						float hdgdelta=(float)(bug.hdg-lastpos.getBearing());
 						if (hdgdelta<-180) hdgdelta+=360;
 						if (hdgdelta>180) hdgdelta-=360;
 						hdgdelta/=30;
 						arrowpaint.setColor(Color.WHITE);
-						Vector bug;
+						Vector bugvec=new Vector(right/2+(right/2)*hdgdelta,y);
 						if (hdgdelta>1)
 						{
-							bug=new Vector(right,y+1.25f*x_dpmm);
-							canvas.rotate(90,(float)bug.x,(float)bug.y);
+							bugvec=new Vector(right,y);
 						}
 						else if (hdgdelta<-1)
 						{
-							bug=new Vector(0,y+1.25f*x_dpmm);
-							canvas.rotate(270,(float)bug.x,(float)bug.y);
+							bugvec=new Vector(0,y);
+						}
+						
+						canvas.save();
+						arrowpaint.setStrokeWidth(0.7f*x_dpmm);
+						arrowpaint.setColor(Color.BLACK);
+						float ww=4.5f;
+						float wy=2.0f;
+						canvas.rotate(bug.bank,(float)bugvec.x,(float)bugvec.y+wy*y_dpmm);
+						canvas.drawLine((float)bugvec.x-ww*x_dpmm, (float)bugvec.y+wy*y_dpmm, (float)bugvec.x+ww*x_dpmm, (float)bugvec.y+wy*x_dpmm, arrowpaint);
+						arrowpaint.setColor(Color.WHITE);
+						arrowpaint.setStrokeWidth(0.4f*x_dpmm);
+						canvas.drawLine((float)bugvec.x-ww*x_dpmm, (float)bugvec.y+wy*y_dpmm, (float)bugvec.x+ww*x_dpmm, (float)bugvec.y+wy*x_dpmm, arrowpaint);
+						arrowpaint.setColor(Color.BLACK);
+						canvas.restore();
+						
+						arrowpaint.setStrokeWidth(0.7f*x_dpmm);
+						canvas.drawLine((float)0.5f*right, (float)bugvec.y, 0.5f*right, (float)bugvec.y+2.5f*x_dpmm, arrowpaint);
+						arrowpaint.setColor(Color.WHITE);
+						arrowpaint.setStrokeWidth(0.4f*x_dpmm);
+						canvas.drawLine((float)0.5f*right, (float)bugvec.y, 0.5f*right, (float)bugvec.y+2.5f*x_dpmm, arrowpaint);
+						
+						int rot=0;
+						if (hdgdelta>1)
+						{
+							bugvec=new Vector(right,y+1.50f*x_dpmm);
+							rot=90;
+						}
+						else if (hdgdelta<-1)
+						{
+							bugvec=new Vector(0,y+1.5f*x_dpmm);
+							rot=270;
 						}
 						else
 						{
-							bug=new Vector(right/2+(right/2)*hdgdelta,y);
+							bugvec=new Vector(right/2+(right/2)*hdgdelta,y);
 						}
 						
+						if (rot!=0)
+							canvas.rotate(rot,(float)bugvec.x,(float)bugvec.y);
+						
 						Path path = new Path();
-						path.moveTo((int) bug.x - 1.2f*x_dpmm, (int) bug.y + 2.5f*x_dpmm);
-						path.lineTo((int) bug.x + 1.2f*x_dpmm, (int) bug.y + 2.5f*x_dpmm);
-						path.lineTo((int) bug.x, (int) bug.y);
+						path.moveTo((int) bugvec.x - 1.4f*x_dpmm, (int) bugvec.y + 3.2f*x_dpmm);
+						path.lineTo((int) bugvec.x + 1.4f*x_dpmm, (int) bugvec.y + 3.2f*x_dpmm);
+						path.lineTo((int) bugvec.x, (int) bugvec.y);
 						path.close();
 						
+						arrowpaint.setStyle(Style.FILL);
+						arrowpaint.setColor(Color.WHITE);
 						canvas.drawPath(path, arrowpaint);
 						arrowpaint.setColor(Color.BLACK);
+						arrowpaint.setStrokeWidth(0.25f*x_dpmm);
+						arrowpaint.setStyle(Style.STROKE);
+						canvas.drawPath(path, arrowpaint);
+												
 						canvas.restore();
-						canvas.drawLine((float)0.5f*right, (float)bug.y, 0.5f*right, (float)bug.y+2.5f*x_dpmm, arrowpaint);
+
+						arrowpaint.setColor(Color.WHITE);
+						canvas.drawLine((float)0.5f*right, (float)bugvec.y, 0.5f*right, (float)bugvec.y+2.5f*x_dpmm, arrowpaint);
+
+						arrowpaint.setStyle(Style.FILL);
+						
+						
 					}
 				}
 			}catch(Throwable e)

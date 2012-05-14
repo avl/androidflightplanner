@@ -1,5 +1,6 @@
 package se.flightplanner2;
 
+import se.flightplanner2.GlobalPosition.PositionSubscriberIf;
 import se.flightplanner2.Project.LatLon;
 import se.flightplanner2.simpler.SimplerView;
 import android.app.Activity;
@@ -13,22 +14,22 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.util.Log;
 
-public class SimplerActivity extends Activity implements LocationListener {
+public class SimplerActivity extends Activity implements PositionSubscriberIf {
 	private LatLon pos;
 	private double hdg;
 	private double gs;
 	private long inhibit_relayout; 
 	private Handler handler;
 	private SimplerView simplerView;
-	private LocationManager locman;
 	@Override
     public void onCreate(Bundle savedInstanceState) 
 	{
 		super.onCreate(savedInstanceState);
 		handler=new Handler();
-		pos=(LatLon)getIntent().getSerializableExtra("se.flightplanner2.pos");
-		hdg=getIntent().getFloatExtra("se.flightplanner2.hdg",0);
-		gs=getIntent().getFloatExtra("se.flightplanner2.gs",0);
+		Location last=GlobalPosition.getLastPosition();
+		pos=new LatLon(last);
+		hdg=last.getBearing();
+		gs=last.getSpeed()*3.6/1.852;
 		
 		simplerView=new SimplerView(this,GlobalLookup.lookup,pos,(float)hdg,(float)gs,new SimplerView.ViewOwner()
 		{
@@ -38,10 +39,8 @@ public class SimplerActivity extends Activity implements LocationListener {
 			}
 		});
 		setContentView(simplerView);
-		
-        locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
-        if (locman!=null)
-        	locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000,500, this);
+
+		GlobalPosition.registerSubscriber(this);
         
         simplerView.setKeepScreenOn(true);
 		
@@ -51,10 +50,9 @@ public class SimplerActivity extends Activity implements LocationListener {
 	{
 		if (update_cb!=null)
 			handler.removeCallbacks(update_cb);
+		GlobalPosition.unRegisterSubscriber(this);
 		simplerView.stop();
 		super.onDestroy();
-		if (locman!=null)
-			locman.removeUpdates(this);
 	}
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
@@ -80,7 +78,7 @@ public class SimplerActivity extends Activity implements LocationListener {
 	
 	
 	@Override
-	public void onLocationChanged(Location location) {
+	public void gps_update(Location location) {
 		Log.i("fplan","Updating position");
 		location=bsp.calcBearingSpeed(location);
 		hdg=location.getBearing();
@@ -112,16 +110,7 @@ public class SimplerActivity extends Activity implements LocationListener {
 	};
 	
 	@Override
-	public void onProviderDisabled(String provider) {
-		
-	}
-	@Override
-	public void onProviderEnabled(String provider) {
-		
-	}
-	@Override
-	public void onStatusChanged(String provider, int status, Bundle extras) {
-		
+	public void gps_disabled() {		
 	}
 	
 }

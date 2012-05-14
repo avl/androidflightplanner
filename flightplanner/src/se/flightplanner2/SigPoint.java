@@ -3,7 +3,7 @@
  */
 package se.flightplanner2;
 
-import java.io.DataInputStream;
+	import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
@@ -39,16 +39,16 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 
 	public LatLon latlon;
 	
-	static public class End
+	static public class End implements Serializable
 	{
 		public String name;
 		public LatLon pos;
 	}
-	static public class Runway
+	static public class Runway implements Serializable
 	{
 		public End[] ends;
 	}
-	static public class ExtraData
+	static public class ExtraData implements Serializable
 	{
 		public String[] notams;
 		public String metar;

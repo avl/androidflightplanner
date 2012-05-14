@@ -42,4 +42,7 @@ public interface DetailedPlace {
 	void prev();
 	void next();
 	boolean is_own_position();
+
+	Date getPassed();
+	boolean hasPassed();
 }

@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="hello">Hello World, Nav!</string>
+    <string name="Chn">Station</string>
+    <string name="Pos">Position Relative</string>
     <string name="app_name">flightplanner</string>
 <string name="detail_prompt">Map Detail</string>
 <string-array name="detail_array"><item>No basemap [500kB download]</item><item>Low Detail [2MB download]</item>

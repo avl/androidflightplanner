@@ -46,7 +46,7 @@ public class AipText {
 		if (is.readByte()==1)
 		{ //Blob is contained
 			int bloblen=is.readInt();
-			Log.i("fplan","Reading "+bloblen+" byte blob.");
+			//Log.i("fplan","Reading "+bloblen+" byte blob.");
 			File extpath = Environment.getExternalStorageDirectory();
 			File aiptextpath = new File(extpath,
 					Config.path+p.icao+"/");

@@ -78,6 +78,10 @@ public class AirspaceProximityDetector {
 		dist=-1;
 		time=1e10f;
 		areanames=null;
+		ArrayList<AirspaceArea> areas=new ArrayList<AirspaceArea>();
+		this.areas=areas;
+		if (gs<1) 
+			return;
 		float hdg=loc.getBearing();
 		LatLon pos=new LatLon(loc);
 		double dist_nm=Math.max(3, gs*(warn_time/60.0f));
@@ -91,7 +95,6 @@ public class AirspaceProximityDetector {
 		aheadpie=aheadpie.swingRight(hdg);
 		BoundPie boundaheadpie=new BoundPie(mpos.toVector(),aheadpie);
 		float closest_dist=1e10f;
-		ArrayList<AirspaceArea> areas=new ArrayList<AirspaceArea>();
 		long now=new Date().getTime();
 		for(AirspaceArea a:allareas)			
 		{

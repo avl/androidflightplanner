@@ -247,12 +247,6 @@ public class ElevBitmapCache implements GetElevation {
 					{
 						Log.i("fplan.terr","Read alts: "+celev1+" and "+celev2dummy);
 					}*/					
-					if (celev1<0)
-					{
-						output[outi]=Color.argb(0x80,0xff,0,0);
-	
-					}
-					else
 					{
 						int margin=this.curelev-celev1;													
 						output[outi]=colorize_margin(margin);						
@@ -409,7 +403,7 @@ public class ElevBitmapCache implements GetElevation {
 		int msb=bs[0]&0xff;
 		short elev=(short)(lsb+(msb<<8));
 		long aft=SystemClock.elapsedRealtime();
-		Log.i("fplan.mmupd","Time to get elev ft: "+(aft-bef)+"ms");
+		//Log.i("fplan.mmupd","Time to get elev ft: "+(aft-bef)+"ms");
 		return elev;
 	}
 	

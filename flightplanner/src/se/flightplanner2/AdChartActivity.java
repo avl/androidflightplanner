@@ -1,6 +1,8 @@
 package se.flightplanner2;
 
 
+import se.flightplanner2.GlobalPosition.PositionIf;
+import se.flightplanner2.GlobalPosition.PositionSubscriberIf;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
@@ -13,7 +15,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
-public class AdChartActivity extends Activity implements LocationListener {
+public class AdChartActivity extends Activity implements PositionSubscriberIf {
 	final static int MENU_BACK=1;
 
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -28,8 +30,7 @@ public class AdChartActivity extends Activity implements LocationListener {
 	    }
 		return false;
 	}
-	LocationManager locman;
-	AdChartView view;
+	private AdChartView view;
 	
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
@@ -75,8 +76,7 @@ public class AdChartActivity extends Activity implements LocationListener {
 
         if (view.haveGeoLocation())
         {
-	        locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
-			locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000,0, this);
+        		GlobalPosition.registerSubscriber(this);
         }
 
         
@@ -84,30 +84,16 @@ public class AdChartActivity extends Activity implements LocationListener {
 	@Override
 	public void onDestroy()
 	{
-		if (locman!=null)
-			locman.removeUpdates(this);
+		GlobalPosition.unRegisterSubscriber(this);
 		super.onDestroy();
-	}
-	private BearingSpeedCalc bearingspeed=new BearingSpeedCalc();
-	
+	}	
 	@Override
-	public void onLocationChanged(Location location) {
-		Location loc=bearingspeed.calcBearingSpeed(location);				
+	public void gps_update(Location loc) {
 		view.update_location(loc);
 	}
 	@Override
-	public void onProviderDisabled(String provider) {
+	public void gps_disabled() {
 		view.no_location_fix();		
-	}
-	@Override
-	public void onProviderEnabled(String provider) {
-		// TODO Auto-generated method stub
-		
-	}
-	@Override
-	public void onStatusChanged(String provider, int status, Bundle extras) {
-		// TODO Auto-generated method stub
-		view.no_location_fix();
 	}
     
 }

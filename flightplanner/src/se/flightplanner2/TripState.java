@@ -45,7 +45,7 @@ public class TripState implements InformationPanel {
 	 * One for each waypoint.
 	 */
 	private ArrayList<WaypointInfo> waypointEvents;
-	static private final double corridor_width=2.0; //nominal width of corridor of flight
+	static private final float corridor_width=2.0f; //nominal width of corridor of flight
 	
 	static private class EnrouteSigPoints
 	{
@@ -88,15 +88,16 @@ public class TripState implements InformationPanel {
 	/*!
 	 * Based on closest point on line (target_wp-1) -> (target_wp)
 	 */
-	public float cur_wp_along2()
+	public float cur_wp_along2(LatLon forpos)
 	{
+		if (target_wp==0) return 1.0f;
 		if (target_wp<=0 || target_wp>=tripdata.waypoints.size()) return 0;
 		Waypoint w1=tripdata.waypoints.get(target_wp-1);
 		Waypoint w2=tripdata.waypoints.get(target_wp);
 		Vector m1=Project.latlon2mercvec(w1.latlon, 13);
 		Vector m2=Project.latlon2mercvec(w2.latlon, 13);		
 		Line line=new Line(m1,m2);
-		Vector merc=Project.latlon2mercvec(lastpos, 13);					
+		Vector merc=Project.latlon2mercvec(forpos, 13);					
 		Vector closest=line.closest(merc);
 		
 		float along_a=(float)Project.exacter_distance(w1.latlon, Project.mercvec2latlon(closest,13));
@@ -177,68 +178,201 @@ public class TripState implements InformationPanel {
 		ret.eta=getEta(ensp);
 		return ret;
 	}
-	public Float getBug() {
-		if (target_wp<0 || target_wp>=tripdata.waypoints.size()) return null;		
-		if (target_wp==0)
+	static public class BugInfo
+	{
+		public float hdg;
+		public float bank;
+	}
+	public BugInfo getBug() {
+		if (target_wp<0 || target_wp>=tripdata.waypoints.size()) return null;
+		
+				
+		
+		float curbughdg = (float)getBugHdgImpl(lastpos);
+		
+		Merc lastposmerc=Project.latlon2merc(lastpos, 17);
+		double onesec_speed=Project.approx_scale(lastposmerc, 17, actual_gs)/3600.0;
+		Vector delta=Project.heading2vector(actual_hdg); 
+		lastposmerc.x+=3*onesec_speed*delta.x; //look 3 seconds ahead
+		lastposmerc.y+=3*onesec_speed*delta.y;		
+		float nextbughdg = (float)getBugHdgImpl(Project.merc2latlon(lastposmerc,17));
+					
+		Log.i("fplan.hdg","Heading bug at: "+curbughdg+" estimated next second at: "+nextbughdg);
+		
+		//spede
+		/*
+		float bank_angle=(float)Math.atan2(event.values[1],event.values[2]);
+		if (speed>1 && Math.abs(bank_angle)>0.01)
 		{
-			return Project.bearing(lastpos, tripdata.waypoints.get(0).latlon);
+			Log.i("fplan.sensor","Bank angle:"+(bank_angle*180.0/Math.PI));
+			float one_g_lift=(float)Math.cos(bank_angle);
+			Log.i("fplan.sensor","one g lift: "+one_g_lift);
+			float needed_gs=(1.0f/one_g_lift);
+			Log.i("fplan.sensor","Needed gs: "+needed_gs);
+			float acceleration=Math.abs(9.82f*needed_gs*(float)Math.sin(bank_angle));
+			Log.i("fplan.sensor","Radial acc m/s/s: "+acceleration);
+			Log.i("fplan.sensor","Velocity m/s: "+speed);
+			//float acceleration=speed*speed/R;
+			//float R*acceleration=speed*speed;
+			float R=speed*speed/acceleration;
+			float orbital_circumference=(float)(R*Math.PI*2.0f);
+			float orbital_period=orbital_circumference/speed;
+			turn_rate=360.0f/orbital_period;
+			if (bank_angle>0) turn_rate=-turn_rate;
+			*/
+			
+		float turn_rate=(float) (nextbughdg-actual_hdg);
+		
+		float abs_turn_rate=(float)Math.abs(turn_rate);
+		/*
+		float standard_bank=30;
+		float roll_rate=10;
+		float standard_rate = Project.getTurnRate((float)actual_gs, standard_bank);
+		float nominal_seconds=(float) (Math.abs(actual_hdg-curbughdg)/standard_rate);
+		float roll_seconds=nominal_seconds;
+		float time_for_roll=roll_seconds*roll_rate;
+		float target_correction_roll;
+		if (time_for_roll>standard_bank/roll_rate)
+			target_correction_roll=standard_bank;
+		else
+			target_correction_roll=time_for_roll*roll_rate;
+		*/
+		
+		
+		float bank=0;
+		if (abs_turn_rate>1e-4)
+		{
+			float speed=((float)actual_gs*1.852f)/3.6f;
+			float orbital_period=360.0f/abs_turn_rate;
+			float orbital_circumference=orbital_period*speed;
+			float R=orbital_circumference/((float)Math.PI*2.0f);
+			float acceleration=(float)(speed*speed/R);
+			//triangle:			
+			//A = 9.82
+			//B = acceleration
+			bank=(float)((180.0f/Math.PI)*Math.atan2(acceleration,9.82f));
+			if (bank>30)
+				bank=30;
+			if (turn_rate<0)
+				bank=-bank;
+			Log.i("fplan.hdg","Speed: "+speed+" R: "+R+" acc: "+acceleration+" bank: "+bank);
 		}
-		int i=target_wp;
-		//Waypoint w1=tripdata.waypoints.get(i-1);
-		Waypoint w2=tripdata.waypoints.get(i);
-		Vector merc=Project.latlon2mercvec(lastpos, 13);
-
-		float remain_advance=3;
-		float along=cur_wp_along2();
-		int curi=target_wp;
-		Log.i("fplan.hdg","target_wp: "+target_wp+" along: "+along);
-		while(remain_advance>=0f)
+		
+		
+		BugInfo binfo=new BugInfo();
+		
+		
+		binfo.bank=bank;
+		binfo.hdg=curbughdg;
+		return binfo;		
+	}
+	private double getBugHdgImpl(LatLon forpos) {
+		double bughdg;
+		double direct_hdg=Project.bearing(forpos, tripdata.waypoints.get(target_wp).latlon);
 		{
-			Log.i("fplan.hdg","iterate target_wp: "+curi+" along: "+along);
-			if (w2.d<1e-3)
-				along=10;
-			else
-			{				
-				float new_along=along+(float)(remain_advance/w2.d);
-				if (new_along>1) new_along=1;
-				float advance_along=new_along-along;
-				remain_advance-=advance_along*w2.d;
-				along=new_along;
-			}
-			Log.i("fplan.hdg","iterate-step target_wp: "+curi+" along: "+along);
-			if (along>=1.0f-1e-4)
+			//Waypoint w1=tripdata.waypoints.get(i-1);
+			Waypoint w2=tripdata.waypoints.get(target_wp);
+			Vector merc=Project.latlon2mercvec(forpos, 13);
+	
+			double remain_advance=(double)corridor_width*0.4f;
+			double along=cur_wp_along2(forpos);
+			int curi=target_wp;
+			Log.i("fplan.hdg","target_wp: "+target_wp+" along: "+along);
+			while(remain_advance>=0f)
 			{
-				if (curi+1>=tripdata.waypoints.size())
+				Log.i("fplan.hdg","iterate target_wp: "+curi+" along: "+along);
+				if (w2.d<1e-3)
+					along=10;
+				else
+				{				
+					double new_along=along+(double)(remain_advance/w2.d);
+					if (new_along>1) new_along=1;
+					double advance_along=new_along-along;
+					remain_advance-=advance_along*w2.d;
+					along=new_along;
+				}
+				Log.i("fplan.hdg","iterate-step target_wp: "+curi+" along: "+along);
+				if (along>=1.0f-1e-4)
 				{
-					along=1;
+					if (curi+1>=tripdata.waypoints.size())
+					{
+						along=1;
+						break;
+					}
+					along=0;
+					curi+=1;
+					w2=tripdata.waypoints.get(curi);
+					continue;
+				}
+				else
+				{
 					break;
 				}
-				along=0;
-				curi+=1;
-				w2=tripdata.waypoints.get(curi);
-				continue;
+			}
+			Vector respos;
+			if (curi==0)
+			{
+				Waypoint w1=tripdata.waypoints.get(0);
+				respos=Project.latlon2mercvec(w1.latlon, 13);
 			}
 			else
 			{
-				break;
+				Waypoint w1=tripdata.waypoints.get(curi-1);
+				Vector m1=Project.latlon2mercvec(w1.latlon, 13);
+				Vector m2=Project.latlon2mercvec(w2.latlon, 13);
+				respos=new Vector(
+						(1.0f-along)*m1.x+along*m2.x,
+						(1.0f-along)*m1.y+along*m2.y);
+					
+			}
+				
+			
+			double next_d=(double)Project.exacter_distance(forpos, tripdata.waypoints.get(target_wp).latlon);
+			
+			double hdg=(double)Project.vector2heading(respos.minus(merc));
+			
+			//maximum miss-angle is that which gives (in radians)
+			//(miss_angle) * distance = corridor_width
+			//but to be conservative, we use:
+			//(miss_angle) * distance = 0.8f*corridor_width
+			//which yields
+			//miss_angle = 0.8f*corridor_width/distance
+			//miss_angle_degrees= (180.0f/Math.PI)*0.8f*corridor_width/distance
+			if (next_d<1.5f*corridor_width)
+			{
+				double close=0;
+				if (next_d<corridor_width)
+					close=1;
+				else
+					close=(double)(1.5f*corridor_width-next_d)/(0.5f*corridor_width);
+				
+				double max_miss_angle=180;
+				if (next_d>=0.5f*corridor_width)			
+					max_miss_angle=(double)((180.0f/Math.PI)*0.4f*corridor_width/next_d);
+				
+				double miss_angle=hdg-direct_hdg;
+				while (miss_angle>180) miss_angle-=360;
+				while (miss_angle<-180) miss_angle+=360;
+				
+				Log.i("fplan.hdg","direct_hdg: "+direct_hdg+" heading corridor ahead: "+hdg+" Max miss angle: "+max_miss_angle+" miss_angle: "+miss_angle);
+				if (Math.abs(miss_angle)>max_miss_angle)
+				{
+					if (miss_angle>0) miss_angle=max_miss_angle;
+					else miss_angle=-max_miss_angle;				
+				}			
+				bughdg=close*(direct_hdg+miss_angle)+(1.0f-close)*hdg;
+			}
+			else
+			{
+				bughdg=hdg;
 			}
 		}
-		Waypoint w1=tripdata.waypoints.get(curi-1);
-		Vector m1=Project.latlon2mercvec(w1.latlon, 13);
-		Vector m2=Project.latlon2mercvec(w2.latlon, 13);
-		Vector respos=new Vector(
-				(1.0f-along)*m1.x+along*m2.x,
-				(1.0f-along)*m1.y+along*m2.y);
-			
-		float hdg=(float)Project.vector2heading(respos.minus(merc));
-		Log.i("fplan.hdg","Heading bug at: "+hdg);
-		return hdg;		
+		return bughdg;
 	}
 	private Date getEta(EnrouteSigPoints ensp) {
 		if (target_wp<=1 || target_wp>=tripdata.waypoints.size()) return null;		
 		if (ensp.target_wp==target_wp)
 		{
-			Waypoint w1=tripdata.waypoints.get(target_wp-1);
 			Waypoint w2=tripdata.waypoints.get(target_wp);
 			Log.i("fplan.dp","not been pased, cur leg, w2 gs"+w2.gs);
 			
@@ -339,6 +473,7 @@ public class TripState implements InformationPanel {
 	private int time_to_destination;
 	//private double distance_to_destination;
 	private double actual_gs;
+	private double actual_hdg;
 	
 	/**
 	 * Determines the most plausible current target.
@@ -353,8 +488,10 @@ public class TripState implements InformationPanel {
 			return;
 		last_location=mylocation;
 		lastpos=new LatLon(last_location);
+		
 		///update_target(l);		
 		actual_gs=mylocation.getSpeed()*3.6/1.852;
+		actual_hdg=mylocation.getBearing();
 				
 		time_to_destination=0;
 		//distance_to_destination=0.0;
@@ -411,7 +548,7 @@ public class TripState implements InformationPanel {
 				tpoints+=rightheading;
 				if (i+1>target_wp && skipped_landing)
 				{
-					tpoints-=5; //Gravely penalize not landing 
+					tpoints-=2; //Gravely penalize not landing 
 				}
 					
 				if (i+1==target_wp)
@@ -466,7 +603,8 @@ public class TripState implements InformationPanel {
 						we.passed=null;
 					}
 				}
-				if (current_waypoint_idx<=target_wp)
+				
+				if (current_waypoint_idx==target_wp && target_wp!=best_points_i)
 					current_waypoint_idx=best_points_i;
 				target_wp=best_points_i;
 			}
@@ -744,9 +882,8 @@ public class TripState implements InformationPanel {
 	@Override
 	public Date getPassed() {
 		int i=current_waypoint_idx;
-		if (tripdata==null || i>=waypointEvents.size())
+		if (tripdata==null || i>=waypointEvents.size() || i<0)
 			return null;
-		if (i==-1) return null;
 		return waypointEvents.get(i).passed;
 	}
 	@Override
@@ -947,6 +1084,14 @@ public class TripState implements InformationPanel {
 				@Override
 				public boolean is_own_position() {
 					return current_waypoint_idx==-1;
+				}
+				@Override
+				public Date getPassed() {
+					return TripState.this.getPassed();
+				}
+				@Override
+				public boolean hasPassed() {
+					return !is_own_position();
 				}				
 			};
 		}

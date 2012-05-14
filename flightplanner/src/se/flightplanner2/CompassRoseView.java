@@ -188,7 +188,7 @@ public class CompassRoseView extends View {
 		{
 			Log.i("fplan","Little plane was null or recycled: "+little_plane);
 		}
-		canvas.drawLine(0.5f*abox,0,0.5f*abox,awid*1.8f,thinlinepaint);
+		//canvas.drawLine(0.5f*abox,0,0.5f*abox,awid*1.8f,thinlinepaint);
 		canvas.drawLine(0.5f*abox,awid*7.0f,0.5f*abox,0.5f*abox,thinlinepaint);
 
 		

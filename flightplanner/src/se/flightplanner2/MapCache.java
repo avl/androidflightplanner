@@ -70,7 +70,7 @@ public class MapCache {
 			return;
 		}
 		Key k=new Key(m,zoomlevel);
-		Log.i("fplan.adchart","Injected bitmap"+k+" fake: "+fake+" only fake-avail: "+only_fake_avail);
+		//Log.i("fplan.adchart","Injected bitmap"+k+" fake: "+fake+" only fake-avail: "+only_fake_avail);
 		long now=SystemClock.uptimeMillis();
 		MapCache.Payload p=new MapCache.Payload();
 		p.lastuse=now;

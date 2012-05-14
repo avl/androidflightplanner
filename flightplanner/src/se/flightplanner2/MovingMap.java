@@ -3,11 +3,8 @@ package se.flightplanner2;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.Random;
-import java.util.TimeZone;
 
 import se.flightplanner2.BackgroundMapLoader.UpdatableUI;
 import se.flightplanner2.GuiSituation.GuiClientInterface;
@@ -18,7 +15,6 @@ import se.flightplanner2.Project.iMerc;
 import se.flightplanner2.Timeout.DoSomething;
 import android.app.Activity;
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Rect;
@@ -44,7 +40,6 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	private String download_status;
 	private boolean download_dismissable;
 	private Timeout dismiss_timeout;
-	private BearingSpeedCalc bearingspeed;
 	private MapCache mapcache;
 	private BackgroundMapLoader loader;
 	private GetMapBitmap bitmaps;
@@ -71,7 +66,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	public void doInvalidate() //for GUI-client
 	{
 		invalidate();
-		Log.i("fplan.mmupd","doInvalidate called anyway");
+		//Log.i("fplan.mmupd","doInvalidate called anyway");
 		handler.removeCallbacks(invalidate_within_runner);
 		next_invalidate_time=Long.MAX_VALUE; 
 	}
@@ -82,7 +77,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		this.owner=owner;
 		this.fplog=fplog;
 		dismiss_timeout=new Timeout();
-		bearingspeed=new BearingSpeedCalc();
+		BearingSpeedCalc bearingspeed=new BearingSpeedCalc();
 		
 		reinit_bmc();
 		
@@ -232,6 +227,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		lastpos=loc;
 		if (gui!=null)
 			gui.updatePos(lastpos);
+		Log.i("fplan.sensor","in gps_update, bearing: "+lastpos.getBearing());
 		last_real_position=SystemClock.uptimeMillis();
 		tripstate.updatemypos(lastpos);
 		LatLon latlon=new LatLon(lastpos.getLatitude(),lastpos.getLongitude());
@@ -252,7 +248,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 				gps_disabled();
 			}
 		};
-		lostSignalTimer.postDelayed(curLostSignalRunnable, 5000);		
+		lostSignalTimer.postDelayed(curLostSignalRunnable, 10000);		
 	}
 	
 	public void gps_disabled() {
@@ -260,17 +256,8 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		doInvalidate();		
 	}
 
-	public void zoom(int zd) {
-		
-		if (debugRunnner)
-		{
-			debugSpeed+=zd*1;
-		}
-		else
-		{
-			if (gui!=null) gui.changeZoom(zd);
-		}
-		
+	public void zoom(int zd) {		
+		if (gui!=null) gui.changeZoom(zd);		
 	}
 	
 	public void update_airspace(Airspace pairspace, AirspaceLookup plookup,int newdetaillevel,boolean northup) {
@@ -302,16 +289,9 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 
 	public void onSideKey(int i) {
 			
-		if (debugRunnner)
-		{
-			debugHdgRad+=i*(10.0f*Math.PI/180.0f);
-		}
-		else
-		{		
-			if (gui!=null)
-				gui.onInfoPanelBrowse(i);
-			doInvalidate();
-		}
+		if (gui!=null)
+			gui.onInfoPanelBrowse(i);
+		doInvalidate();
 		
 	}
 
@@ -356,7 +336,8 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	public void enableTerrainMap(boolean b) {
 		if (b==false)
 		{
-			mapcache.shutdown();
+			if (mapcache!=null)
+				mapcache.shutdown();
 			mapcache=null;
 			blobs=null;
 			bitmaps=null;
@@ -421,58 +402,6 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	
 	private GuiSituation gui;
 	
-	private Handler debugTimer;
-	private Runnable debugRunnable;
-	private boolean debugRunnner;
-	private Merc debugMerc;
-	private float debugSpeed;
-	private float debugHdgRad;
-	private static Random random=new Random();
-	public void enableDriving(boolean debugdrive) 
-	{
-		if (debugdrive)
-		{
-			debugRunnner=true;
-			if (debugMerc==null)
-			{
-				debugMerc=Project.latlon2merc(new LatLon(
-						lastpos.getLatitude(),lastpos.getLongitude()), 13);
-			}
-			final MovingMap outer=this;
-			if (debugTimer==null)
-			{
-				debugTimer=new Handler();
-			}			
-			debugRunnable=new Runnable() {			
-				@Override	
-				public void run() {
-					if (outer.debugRunnable==null)
-						return; //stop
-					debugMerc=new
-						Merc(debugMerc.x+debugSpeed*Math.cos(debugHdgRad+Math.PI/2.0),
-								debugMerc.y+debugSpeed*Math.sin(debugHdgRad+Math.PI/2.0));
-					LatLon l=Project.merc2latlon(debugMerc, 13);
-					Location loc=new Location("gps");
-					//, "alt": 30, "lon": 
-					loc.setLatitude(l.lat);
-					loc.setLongitude(l.lon);
-					loc.removeBearing();
-					loc.removeSpeed();					
-					loc.setAltitude(100.0*random.nextFloat());
-					Date d = new Date();
-					loc.setTime(d.getTime());
-					outer.gps_update(loc,terrwarn);					
-					debugTimer.postDelayed(debugRunnable, 1000);
-				}
-			};
-			debugTimer.postDelayed(debugRunnable, 1000);		
-		}
-		else
-		{
-			debugRunnner=false;
-			debugRunnable=null;
-		}
-	}
 	@Override
 	public void cancelMapDownload() {
 		Log.i("fplan","cancel map download:");
@@ -528,7 +457,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		public void run() {
 			MovingMap.this.invalidate();
 			next_invalidate_time=Long.MAX_VALUE;
-			Log.i("fplan.mmupd","Delayed invalidate running");			
+			//Log.i("fplan.mmupd","Delayed invalidate running");			
 		}
 	};
 	private void invalidate_within(int ms)
@@ -538,7 +467,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		if (scheduled_delta<ms) return;
 		next_invalidate_time=now+ms;
 		handler.postDelayed(invalidate_within_runner,ms);
-		Log.i("fplan.mmupd","Posting a delayed invalidate in "+ms+"ms");
+		//Log.i("fplan.mmupd","Posting a delayed invalidate in "+ms+"ms");
 	}
 	@Override
 	public void set_gps_sat_cnt(int satcnt,int satfixcnt) {

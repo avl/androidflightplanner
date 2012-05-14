@@ -139,7 +139,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 	{
 		StatFs stat = new StatFs(Environment.getExternalStorageDirectory().getPath());
 		long bytesAvailable = (long)stat.getBlockSize() *(long)stat.getBlockCount();
-		long megs=bytesAvailable/(1000000);
+		//long megs=bytesAvailable/(1000000);
 		if (bytesAvailable<atleast)
 			throw new FatalBackgroundException("Error: Disk full.");
 		return bytesAvailable;
@@ -400,7 +400,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 						new FileOutputStream(chartblobpath));
 				if (blobsize>40000000)
 					throw new RuntimeException("AD Chart is way too large");
-				Log.i("fplan.download","Reading "+blobsize+" byte blob.");
+				//Log.i("fplan.download","Reading "+blobsize+" byte blob.");
 				while(blobsize>0)
 				{
 					int len=(int)blobsize;

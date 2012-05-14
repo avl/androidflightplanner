@@ -322,6 +322,26 @@ public class Project {
 	public static double vector2heading(Vector v) {
 		return vector2heading(v.getx(),v.gety());
 	}
+	public static float getTurnRate(float speed, float bank_angle) {
+		float turn_rate;
+		//Log.i("fplan.sensor","Bank angle:"+(bank_angle*180.0/Math.PI));
+		float one_g_lift=(float)Math.cos(bank_angle);
+		//Log.i("fplan.sensor","one g lift: "+one_g_lift);
+		float needed_gs=(1.0f/one_g_lift);
+		//Log.i("fplan.sensor","Needed gs: "+needed_gs);
+		float acceleration=Math.abs(9.82f*needed_gs*(float)Math.sin(bank_angle));
+		//Log.i("fplan.sensor","Radial acc m/s/s: "+acceleration);
+		//Log.i("fplan.sensor","Velocity m/s: "+speed);
+		//float acceleration=speed*speed/R;
+		//float R*acceleration=speed*speed;
+		float R=speed*speed/acceleration;
+		float orbital_circumference=(float)(R*Math.PI*2.0f);
+		float orbital_period=orbital_circumference/speed;
+		turn_rate=360.0f/orbital_period;
+		//Log.i("fplan.sensor","orbital period: "+orbital_period+" turn rate(deg): "+turn_rate);
+		if (bank_angle>0) turn_rate=-turn_rate;
+		return turn_rate;
+	}	
 	public static Vector heading2vector(double ang) {
 		double rad=Math.PI*(90-ang)/180.0;
 		double dx=Math.cos(rad);

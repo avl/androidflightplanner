@@ -8,6 +8,7 @@ import java.util.TimeZone;
 
 
 import se.flightplanner2.GlobalGetElev.GetElevation;
+import se.flightplanner2.GlobalPosition.PositionSubscriberIf;
 import se.flightplanner2.Project.LatLon;
 import android.app.Activity;
 import android.content.Context;
@@ -15,7 +16,6 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -77,6 +77,7 @@ public class DetailedPlaceActivity extends Activity{
 	//private SigPoint sp;
 	private TextView ETA2;
 	private TextView ETA2time;
+	private TextView passed;
 	private TextView d;
 	private TextView gs;
 	private TextView hdg;
@@ -89,11 +90,11 @@ public class DetailedPlaceActivity extends Activity{
 	private TextView planned_field;
 	private TextView waypoint_hdg;
 	private CompassRoseView compass;
-	private LocationManager locman;
 	
 	private void fail()
 	{
 		if (ETA2!=null) ETA2.setText("--");
+		if (passed!=null) passed.setText("--");
 		if (ETA2time!=null) ETA2time.setText("--");
 		if (d!=null) d.setText("--");
 		gs.setText("--");
@@ -149,6 +150,16 @@ public class DetailedPlaceActivity extends Activity{
 		
 		tod.setText(df.format(new Date())+"Z");
 		
+		Date waspassed=place.getPassed();
+		if (passed!=null)
+		{
+			passed.setText("--");
+			if (waspassed!=null)
+			{
+				passed.setText(df.format(waspassed)+"Z");
+			}
+		}
+		
 		Date eta2time=place.getETA2();
 		if (eta2time!=null)
 		{
@@ -185,9 +196,14 @@ public class DetailedPlaceActivity extends Activity{
 				planned_field.setText("--");
 		}
 		
-		if (delay!=null && eta2time!=null)
+		if (delay!=null && (eta2time!=null || waspassed!=null))
 		{			
-			int diff=(int)((planned.getTime()-eta2time.getTime())/1000l);
+			Date comptime;
+			if (eta2time!=null)
+				comptime=eta2time;
+			else
+				comptime=waspassed;
+			int diff=(int)((planned.getTime()-comptime.getTime())/1000l);
 			if (diff>0)
 			{ //early
 				if (diff<60)
@@ -229,7 +245,12 @@ public class DetailedPlaceActivity extends Activity{
 			float brg=Project.bearing(ownlatlon,placepos);
 			if (waypoint_hdg!=null) waypoint_hdg.setText(String.format("%03.0f°", brg));
 			if (compass!=null)
-				compass.set(hdg, brg);
+			{
+				if (dv<0.01)
+					compass.set(hdg, -1000); //so close we can't really tell the direction
+				else
+					compass.set(hdg, brg);
+			}
 			
 			GetElevation gelv=GlobalGetElev.get_elev;
 			if (gelv!=null)
@@ -259,6 +280,7 @@ public class DetailedPlaceActivity extends Activity{
 	//private Button prev;
 	//private Button next;
 	private DetailedPlace place;
+	private PositionSubscriberIf subs;
 	@Override
     public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -274,39 +296,31 @@ public class DetailedPlaceActivity extends Activity{
 		initialize();
 		
 		
-		final Handler handler=new Handler();
-		final Runnable gpsfail=new Runnable()
-		{
+		
+		subs=new PositionSubscriberIf() {				
 			@Override
-			public void run() {
+			public void gps_update(Location location) {
+				last_location=location;
+				update_location(location);					
+			}
+			@Override
+			public void gps_disabled() {
 				fail();
 			}
 		};
-		
-		
-        locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
-        if (locman!=null)
-        	locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000,0, new LocationListener() {
-				@Override
-				public void onStatusChanged(String provider, int status, Bundle extras) {
-				}
-				@Override
-				public void onProviderEnabled(String provider) {					
-				}
-				@Override
-				public void onProviderDisabled(String provider) {					
-				}
-				@Override
-				public void onLocationChanged(Location location) {
-					handler.removeCallbacks(gpsfail);
-					last_location=location;
-					handler.postDelayed(gpsfail, 4000);
-					update_location(location);					
-				}
-			});
+		GlobalPosition.registerSubscriber(
+				subs
+			);
         //Log.i("fplan.tmp","DetailedPlaceActivity create stopped");
 
 	}
+	@Override
+	protected void onDestroy()
+	{
+		GlobalPosition.unRegisterSubscriber(subs);
+		super.onDestroy();
+	}
+	
 	private void initialize() {
 		setContentView(R.layout.details);
 		
@@ -328,10 +342,12 @@ public class DetailedPlaceActivity extends Activity{
 		{
 			waypoint_hdg=addRow("Bearing");
 			d=addRow("Distance");
-			compass=addRow("Direction",new CompassRoseView(this));
 			ETA2=addRow("ETA");
 			ETA2time=addRow("Time Remain.");
+			passed=addRow("Passed");
 		}
+		compass=addRow("Direction",new CompassRoseView(this));
+		
 		
 		
 		if (place.hasPlanned())

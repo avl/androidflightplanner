@@ -6,8 +6,6 @@ import android.view.KeyEvent;
 
 public interface MainMapIf {
 
-	public abstract void enableDriving(boolean debugdrive);
-
 	public abstract void zoom(int i);
 
 	public abstract void onSideKey(int i);
@@ -36,5 +34,6 @@ public interface MainMapIf {
 	public abstract void proxwarner_update(String[] warning);
 
 	public abstract void set_gps_sat_cnt(int satcnt, int satfixcnt);
+
 
 }

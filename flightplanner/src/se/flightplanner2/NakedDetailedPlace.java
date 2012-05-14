@@ -100,4 +100,15 @@ public class NakedDetailedPlace implements DetailedPlace {
 		return false;
 	}
 
+	@Override
+	public Date getPassed() {
+		return null;
+	}
+
+	@Override
+	public boolean hasPassed() {
+		return false;
+	}
+	
+
 }

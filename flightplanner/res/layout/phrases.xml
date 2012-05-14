@@ -11,5 +11,26 @@
         android:layout_height="wrap_content"
         android:orientation="vertical" 
         >
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal" 
+        >
+        <Spinner 
+        android:id="@+id/spn_channel"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:prompt="@string/Chn"
+    	/>
+        <Button 
+        android:id="@+id/but_position"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:text="Position" 
+    	/>
+        </LinearLayout>
+	        
     </LinearLayout>
 </ScrollView>

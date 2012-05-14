@@ -14,7 +14,7 @@
 <LinearLayout
   xmlns:android="http://schemas.android.com/apk/res/android"
   android:orientation="horizontal"
-  android:layout_width="fill_parent"
+  android:layout_width="wrap_content"
   android:layout_height="wrap_content">
     <Button
         android:id="@+id/dp_all"
@@ -57,7 +57,7 @@
 	    android:layout_width="fill_parent"
 		android:layout_height="2dip"
 		android:background="#FFFFFFFF" />
-    
+	
 <ScrollView
   xmlns:android="http://schemas.android.com/apk/res/android"
   android:layout_width="fill_parent"
@@ -66,10 +66,17 @@
 	<TextView android:id="@+id/posdescr" android:text="TextView" android:layout_width="wrap_content" android:textAppearance="?android:attr/textAppearanceLarge" android:layout_height="wrap_content"></TextView>
 		
 </ScrollView>
-	<LinearLayout 
+	<LinearLayout
+	    android:id="@+id/endlayout" 
 	    android:layout_width="fill_parent"
 		android:layout_height="2dip"
 		android:background="#FFFFFFFF" />
 
-
+    <Button
+        android:id="@+id/selectbuttonend"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Use Position" 
+        />
+	
 </LinearLayout>

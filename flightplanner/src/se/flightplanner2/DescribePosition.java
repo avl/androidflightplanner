@@ -6,14 +6,20 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
+import se.flightplanner2.GlobalPosition.PositionSubscriberIf;
 import se.flightplanner2.Project.LatLon;
 import se.flightplanner2.Project.Merc;
 import se.flightplanner2.TripState.NextSigPoints;
+import se.flightplanner2.descpos.LatLonRelDec;
+import se.flightplanner2.descpos.NextSigPointReldec;
+import se.flightplanner2.descpos.RelDec;
+import se.flightplanner2.descpos.SigPointReldec;
 import se.flightplanner2.vector.BoundingBox;
 
 import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
@@ -30,14 +36,10 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 
-public class DescribePosition extends Activity implements LocationListener{
+public class DescribePosition extends Activity implements PositionSubscriberIf{
 
-	static private abstract class RelDec
-	{
-		String name;
-		public abstract String getDescr();				
-	}
-	private String roughdir(float brg)
+	protected static final int CHOOSE_POSITION = 1;
+	public static String roughdir(float brg)
 	{
 		if (brg<11.25+22.5*0) return "north";
 		if (brg<11.25+22.5*1) return "north-north-east";
@@ -60,38 +62,7 @@ public class DescribePosition extends Activity implements LocationListener{
 		if (brg<11.25+22.5*15) return "north-north-west";
 		return "north";
 	}
-	private String getSigPointPosDescr(SigPoint sp)
-	{
-		
-		TripState st=GlobalTripState.tripstate;
-		if (st==null) return null; 
-		
-		NextSigPoints nesp=st.getSPInfo(sp);
-		return getSigPointPosDescrFromEnsp(nesp);
-	}
-	private String getSigPointPosDescrFromEnsp(NextSigPoints nesp) {
-		Log.i("fplan.dp","Nesp:"+nesp);
-		if (nesp==null) return null;
-		TripState tst=GlobalTripState.tripstate;
-		if (tst!=null)
-		{
-			tst.update_ensp(nesp);
-		}
-		Date either=nesp.passed!=null ? nesp.passed : nesp.eta;
-		Log.i("fplan.dp","Either date:"+either);
-		if (either!=null)
-		{
-			Date now=new Date();
-			if (Math.abs(now.getTime()-either.getTime())<30000) //within one minute
-				return nesp.name;
-		}
-		if (nesp.passed!=null)
-			return nesp.name+" "+aviation_format_time(nesp.passed);
-		if (nesp.eta!=null)		
-			return "ESTIMATING "+nesp.name+" "+aviation_format_time(nesp.eta);
-		return null;
-	}
-	private String aviation_format_time(Date when) {
+	public static String aviation_format_time(Date when) {
 		Date now=new Date();
 		long lnow=now.getTime();
 		long lwhen=when.getTime();
@@ -123,36 +94,10 @@ public class DescribePosition extends Activity implements LocationListener{
 	TextView describer;
 	ListView spin;
 	int sel=AdapterView.INVALID_POSITION;
-	ArrayList<RelDec> items=new ArrayList<DescribePosition.RelDec>();
+	ArrayList<RelDec> items=new ArrayList<RelDec>();
 	
 	void addEnsp(final NextSigPoints ensp) {
-		final RelDec d=new RelDec()
-		{
-			@Override
-			public String getDescr() {
-				float bearing=Project.bearing(ensp.latlon,mypos);
-				double distance=Project.exacter_distance(mypos, ensp.latlon);
-				StringBuilder sb=new StringBuilder();
-				
-				
-				
-				//say "Long final rwy" if possible..
-				sb.append("<p>");
-				sb.append(String.format("%.1f miles %s of %s",distance,roughdir(bearing),name));
-				sb.append("</p>");
-				sb.append("(or)<br/>");
-				sb.append("<p>");
-				sb.append(String.format("%03.0f° %.1f miles from %s",bearing,distance,name));
-				sb.append("</p>");
-				String icao_sigp_format=getSigPointPosDescrFromEnsp(ensp);
-				if (icao_sigp_format!=null)
-				{
-					sb.append("(or)<br/>");
-					sb.append("<p>"+icao_sigp_format+"</p");
-				}
-				return sb.toString();
-			}
-		};
+		final RelDec d=new NextSigPointReldec(ensp);
 		d.name=ensp.name;		
 		items.add(d);
 		
@@ -160,51 +105,13 @@ public class DescribePosition extends Activity implements LocationListener{
 		
 	void addPoint(final SigPoint sp)
 	{
-		final RelDec d=new RelDec()
-		{
-			@Override
-			public String getDescr() {
-				float bearing=Project.bearing(sp.latlon,mypos);
-				double distance=Project.exacter_distance(mypos, sp.latlon);
-				StringBuilder sb=new StringBuilder();
-				
-				
-				//say "Long final rwy" if possible..
-				sb.append("<p>");
-				sb.append(String.format("%.1f miles %s of %s",distance,roughdir(bearing),name));
-				sb.append("</p>");
-				sb.append("(or)<br/>");
-				sb.append("<p>");
-				sb.append(String.format("%03.0f° %.1f miles from %s",bearing,distance,name));
-				sb.append("</p>");
-				String icao_sigp_format=getSigPointPosDescr(sp);
-				if (icao_sigp_format!=null)
-					sb.append("<p>"+icao_sigp_format+"</p");
-				return sb.toString();
-			}
-		};
+		final RelDec d=new SigPointReldec(sp);
 		d.name=sp.name;		
 		items.add(d);
 	}
 	void addLatLon(String item,final boolean decimal)
 	{
-		RelDec d=new RelDec()
-		{
-			@Override
-			public String getDescr() {
-				if (mypos==null)
-					return "Unknown position";
-				if (decimal)
-				{
-					return String.format("<p>WGS84 Decimal:</p>Latitude: %02.4f<br/>Longitude: %03.4f<br/>",mypos.lat,mypos.lon);
-				}
-				else
-				{
-					
-					return String.format("<p>WGS84:</p><p>"+mypos.toString2().replace(" ", "<br/>")+"</p>");					
-				}
-			}
-		};
+		RelDec d=new LatLonRelDec(decimal);
 		d.name=item;
 		items.add(d);
 	}
@@ -220,26 +127,41 @@ public class DescribePosition extends Activity implements LocationListener{
 			return;
 		}
 		RelDec rd=items.get(pos);
-		describer.setText(Html.fromHtml(rd.getDescr()));		
+		describer.setText(Html.fromHtml(rd.getDescr(false)));		
 	}
 	private String filter=null;
-	LocationManager locman;
 
-	LatLon mypos;
+	private boolean selectpos;
 	@Override
     public void onCreate(Bundle savedInstanceState) 
-	{
-		
+	{		
 		super.onCreate(savedInstanceState);
-
+		selectpos=getIntent().getBooleanExtra("se.flightplanner2.selectpos", false);
 		setContentView(R.layout.descpos);
-		mypos=(LatLon)getIntent().getSerializableExtra("se.flightplanner2.pos");
-		if (mypos==null)
-		{
-			RookieHelper.showmsg(this.getApplicationContext(),"Current position unknown");
-			finish();
-			return;
-		}
+		Button selbutton=(Button)findViewById(R.id.selectbuttonend);
+		if (!selectpos)
+			selbutton.setVisibility(View.GONE);
+		else
+			selbutton.setOnClickListener(new OnClickListener()
+			{
+				@Override
+				public void onClick(View v) {
+					Intent intent = DescribePosition.this.getIntent();
+
+					int pos=sel;
+					if (pos==AdapterView.INVALID_POSITION)
+						pos=0;
+					if (pos>=0 || pos<items.size())
+					{
+						RelDec rd=items.get(pos);
+						intent.putExtra("se.flightplanner2.reldec",rd);
+					}
+					
+					DescribePosition.this.setResult(RESULT_OK, intent);
+					DescribePosition.this.finish();
+				}			
+			});
+	
 		describer=(TextView)findViewById(R.id.posdescr);
 		spin=(ListView)findViewById(R.id.relspinner);
 		
@@ -276,13 +198,25 @@ public class DescribePosition extends Activity implements LocationListener{
 		
 		
 		complete_update();
-        locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
-		locman.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000,0, this);
+		GlobalPosition.registerSubscriber(this);
 		
 		update(null);
 		
 	}
+	@Override
+	protected void onDestroy()
+	{
+		GlobalPosition.unRegisterSubscriber(this);
+		super.onDestroy();
+	}
 	private void complete_update() {
+		LatLon mypos=GlobalPosition.getLastLatLonPosition();
+		if (mypos==null)
+		{
+			finish();
+			return;
+		}
+		
 		items.clear();
 		ArrayList<SigPoint> all=new ArrayList<SigPoint>();
 		AirspaceLookup lookup=GlobalLookup.lookup;
@@ -334,6 +268,7 @@ public class DescribePosition extends Activity implements LocationListener{
 					int index, long arg3) {
 				Log.i("fplan","OnClick does run");
 				sel=index;
+				LatLon mypos=GlobalPosition.getLastLatLonPosition();
 				update(mypos);
 				
 			}
@@ -352,20 +287,14 @@ public class DescribePosition extends Activity implements LocationListener{
 		return founditems;
 	}
 	@Override
-	public void onLocationChanged(Location location) {
-		mypos=new LatLon(location);
+	public void gps_update(Location location) {
+		LatLon mypos=new LatLon(location);
 		Log.i("fplan","DescribePosition update");
 		update(mypos);
 	}
 	@Override
-	public void onProviderDisabled(String provider) {
-		update(null);
-		
-	}
-	@Override
-	public void onProviderEnabled(String provider) {
-	}
-	@Override
-	public void onStatusChanged(String provider, int status, Bundle extras) {
+	public void gps_disabled() {
+		update(null);	
 	}
 }
+
