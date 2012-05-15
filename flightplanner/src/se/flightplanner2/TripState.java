@@ -56,6 +56,7 @@ public class TripState implements InformationPanel {
 		public int target_wp;
 		public Date passed;
 		public String name;
+		public boolean landing;
 		public String toString()
 		{
 			return "SP: "+name+" ratio: "+ratio+" target_wp "+target_wp+" passed: "+passed;
@@ -370,10 +371,11 @@ public class TripState implements InformationPanel {
 		return bughdg;
 	}
 	private Date getEta(EnrouteSigPoints ensp) {
-		if (target_wp<=1 || target_wp>=tripdata.waypoints.size()) return null;		
-		if (ensp.target_wp==target_wp)
+		Log.i("fplan.dp","getEta()");
+		if (target_wp<0 || target_wp>=tripdata.waypoints.size()) return null;		
+		if (ensp.target_wp==target_wp || ensp.target_wp==0)
 		{
-			Waypoint w2=tripdata.waypoints.get(target_wp);
+			Waypoint w2=tripdata.waypoints.get(ensp.target_wp);
 			Log.i("fplan.dp","not been pased, cur leg, w2 gs"+w2.gs);
 			
 			float dist=(float)Project.exacter_distance(lastpos, ensp.latlon);
@@ -386,6 +388,7 @@ public class TripState implements InformationPanel {
 			return null; //should never happen
 		if (ensp.target_wp>=tripdata.waypoints.size() || ensp.target_wp<1)
 			return null;
+		
 		Date eta;		
 		WaypointInfo we1=waypointEvents.get(ensp.target_wp-1);
 		WaypointInfo we2=waypointEvents.get(ensp.target_wp);
@@ -444,6 +447,7 @@ public class TripState implements InformationPanel {
 						ensp.latlon=sp.latlon;
 						ensp.target_wp=i;
 						ensp.name=sp.name;
+						ensp.landing=false;
 						enroute.add(ensp);
 					}
 				}
@@ -455,12 +459,38 @@ public class TripState implements InformationPanel {
 					ensp2.target_wp=i;
 					ensp2.name=w2.name;			
 					ensp2.latlon=w2.latlon;
+					ensp2.landing=w2.land_at_end;
 					enroute.add(ensp2);
 				}
 			}
 		}
 		
 	}
+	
+	static public class NextLanding
+	{
+		String where;
+		Date when;
+	}
+	
+	public NextLanding getNextLanding()
+	{
+		
+		for(int i=0;i<enroute.size();++i)
+		{
+			EnrouteSigPoints esp=enroute.get(i);
+			if (esp.target_wp<target_wp) continue;
+			if (esp.landing || i==enroute.size()-1)
+			{
+				NextLanding nl=new NextLanding();
+				nl.where=esp.name;
+				nl.when=getEta(esp);
+				return nl;
+			}
+		}
+		return null;
+	}
+	
 	public int get_time_to_destination() {
 		return time_to_destination;
 	}
@@ -1104,6 +1134,12 @@ public class TripState implements InformationPanel {
 	public void reupdate() {
 		if (last_location!=null)
 			updatemypos(last_location);		
+	}
+	public String get_registration() {
+		return tripdata.aircraft;
+	}
+	public String get_atsradioname() {
+		return tripdata.atsradiotype;
 	}
 	
 		

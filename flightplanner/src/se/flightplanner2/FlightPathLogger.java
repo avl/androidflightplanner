@@ -236,7 +236,7 @@ public class FlightPathLogger {
 		}
 		final static private SimpleDateFormat dateformat = new SimpleDateFormat("yyyyMMddkkmmss");
 		final static private SimpleDateFormat dateonlyformat = new SimpleDateFormat("yyyy-MM-dd");
-		final static private SimpleDateFormat timeonlyformat = new SimpleDateFormat("kk:mm");
+		final static private SimpleDateFormat timeonlyformat = new SimpleDateFormat("HH:mm");
 		static
 		{
 			dateformat.setTimeZone(TimeZone.getTimeZone("GMT"));

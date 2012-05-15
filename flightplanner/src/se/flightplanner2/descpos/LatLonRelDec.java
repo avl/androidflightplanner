@@ -11,9 +11,13 @@ public final class LatLonRelDec extends RelDec {
 	public LatLonRelDec(boolean decimal) {
 		this.decimal = decimal;
 	}
+	public String getName()
+	{
+		return "WGS84 Position";
+	}
 
 	@Override
-	public String getDescr(boolean shortdesc) {
+	public String getDescr(boolean shortdesc,boolean exacter) {
 		LatLon mypos=GlobalPosition.getLastLatLonPosition();
 		Log.i("fplan","DescribePosition update");
 		if (shortdesc)

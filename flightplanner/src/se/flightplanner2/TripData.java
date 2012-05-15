@@ -35,6 +35,9 @@ public class TripData implements Serializable {
 	private static final long serialVersionUID = -6626110951719722186L;
 	ArrayList<Waypoint> waypoints;
 	String trip;
+	String aircraft; //registration
+	String atsradiotype; //type name used on radio
+	
 	
 	/*
 	static String[] get_trips(String user,String pass) throws Exception
@@ -160,6 +163,16 @@ public class TripData implements Serializable {
 	{
 		TripData d=new TripData();
 		d.trip=is.readUTF();
+		if (version>=8)
+		{
+			d.aircraft=is.readUTF();
+			d.atsradiotype=is.readUTF();
+		}
+		else
+		{
+			d.aircraft="?";
+			d.atsradiotype="?";
+		}
 		int numw=is.readInt();
 		d.waypoints=new ArrayList<TripData.Waypoint>();
 		for(int i=0;i<numw;++i)
@@ -172,6 +185,9 @@ public class TripData implements Serializable {
 	}
 	public void serialize(DataOutputStream os) throws IOException{
 		os.writeUTF(trip);
+		os.writeUTF(aircraft);
+		os.writeUTF(atsradiotype);
+		
 		os.writeInt(waypoints.size());
 		for(Waypoint w:waypoints)
 		{

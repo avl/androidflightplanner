@@ -98,7 +98,7 @@ public class DescribePosition extends Activity implements PositionSubscriberIf{
 	
 	void addEnsp(final NextSigPoints ensp) {
 		final RelDec d=new NextSigPointReldec(ensp);
-		d.name=ensp.name;		
+			
 		items.add(d);
 		
 	}
@@ -106,13 +106,11 @@ public class DescribePosition extends Activity implements PositionSubscriberIf{
 	void addPoint(final SigPoint sp)
 	{
 		final RelDec d=new SigPointReldec(sp);
-		d.name=sp.name;		
 		items.add(d);
 	}
 	void addLatLon(String item,final boolean decimal)
 	{
 		RelDec d=new LatLonRelDec(decimal);
-		d.name=item;
 		items.add(d);
 	}
 	void update(LatLon mypos)
@@ -127,7 +125,7 @@ public class DescribePosition extends Activity implements PositionSubscriberIf{
 			return;
 		}
 		RelDec rd=items.get(pos);
-		describer.setText(Html.fromHtml(rd.getDescr(false)));		
+		describer.setText(Html.fromHtml(rd.getDescr(false,false)));		
 	}
 	private String filter=null;
 
@@ -254,7 +252,7 @@ public class DescribePosition extends Activity implements PositionSubscriberIf{
 		}
 		ArrayList<String> stritems=new ArrayList<String>();
 		for(RelDec r:items)
-			stritems.add(r.name);
+			stritems.add(r.getName());
 		
 		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_selectable_list_item,stritems);
 	

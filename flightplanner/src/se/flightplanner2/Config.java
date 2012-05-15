@@ -11,5 +11,5 @@ public class Config {
 
 	public static int max_elev_zoomlevel=8;
 	
-	public static boolean skip_download=false;
+	public static boolean skip_download=true;
 }

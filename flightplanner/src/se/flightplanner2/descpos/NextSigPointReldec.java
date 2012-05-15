@@ -13,21 +13,42 @@ import android.util.Log;
 
 public final class NextSigPointReldec extends RelDec {
 	private final NextSigPoints ensp;
-
+	String name;
 	public NextSigPointReldec(NextSigPoints ensp) {
 		this.ensp = ensp;
+		name=ensp.name;
+		if (name.startsWith("E") && name.length()>5)
+		{
+			String icaocand=name.substring(0,4);
+			if (icaocand.toUpperCase().equals(icaocand) && name.charAt(4)==' ')
+			{
+				name=name.substring(5);
+			}
+		}
+		
 	}
+	public String getName()
+	{
+		return name;
+	}
+	
 
 	@Override
-	public String getDescr(boolean shorted) {
+	public String getDescr(boolean shorted,boolean exacter) {
 		LatLon mypos=GlobalPosition.getLastLatLonPosition();
 		float bearing=Project.bearing(ensp.latlon,mypos);
 		double distance=Project.exacter_distance(mypos, ensp.latlon);
 		StringBuilder sb=new StringBuilder();
 		
-		String shortdesc=String.format("%.0f miles %s of %s",distance,DescribePosition.roughdir(bearing),name);
+		String shortdesc=String.format("%.0f miles %s %s",distance,DescribePosition.roughdir(bearing),name);
+		String longdesc=String.format("%03.0f° %.1f miles from %s",bearing,distance,name);
 		if (shorted)
-			return shortdesc;
+		{
+			if (exacter)
+				return longdesc;
+			else
+				return shortdesc;
+		}
 				
 		//say "Long final rwy" if possible..
 		sb.append("<p>");
@@ -35,7 +56,7 @@ public final class NextSigPointReldec extends RelDec {
 		sb.append("</p>");
 		sb.append("(or)<br/>");
 		sb.append("<p>");
-		sb.append(String.format("%03.0f° %.1f miles from %s",bearing,distance,name));
+		sb.append(longdesc);
 		sb.append("</p>");
 		String icao_sigp_format=NextSigPointReldec.getSigPointPosDescrFromEnsp(ensp);
 		if (icao_sigp_format!=null)
@@ -47,9 +68,10 @@ public final class NextSigPointReldec extends RelDec {
 	}
 
 	static public String getSigPointPosDescrFromEnsp(NextSigPoints nesp) {
-		Log.i("fplan.dp","Nesp:"+nesp);
+		
 		if (nesp==null) return null;
 		TripState tst=GlobalTripState.tripstate;
+		Log.i("fplan.dp","Nesp:"+nesp+" tst: "+tst);
 		if (tst!=null)
 		{
 			tst.update_ensp(nesp);

@@ -5,6 +5,10 @@ package se.flightplanner2.vector;
 
 import java.io.Serializable;
 
+import se.flightplanner2.Project;
+import se.flightplanner2.Project.LatLon;
+import se.flightplanner2.Project.Merc;
+
 public class BoundingBox implements Cloneable, Serializable
 {
 	private static final long serialVersionUID = 2356282658637933688L;
@@ -22,6 +26,13 @@ public class BoundingBox implements Cloneable, Serializable
 		y1=center.gety()-size;
 		x2=center.getx()+size;
 		y2=center.gety()+size;		
+	}
+	static public BoundingBox nearby(LatLon latlon,float dist_nm)
+	{
+		Vector merc=Project.latlon2mercvec(latlon, 13);
+		float nm_in_merc=(float)Project.approx_scale(merc.y, 13, dist_nm);
+		return new BoundingBox(merc,(double)nm_in_merc);
+		
 	}
 	public BoundingBox expand(double h)
 	{
