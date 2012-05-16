@@ -86,12 +86,15 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		y_dpmm=dot_per_mm_y;
 		float dot_per_mm_x=metrics.xdpi/25.4f;
 		x_dpmm=dot_per_mm_x;
+		
+		
+		
 		screen_size_x=metrics.widthPixels/dot_per_mm_x;
 		screen_size_y=metrics.heightPixels/dot_per_mm_y;
 		
 		this.tripstate=ptripstate;
 		
-		//float bigtextsize=dot_per_mm_y*2.7f; //6.5 mm text size
+		//float bigtextsize=dot_per_mm_y*2.kf; //6.5 mm text size
 		//float textsize=dot_per_mm_y*1.75f; //6.5 mm text size
 		 
 		last_real_position=0;

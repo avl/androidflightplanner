@@ -122,14 +122,14 @@ public class Nav extends Activity implements PositionSubscriberIf,
 			return true;
 		}
 		if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-			if (DataDownloader.debugMode())
+			if (Config.debugMode())
 				GlobalPosition.pos.debugElev(250*0.3048f);
 			else
 				map.zoom(1);
 			return true;
 		}
 		if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-			if (DataDownloader.debugMode())
+			if (Config.debugMode())
 				GlobalPosition.pos.debugElev(-250*0.3048f);
 			else
 				map.zoom(-1);
@@ -694,7 +694,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		if (airspace!=null && airspace.spaces!=null)
 			clearper.load(airspace.spaces);
 		
-		if (DataDownloader.debugMode())
+		if (Config.debugMode() && Config.gpsdrive)
 		{
 			SensorManager sensorManager=(SensorManager) getSystemService(SENSOR_SERVICE);
 	        sensorManager.registerListener(
@@ -706,7 +706,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 							float speed_sign=-1;
 							int TRN=0;
 							int DOWN=2;
-							//Log.i("fplan.sensor","Sensors: X: "+event.values[1]+" Y: "+event.values[0]+" Z: "+event.values[2]);
+							Log.i("fplan.sensor","Sensors: X: "+event.values[1]+" Y: "+event.values[0]+" Z: "+event.values[2]);
 							float speed=-speed_sign*event.values[SPD]*20;
 							if (speed<0) speed=0;
 							float turn_rate=0;
@@ -871,11 +871,12 @@ public class Nav extends Activity implements PositionSubscriberIf,
 									"This trip has no waypoints. Go to www.swflightplanner.se and create some!");
 				}
 				nav.tripdata = td;
-				nav.tripdata.serialize_to_file(nav, "tripdata.bin");
 				tripstate = new TripState(nav.tripdata);
+				nav.tripstate=tripstate;
 				GlobalTripState.tripstate = tripstate;
 				map.update_tripdata(nav.tripdata, tripstate);
 				tripstate.reupdate();
+				nav.tripdata.serialize_to_file(nav, "tripdata.bin");
 			} catch (Throwable e) {
 				RookieHelper.showmsg(nav, e.toString());
 			}

@@ -26,11 +26,31 @@
         <Button 
         android:id="@+id/but_position"
         android:layout_width="0dp"
-        android:layout_weight="0.5"
+        android:layout_weight="0.25"
         android:layout_height="wrap_content"
         android:text="Position" 
     	/>
         </LinearLayout>
-	        
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal" 
+        >
+        <Spinner 
+        android:id="@+id/spn_alt"
+        android:layout_width="0dp"
+        android:layout_weight="0.5"
+        android:layout_height="wrap_content"
+        android:prompt="@string/Alt"
+    	/>
+        <Spinner 
+        android:id="@+id/spn_lvl"
+        android:layout_width="0dp"
+        android:layout_weight="0.5"
+        android:layout_height="wrap_content"
+        android:prompt="@string/Lvl"
+    	/>
+        </LinearLayout>
+    	        
     </LinearLayout>
 </ScrollView>

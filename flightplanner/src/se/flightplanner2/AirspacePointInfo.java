@@ -73,7 +73,7 @@ public class AirspacePointInfo implements InformationPanel
 		GetElevation gete=GlobalGetElev.get_elev;
 		if (gete!=null)
 		{
-			elev=gete.get_elev_ft(about);
+			elev=gete.get_elev_ft(about,13,Math.max((int)marker_size13/2,1));
 		}		
 	}
 	

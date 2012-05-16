@@ -39,9 +39,23 @@ public final class NextSigPointReldec extends RelDec {
 		float bearing=Project.bearing(ensp.latlon,mypos);
 		double distance=Project.exacter_distance(mypos, ensp.latlon);
 		StringBuilder sb=new StringBuilder();
-		
-		String shortdesc=String.format("%.0f miles %s %s",distance,DescribePosition.roughdir(bearing),name);
-		String longdesc=String.format("%03.0f° %.1f miles from %s",bearing,distance,name);
+		String shortdesc;
+		String longdesc;
+		if (distance<0.25)
+		{
+			shortdesc=longdesc=name;
+		} 
+		else if (distance<.75)
+		{
+			shortdesc=name;
+			longdesc=String.format("%03.0f° %.1f miles from %s",bearing,distance,name);
+			
+		}
+		else
+		{
+			shortdesc=String.format("%.0f miles %s %s",distance,DescribePosition.roughdir(bearing),name);
+			longdesc=String.format("%03.0f° %.1f miles from %s",bearing,distance,name);
+		}
 		if (shorted)
 		{
 			if (exacter)

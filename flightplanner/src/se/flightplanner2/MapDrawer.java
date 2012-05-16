@@ -19,6 +19,7 @@ import se.flightplanner2.Project.iMerc;
 import se.flightplanner2.SigPoint.Runway;
 import se.flightplanner2.TripData.Waypoint;
 import se.flightplanner2.TripState.BugInfo;
+import se.flightplanner2.TripState.NextLanding;
 import se.flightplanner2.vector.BoundingBox;
 import se.flightplanner2.vector.ConvexPolygon;
 import se.flightplanner2.vector.Vector;
@@ -53,8 +54,8 @@ public class MapDrawer {
 	private Paint blackgroundpaint;
 	private Paint textpaint;
 	private float x_dpmm, y_dpmm;
-	private SimpleDateFormat formatter = new SimpleDateFormat("kkmmss");
-	private SimpleDateFormat formatter2 = new SimpleDateFormat("kkmm");
+	private SimpleDateFormat formatter = new SimpleDateFormat("HHmmss");
+	private SimpleDateFormat formatter2 = new SimpleDateFormat("HH:mm");
 	private String zoom_in_text = null;
 	private String zoom_out_text = null;
 	private boolean zoom_buttons;
@@ -299,14 +300,14 @@ public class MapDrawer {
 		redraw_start = bef;
 		redraw_view = view;
 		int elev_ft = (int) (lastpos.getAltitude() / 0.3048f);
-		if (DataDownloader.debugMode())
+		if (Config.debugMode())
 			;//elev_ft = 7000 - (int) ((long) ((SystemClock.elapsedRealtime() * 0.001f * 75f)) % 7000);
 		
-		int agnd=Integer.MAX_VALUE;								
+		int amsl=Integer.MAX_VALUE;								
 		GetElevation gelev=GlobalGetElev.get_elev;
 		if (gelev!=null)
 		{
-			agnd=elev_ft-gelev.get_elev_ft(new LatLon(lastpos));
+			amsl=elev_ft/*-gelev.get_elev_ft(new LatLon(lastpos))*/;
 		}
 
 		double gs_kt = lastpos.getSpeed() * 3.6 / 1.852;
@@ -877,21 +878,21 @@ public class MapDrawer {
 			if (eta2 != null) {
 				int when = (int) ((eta2.getTime() - new Date().getTime()) / 1000l);
 				whenstr = fmttime((int) when);
+				whentempl="22:22_";
 				// whenstr="T:"+formatter.format(eta2)+"Z";
-				whentempl = "T:WW:WW ";
 			} else {
 				if (empty) {
 					whenstr = "";
-					whentempl = "";
+					whentempl="";
 				} else if (skipped) {
-					whenstr = "Skipped";
-					whentempl = whenstr;
+					whenstr = "Skipped.";
+					whentempl="Skipped.";
 				} else {
 					if (passed != null)
 						whenstr = "Passed " + formatter.format(passed) + "Z";
 					else
 						whenstr = "--:--";
-					whentempl = "Passed WW:WWZ";
+					whentempl="Passed 22:22Z.";
 				}
 			}
 
@@ -959,6 +960,9 @@ public class MapDrawer {
 					gui.onCloseInfoPanel();
 				}
 			});
+			
+			bigtextpaint.setTextSize(bigtextsize);
+			
 
 			RectF r = new RectF(0, topy1, right, bottom);
 			canvas.drawLine(0, topy1, right, topy1, thinlinepaint);
@@ -971,7 +975,8 @@ public class MapDrawer {
 			addTextIfFits(canvas, whentempl, "", r, whenstr, "", y1, bigtextpaint, smalltextpaint);
 			// canvas.drawText(String.format("T:%s",whenstr),
 			// 70,y1,bigtextpaint);
-			addTextIfFits(canvas, null, "", r, we.getPointTitle(), "", y1, bigtextpaint, smalltextpaint);
+			
+			addTextIfFits(canvas, null, null, r, we.getPointTitle(), "", y1, bigtextpaint, smalltextpaint);
 			// canvas.drawText(we.getTitle(), 140,y1,bigtextpaint);
 			for (int i = 0; i < actuallines - 1; ++i) {
 				/*
@@ -1159,37 +1164,49 @@ public class MapDrawer {
 		}
 
 		linepaint.setColor(Color.RED);
-		float y = hugetextpaint.getTextSize() * 0.85f;
+		float y = Math.max(hugetextpaint.getTextSize() * 0.85f,bigtextpaint.getTextSize()*1.85f);
+		float yledge =bigtextpaint.getTextSize() * 0.85f;
 		bigtextpaint.setColor(Color.WHITE);
-		RectF r = new RectF(0, 0, right, y + 4);
+		RectF r = new RectF(0, 0, right, y + 0.7f*y_dpmm);
 		canvas.drawRect(r, blackgroundpaint);
 		addTextIfFits(canvas, "hdg:", "223-",r, "hdg:",String.format("%03.0f°", lastpos.getBearing()),
 				y, smalltextpaint,hugetextpaint);
 
 		addTextIfFits(canvas, "gs:","222", r, "gs:",String.format("%.0f", gs_kt),
 				y, smalltextpaint,hugetextpaint);
+		
+		RectF rledge=new RectF(r);
 
 		// canvas.drawText(String.format("%03.0f°",lastpos.getBearing()), 40, y,
 		// bigtextpaint);
 		// canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),100,y,bigtextpaint);
-		int td = tripstate.get_time_to_destination();
-		// canvas.drawText(fmttime(td),150,y,bigtextpaint);
-		String agnd_txt="--";
-		if (agnd>-9999)
-			agnd_txt=""+agnd;
-		addTextIfFits(canvas, "gnd:", "2000", r, "gnd:",agnd_txt,  y, smalltextpaint,bigtextpaint);
+		NextLanding nextlanding=tripstate.getNextLanding();
+		//int td = tripstate.get_time_to_destination();
+		// canvas.drawText(fmttime(td),150,y,bigtextpaint);asdf
+		addTextIfFits(canvas, "ETA:", "22:22", rledge, "ETA:",formatter2.format(nextlanding.when),  yledge, smalltextpaint,bigtextpaint);
+		//Log.i("fplan.delay","nextlanding: "+nextlanding.where+" when: "+nextlanding.planned);
+		int delay=(int)((nextlanding.when.getTime()-nextlanding.planned.getTime())/(60*1000l));
+		addTextIfFits(canvas, "dehay::", "22:22", rledge, (delay>0) ? "delay:" : "ahead:" ,fmtdelay(delay),  yledge, smalltextpaint,bigtextpaint);
+		
+		
+		String amsl_txt="--";
+		if (amsl>-9999)
+			amsl_txt=""+amsl;
+		addTextIfFits(canvas, "ETA:", "22:22", r, "msl:",amsl_txt,  y, smalltextpaint,bigtextpaint);
 		
 		if (havefix) // if significantly after 1970-0-01
 		{
-			addTextIfFits(canvas, "GPS:","NOK100%", 
-					r, "GPS:",String.format("OK%d%%",gps_sat_fix_cnt), y, smalltextpaint, bigtextpaint);
+			addTextIfFits(canvas, "GPS:","100%", 
+					r, "GPS:",String.format("%d%%",gps_sat_fix_cnt), y, smalltextpaint, bigtextpaint,false);
 		} else {
-			addTextIfFits(canvas, "GPS:","NOK100%", 
-					r, "GPS:",String.format("NOK%d%%",gps_sat_fix_cnt), y, smalltextpaint, bigtextpaint);
+			bigtextpaint.setColor(Color.RED);
+			addTextIfFits(canvas, "GPS:","100%", 
+					r, "GPS:",String.format("%d%%",gps_sat_fix_cnt), y, smalltextpaint, bigtextpaint,true);
+			bigtextpaint.setColor(Color.WHITE);
 		}
 		
 		// /canvas.drawText(String.format("Z%d",zoomlevel), 0,y,bigtextpaint);
-		if (DataDownloader.debugMode())
+		if (Config.debugMode())
 			addTextIfFits(canvas, "Z13", "", r, String.format("Z%d", zoomlevel),
 				"", y, bigtextpaint, smalltextpaint);
 		
@@ -1571,25 +1588,37 @@ public class MapDrawer {
 		return false;
 
 	}
-
 	boolean addTextIfFits(Canvas canvas, String sizetext, String sizetext2,
 			RectF r, String realtext, String realtext2, float y, Paint tp, Paint tp2) {
+		return addTextIfFits(canvas, sizetext, sizetext2,
+				r, realtext, realtext2, y, tp, tp2,false); 
+	}
+
+	boolean addTextIfFits(Canvas canvas, String sizetext, String sizetext2,
+			RectF r, String realtext, String realtext2, float y, Paint tp, Paint tp2,boolean strikethrough) {
 		if (sizetext == null) {
 			Rect rect = new Rect();
-			tp.getTextBounds(realtext, 0, realtext.length(), rect);
+			getTextBounds(realtext, tp, rect);
 			canvas.drawText(realtext, r.left, y, tp);
 			canvas.drawText(realtext2, (float)(r.left+rect.width()), y, tp2);
 			r.left = r.right + 1;
 			return true;
 		} else {
 			Rect rect2 = new Rect();
-			tp2.getTextBounds(sizetext2, 0, sizetext2.length(), rect2);
+			getTextBounds(sizetext2, tp2, rect2);
 			Rect rect = new Rect();
-			tp.getTextBounds(sizetext, 0, sizetext.length(), rect);
+			getTextBounds(sizetext, tp, rect);
 			
 			if (r.left + rect.width() + rect2.width() < r.right) {
 				canvas.drawText(realtext, r.left, y, tp);
 				canvas.drawText(realtext2, r.left+rect.width()+0.25f*x_dpmm, y, tp2);
+				if (strikethrough)
+				{
+					Rect rect3 = new Rect();
+					tp2.setStrokeWidth(0.5f*x_dpmm);
+					getTextBounds(realtext2, tp2, rect3);
+					canvas.drawLine(r.left+rect.width(), y+rect3.bottom-rect3.height()/2, r.left+rect.width()+rect3.width(), y+rect3.bottom-rect3.height()/2, tp2);
+				}
 				r.left += (rect.width()+rect2.width()) + 1.0f * x_dpmm;
 				return true;
 			} else {
@@ -1598,6 +1627,17 @@ public class MapDrawer {
 			}
 		}
 
+	}
+
+	private void getTextBounds(String sizetext, Paint tp, Rect rect) {
+		if (sizetext.length()==0)
+		{
+			rect.left=0;rect.right=0;
+			rect.top=0;
+			rect.bottom=(int)(tp.getTextSize()/2);
+			return;
+		}
+		tp.getTextBounds(sizetext, 0, sizetext.length(), rect);
 	}
 
 	static void grow(Rect r, int howmuch) {
@@ -1611,6 +1651,20 @@ public class MapDrawer {
 		if (when == 0 || when > 3600 * 24 * 10)
 			return "--:--";
 		return String.format("%d:%02d", when / 60, when % 60);
+	}
+	public static String fmtdelay(int when) {
+		if (when>60*24*7)
+			return "--";
+		if (when<-60*24*7)
+			return "-";
+		if (when<0) {
+			when=-when;
+		}
+		if (when<60)
+			return ""+when+"m";
+		int hour=when/60;
+		int minute=when%60;
+		return String.format("%dh%02dm", hour,minute);
 	}
 
 }

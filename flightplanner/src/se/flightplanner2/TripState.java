@@ -471,20 +471,37 @@ public class TripState implements InformationPanel {
 	{
 		String where;
 		Date when;
+		Date planned;
 	}
 	
 	public NextLanding getNextLanding()
 	{
-		
-		for(int i=0;i<enroute.size();++i)
+		for(int i=target_wp;i<waypointEvents.size();++i)
 		{
-			EnrouteSigPoints esp=enroute.get(i);
-			if (esp.target_wp<target_wp) continue;
-			if (esp.landing || i==enroute.size()-1)
+			WaypointInfo esp=waypointEvents.get(i);
+			if (i==waypointEvents.size()-1 || tripdata.waypoints.get(i).land_at_end)
 			{
 				NextLanding nl=new NextLanding();
-				nl.where=esp.name;
-				nl.when=getEta(esp);
+				nl.where=esp.point_title;;
+				nl.when=esp.eta2;
+				nl.planned=new Date(tripdata.waypoints.get(i).arrive_dt*1000l);
+				return nl;
+			}
+		}
+		return null;
+	}
+	public NextLanding getPrevTakeoff()
+	{
+		for(int i=target_wp-1;i>=0;--i)
+		{
+			if (i>=waypointEvents.size()) continue;
+			WaypointInfo esp=waypointEvents.get(i);
+			if (i==0 || tripdata.waypoints.get(i).land_at_end)
+			{
+				NextLanding nl=new NextLanding();
+				nl.where=esp.point_title;;
+				nl.when=esp.passed;
+				nl.planned=new Date(tripdata.waypoints.get(i).depart_dt*1000l);
 				return nl;
 			}
 		}

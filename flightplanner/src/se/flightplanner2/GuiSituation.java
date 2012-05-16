@@ -376,6 +376,8 @@ public class GuiSituation
 		
 	}
 	public void updateTripState(TripState tripstate2) {
+		if (tripstate!=tripstate2)
+			currentInfo=null;
 		this.tripstate=tripstate2;
 	}
 	public void updateLookup(AirspaceLookup lookup)

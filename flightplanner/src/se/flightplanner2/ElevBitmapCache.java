@@ -364,22 +364,63 @@ public class ElevBitmapCache implements GetElevation {
 	
 	
 	HashMap<iMerc,Short> pt_elev_cache=new HashMap<iMerc,Short>();
+	int last_cached_zoomlevel;
 	//setPixels (int[] pixels, int offset, int stride, int x, int y, int width, int height)
 	@Override
-	public short get_elev_ft(LatLon pos) {
-		iMerc m=Project.latlon2imerc(pos, 8);
+	public short get_elev_ft(LatLon pos,int zoomlevel,int pixelradius) {
+		long bef=SystemClock.elapsedRealtime();
+		int pixels=6;
+		while (zoomlevel>0 && pixels<pixelradius)
+		{
+			zoomlevel-=1;
+			pixels<<=1;
+		}
+		int samplebox=6;
+		if (zoomlevel>Config.max_elev_zoomlevel)
+		{
+			int diff=zoomlevel-Config.max_elev_zoomlevel;
+			samplebox>>=diff;
+			if (samplebox<1) samplebox=1;
+			zoomlevel=Config.max_elev_zoomlevel;
+		}
+		
+		
+		iMerc m=Project.latlon2imerc(pos, zoomlevel);
+		m.x-=samplebox/2;
+		m.y-=samplebox/2;
+		
+		
+		if (zoomlevel!=last_cached_zoomlevel)
+			pt_elev_cache.clear();
+		last_cached_zoomlevel=zoomlevel;
 		Short cval=pt_elev_cache.get(m);
-		if (cval!=null) return cval;
-		short val=get_elev_ft_uncached(m);
+		
+		if (cval!=null) {
+			Log.i("fplan.mmupd","Elev Cache hit, cache size: "+pt_elev_cache.size()+" coord: "+m+" pos: "+pos);
+			return cval;
+		}
+		iMerc orig=new iMerc(m);
+		short maxval=Short.MIN_VALUE;
+		for(int ix=0;ix<samplebox;++ix)
+			for(int iy=0;iy<samplebox;++iy)
+			{
+				m.x=orig.x+ix;
+				m.y=orig.y+iy;
+				short val1=get_elev_ft_uncached(m,zoomlevel);
+				if (val1>maxval)
+					maxval=val1;
+			}
+		short val=maxval;
 		cval=val;
 		if (pt_elev_cache.size()>50)
 			pt_elev_cache.clear();
-		pt_elev_cache.put(m,cval);
+		pt_elev_cache.put(orig,cval);
+		long aft=SystemClock.elapsedRealtime();
+		Log.i("fplan.mmupd","Time to get elev ft: "+(aft-bef)+"ms");
 		return val;		
 	}	
-	private short get_elev_ft_uncached(iMerc m) {
-		int zoom=8;
-		long bef=SystemClock.elapsedRealtime();
+	private short get_elev_ft_uncached(iMerc m,int zoom) {
+		
 		int x=m.getX()&(~0xff);
 		int y=m.getY()&(~0xff);
 		int xoff=m.getX()&0xff;
@@ -402,8 +443,6 @@ public class ElevBitmapCache implements GetElevation {
 		int lsb=bs[1]&0xff;
 		int msb=bs[0]&0xff;
 		short elev=(short)(lsb+(msb<<8));
-		long aft=SystemClock.elapsedRealtime();
-		//Log.i("fplan.mmupd","Time to get elev ft: "+(aft-bef)+"ms");
 		return elev;
 	}
 	

@@ -119,8 +119,8 @@ public class Project {
 }
 	static public class iMerc
 	{
-		private int x;
-		private int y;
+		public int x;
+		public int y;
 		public iMerc(Vector v)
 		{
 			x=(int)v.x;

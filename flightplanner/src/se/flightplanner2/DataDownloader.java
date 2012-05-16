@@ -36,39 +36,6 @@ import org.json.JSONObject;
 import android.util.Log;
 
 public class DataDownloader {
-	public static boolean debugMode() {
-		return true;
-	}
-	
-	
-	static private String get_addr()
-	{
-		String addr;
-		if (debugMode())
-		{
-			//addr="http://10.0.2.2:5000";
-			//String addr="192.168.42.222:5000";
-			//String addr="http://192.168.1.150:5000";
-			
-			//String addr="http://192.168.1.102:5000";
-			//addr="http://192.168.1.160:5000";
-			//addr="http://192.168.1.101:5000";
-			//String addr="http://79.99.0.86:5000";
-			addr="http://192.168.1.160:5000";
-			//addr="http://192.168.43.251:5000";
-			//addr="http://www.swflightplanner.se";
-			
-		}
-		else
-		{
-			addr="http://www.swflightplanner.se";
-		}
-		
-		
-		return addr;
-	}
-	
-	
 	static InputStream postRaw(String path,String user, String pass,
 			ArrayList<NameValuePair> nvps,boolean zip) throws Exception {
 		
@@ -165,7 +132,7 @@ public class DataDownloader {
 	{
 
 		File pathobj=new File(path);
-		URL url=new URL(get_addr()+path);
+		URL url=new URL(Config.get_addr()+path);
 		HttpURLConnection conn=(HttpURLConnection)url.openConnection();
 		conn.setRequestMethod("POST"); 
 		conn.setUseCaches(false); 
@@ -233,7 +200,7 @@ public class DataDownloader {
 	private static HttpPost httpConnect(String path, String user, String pass,
 			ArrayList<NameValuePair> nvps, boolean zip)
 			throws NoSuchAlgorithmException, UnsupportedEncodingException {
-		HttpPost req=new HttpPost(get_addr()+path);
+		HttpPost req=new HttpPost(Config.get_addr()+path);
 		{
 			if (pass!=null)
 			{
@@ -273,7 +240,7 @@ public class DataDownloader {
 
 
 	public static boolean chartGpsDebugMode() {
-		return false && debugMode();
+		return false && Config.debugMode();
 	}
 
 

@@ -2,6 +2,9 @@
 <resources>
     <string name="hello">Hello World, Nav!</string>
     <string name="Chn">Station</string>
+    <string name="Alt">Altitude</string>
+    <string name="Qnh">QNH</string>
+    <string name="Lvl">Flight Level</string>
     <string name="Pos">Position Relative</string>
     <string name="app_name">flightplanner</string>
 <string name="detail_prompt">Map Detail</string>

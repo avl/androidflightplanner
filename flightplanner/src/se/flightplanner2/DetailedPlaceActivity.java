@@ -260,7 +260,7 @@ public class DetailedPlaceActivity extends Activity{
 				if (last_elev_placepos!=null && last_elev_placepos.equals(placepos))
 					elev=last_elev;
 				else
-					elev=gelv.get_elev_ft(placepos);
+					elev=gelv.get_elev_ft(placepos,13,1);
 				terr_elev.setText(""+elev+"ft");
 			}
 			else

@@ -13,6 +13,7 @@ import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Date;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -133,6 +134,7 @@ public class TripData implements Serializable {
 			w.endfuel=is.readFloat();
 			w.fuelburn=is.readFloat();
 			w.depart_dt=is.readLong();
+			Log.i("fplan.depart_dt","Read depart_dt: "+new Date(w.depart_dt*1000));
 			w.arrive_dt=is.readLong();
 			w.lastsub=is.readByte();
 			return w;

@@ -47,7 +47,11 @@ public class GlobalPositionImpl implements PositionIf, LocationListener {
 		handler.removeCallbacks(debugRunnable);
 		locman.removeUpdates(this);
 	}
-	public void onLocationChanged(Location loc) {
+	public void onLocationChanged(Location loc) {		
+		if (debugRunner) return;
+		onLocationChangedImpl(loc);
+	}
+	public void onLocationChangedImpl(Location loc) {
 		Location location = bearingspeed.calcBearingSpeed(loc);
 		last_location = location;
 		Log.i("fplan.sensor","Number of subscribers: "+subs.size());
@@ -61,6 +65,7 @@ public class GlobalPositionImpl implements PositionIf, LocationListener {
 
 	@Override
 	public void onProviderDisabled(String provider) {
+		if (debugRunner) return;
 		for(PositionSubscriberIf pos:subs.keySet())
 			pos.gps_disabled();
 	}
@@ -120,8 +125,10 @@ public class GlobalPositionImpl implements PositionIf, LocationListener {
 	
 	public void enableDriving() 
 	{
+		if (!Config.debugMode()) return;
 		if (debugRunner==true)
 			return;
+		handler.removeCallbacks(lost_gps);
 		debugRunner=true;
 		if (debugMerc==null)
 		{
@@ -152,7 +159,7 @@ public class GlobalPositionImpl implements PositionIf, LocationListener {
 				loc.removeBearing();
 				loc.removeSpeed();
 				
-				onLocationChanged(loc);									
+				onLocationChangedImpl(loc);									
 				handler.postDelayed(debugRunnable, 1000);
 			}
 		};

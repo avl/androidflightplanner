@@ -440,7 +440,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 	}
 	private long downloadLevel(long totprog, int level, int maxlevel, String kind)
 			throws InterruptedException, BackgroundException, FatalBackgroundException {
-		if (DataDownloader.debugMode() && Config.skip_download)
+		if (Config.debugMode() && Config.skip_download)
 			return 0;
 		long startversion = -1;
 		boolean first=true;
