@@ -6,6 +6,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Random;
 
+import se.flightplanner2.AdChartLoader.AdChartOwner;
+import se.flightplanner2.Airspace.ChartInfo;
+import se.flightplanner2.Airspace.VariantInfo;
 import se.flightplanner2.BackgroundMapLoader.UpdatableUI;
 import se.flightplanner2.GuiSituation.GuiClientInterface;
 import se.flightplanner2.MapDrawer.DrawResult;
@@ -13,6 +16,7 @@ import se.flightplanner2.Project.LatLon;
 import se.flightplanner2.Project.Merc;
 import se.flightplanner2.Project.iMerc;
 import se.flightplanner2.Timeout.DoSomething;
+import se.flightplanner2.vector.BoundingBox;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -26,8 +30,9 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Toast;
 
-public class MovingMap extends View implements UpdatableUI,GuiClientInterface,MainMapIf {
+public class MovingMap extends View implements UpdatableUI,GuiClientInterface,MainMapIf, AdChartOwner {
 	private TripData tripdata;
 	private TripState tripstate;
 	private AirspaceLookup lookup;
@@ -47,6 +52,8 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	private boolean defnorthup=false;
 	private float x_dpmm;
 	private float y_dpmm;
+	private int batt=-1;
+	private boolean charging=false;
 	private float screen_size_x,screen_size_y;
 	private FlightPathLogger fplog;
 	private MovingMapOwner owner;
@@ -70,12 +77,14 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		handler.removeCallbacks(invalidate_within_runner);
 		next_invalidate_time=Long.MAX_VALUE; 
 	}
+	private AdChartLoader adloader=null;
 	public MovingMap(Context context,DisplayMetrics metrics, FlightPathLogger fplog,MovingMapOwner owner,
 			TripState ptripstate)
 	{
 		super(context);
 		this.owner=owner;
 		this.fplog=fplog;
+		
 		dismiss_timeout=new Timeout();
 		BearingSpeedCalc bearingspeed=new BearingSpeedCalc();
 		
@@ -172,7 +181,6 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			GetMapBitmap usebitmaps=bitmaps;
 			if (MapDetailLevels.getMaxLevelFromDetail(detaillevel)<0)
 				usebitmaps=null;
-				
 			DrawResult res=drawer.draw_actual_map(tripdata, tripstate,
 					lookup,
 					canvas,					
@@ -185,21 +193,25 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 					this,
 					prox_warning,
 					gps_sat_cnt,gps_sat_fix_cnt,
-					elevbmc,terrwarn
+					elevbmc,terrwarn,batt,charging,adloader
 					);
 			lastcachesize=res.lastcachesize;
-			if (mapcache!=null && mapcache.haveUnsatisfiedQueries())
+			mapcache.garbageCollect();
+			if (mapcache!=null)
 			{
-				if (loader==null)
+				if (mapcache.haveUnsatisfiedQueries())
 				{
-					loader=new BackgroundMapLoader(blobs, mapcache, this,lastcachesize);
-					loader.run();
-					//Log.i("fplan.bitmap","Start a background task again");
-				}
-				else
-				{
-					//loader.cancel(true);
-					//Log.i("fplan.bitmap","Cancel running background task, need a new.");
+					if (loader==null)
+					{
+						loader=new BackgroundMapLoader(blobs, mapcache, this);
+						loader.run();
+						//Log.i("fplan.bitmap","Start a background task again");
+					}
+					else
+					{
+						//loader.cancel(true);
+						//Log.i("fplan.bitmap","Cancel running background task, need a new.");
+					}
 				}
 			}
 			
@@ -230,7 +242,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		lastpos=loc;
 		if (gui!=null)
 			gui.updatePos(lastpos);
-		Log.i("fplan.sensor","in gps_update, bearing: "+lastpos.getBearing());
+		//Log.i("fplan.sensor","in gps_update, bearing: "+lastpos.getBearing());
 		last_real_position=SystemClock.uptimeMillis();
 		tripstate.updatemypos(lastpos);
 		LatLon latlon=new LatLon(lastpos.getLatitude(),lastpos.getLongitude());
@@ -312,7 +324,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			if (mapcache!=null && mapcache.haveUnsatisfiedQueries())
 			{
 				//Log.i("fplan.bitmap","Restart background task in updateUI");
-				loader=new BackgroundMapLoader(blobs,mapcache,this,lastcachesize);
+				loader=new BackgroundMapLoader(blobs,mapcache,this);
 				loader.run();
 			}
 			if (mapcache==null || !mapcache.haveUnsatisfiedQueries())
@@ -376,7 +388,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 				}
 				else
 				{					
-					bitmaps=new GetMapBitmap(mapcache,maxzoomlevel);
+					bitmaps=new GetMapBitmap(mapcache);
 				}
 			} catch (IOException e) {
 				//System.out.println("Failed opening terrain bitmap. Check file:"+path);
@@ -480,6 +492,61 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			gps_sat_fix_cnt=satfixcnt;
 			invalidate_within(500);
 		}		
+	}
+	@Override
+	public void set_battery_level(int level,boolean plugged) {
+		batt=level;
+		charging=plugged;
+		invalidate_within(1500);
+	}
+
+	@Override
+	public void adChartLoadFinish(boolean done) {
+		invalidate_within(1000);
+	}
+
+	
+	private int cur_toggle_map=-1;
+	@Override
+	public void selectChart(String chart) {
+		adloader=new AdChartLoader(chart,this);
+		gui.chartMode(true);
+		doInvalidate();
+	}
+
+	@Override
+	public void toggle_map() {
+		cur_toggle_map+=1;
+		ArrayList<VariantInfo> avail=new ArrayList<VariantInfo>();
+		ArrayList<SigPoint> sps=new ArrayList<SigPoint>();
+		for(SigPoint sp:lookup.majorAirports.findall(BoundingBox.nearby(new LatLon(lastpos), 30)))
+		{
+			
+			if (sp.extra!=null && sp.extra.icao!=null)
+			{
+				ChartInfo cif=lookup.getChartInfo(sp.extra.icao);
+				if (cif!=null && cif.getVariants()!=null)
+					for(VariantInfo variant:cif.getVariants())
+					{
+						avail.add(variant);
+						sps.add(sp);
+					}
+			}
+		}
+		if (cur_toggle_map>=avail.size())
+		{
+			adloader=null;
+			cur_toggle_map=-1;
+			gui.chartMode(false);
+		}
+		else
+		{
+			adloader=new AdChartLoader(avail.get(cur_toggle_map).chartname,this);
+			gui.chartMode(true);			
+		}
+		
+		doInvalidate();
+		
 	}
 	
 }

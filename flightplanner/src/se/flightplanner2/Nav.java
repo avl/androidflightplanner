@@ -20,9 +20,11 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.pm.ActivityInfo;
@@ -43,6 +45,7 @@ import android.location.LocationProvider;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.os.Vibrator;
@@ -52,6 +55,7 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -73,6 +77,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 	final static int SETTINGS_DIALOG = 2;
 	final static int VIEW_RECORDINGS = 3;
 	final static int VIEW = 4;
+	final static int ADINFO = 5;
 
 	final static int MENU_SYNC = 3;
 	final static int MENU_FINISH = 4;
@@ -170,7 +175,14 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		 * Integer(req).toString()+ " res:"+new Integer(res).toString())
 		 * .setCancelable(true); AlertDialog diag=builder.create(); diag.show();
 		 */
+		if (req==ADINFO && data!=null)
+		{
+	    	Log.i("fplan.adchart","ADINFO request,selecting chart");
 
+			String chart=data.getStringExtra("se.flightplanner2.adchart");
+			if (chart!=null && !chart.equals(""))		
+				map.selectChart(chart);
+		}
 		if (req == SETUP_INFO && data != null) {
 			final String user = data.getStringExtra("se.flightplanner2.login");
 			final String password = data
@@ -326,6 +338,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		switch (item.getItemId()) {
 		case MENU_FINISH:
 			finish();
+			overridePendingTransition(0, 0);
 			break;
 		case MENU_SETTINGS: {
 			Intent intent = getSettingsIntent();
@@ -372,6 +385,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 
 		case MENU_DESCPOS: {
 			Intent intent = new Intent(this, DescribePosition.class);
+			intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
 			if (last_location != null) {
 				startActivity(intent);
 			} else {
@@ -385,6 +399,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		}
 		case MENU_PHRASES: {
 			Intent intent = new Intent(this, PhrasesActivity.class);
+			intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
 			startActivity(intent);
 		}
 
@@ -394,6 +409,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 
 	public void doShowAirspaces() {
 		Intent intent = new Intent(this, SimplerActivity.class);
+		intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
 		if (last_location != null) {
 			startActivity(intent);
 		} else {
@@ -462,6 +478,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 	private void viewRecordings() {
 		try {
 			Intent intent = new Intent(this, ViewRecordings.class);
+			intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
 			intent.putExtra("se.flightplanner2.user",
 					getPreferences(MODE_PRIVATE).getString("user", ""));
 			intent.putExtra("se.flightplanner2.password",
@@ -512,14 +529,16 @@ public class Nav extends Activity implements PositionSubscriberIf,
 
 	protected void loadSelectedAd(String icao) {
 		Intent intent = new Intent(this, ViewAdInfo.class);
+		intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
 		intent.putExtra("se.flightplanner2.icao", icao);
 		Log.i("fplan.chart", "After calling put Serializable");
 		map.releaseMemory();
-		startActivity(intent);
+		startActivityForResult(intent,ADINFO);
 	}
 
 	private Intent getSettingsIntent() {
 		Intent intent = new Intent(this, SetupInfo.class);
+		intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
 		intent.putExtra("se.flightplanner2.user", getPreferences(MODE_PRIVATE)
 				.getString("user", "user"));
 		intent.putExtra("se.flightplanner2.password",
@@ -533,6 +552,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		intent.putExtra("se.flightplanner2.terrwarn",
 				getPreferences(MODE_PRIVATE).getBoolean("terrwarn", false));
 		// RookieHelper.showmsg(this,"Got mapd"+mapd);
+		intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
 		return intent;
 	}
 
@@ -621,7 +641,10 @@ public class Nav extends Activity implements PositionSubscriberIf,
     public void onCreate(Bundle savedInstanceState) {
     	super.onCreate(savedInstanceState);
     	UpgradeFromv1.upgradeIfNeeded();
+    	getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+    	
     	final NavData data = (NavData) getLastNonConfigurationInstance();
+    	
 		
 		locman=(LocationManager)getSystemService(Context.LOCATION_SERVICE);
 		locman.addGpsStatusListener(gpsstatuslistener);		
@@ -674,6 +697,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
         }
 		DisplayMetrics metrics = new DisplayMetrics();
 		getWindowManager().getDefaultDisplay().getMetrics(metrics);
+		
+		
 
         tripstate=new TripState(tripdata);
 		GlobalTripState.tripstate=tripstate;
@@ -685,6 +710,18 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		
 		map.thisSetContentView(this);
 		map.gps_update(null,false);
+
+		
+    	this.registerReceiver(new BroadcastReceiver(){  
+    	    @Override  
+    	    public void onReceive(Context arg0, Intent intent) {  
+    	      int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
+    	      int plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
+    	      map.set_battery_level(level,plugged!=0);
+    	        
+    	    }  
+    	  },new IntentFilter(Intent.ACTION_BATTERY_CHANGED));  
+		
 		
 		proxdet=new AirspaceProximityDetector(lookup,5);
 		clearper=new ClearancePersistence();
@@ -706,7 +743,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 							float speed_sign=-1;
 							int TRN=0;
 							int DOWN=2;
-							Log.i("fplan.sensor","Sensors: X: "+event.values[1]+" Y: "+event.values[0]+" Z: "+event.values[2]);
+							///Log.i("fplan.sensor","Sensors: X: "+event.values[1]+" Y: "+event.values[0]+" Z: "+event.values[2]);
 							float speed=-speed_sign*event.values[SPD]*20;
 							if (speed<0) speed=0;
 							float turn_rate=0;
@@ -750,25 +787,6 @@ public class Nav extends Activity implements PositionSubscriberIf,
 	@Override
 	public void gps_update(Location location) {
 		// Log.i("fplan","Location changed");
-		/*
-		if (loc != null && DataDownloader.chartGpsDebugMode()) {
-			double lat = loc.getLatitude();
-			double lon = loc.getLongitude();
-
-			// Forcefully move us to middle of Arlanda airport,
-			// So that we can easily test moving around there without
-			// actually being there :-).
-			if (offlat == 0) {
-				offlat = lat;
-				offlon = lon;
-			}
-			lat = lat - offlat + 59.652011;
-			lon = lon - offlon + 17.918701;
-			loc.removeBearing();
-			loc.setLatitude(lat);
-			loc.setLongitude(lon);
-		}
-		*/
 
 		warner.run(location, (getPreferences(MODE_PRIVATE).getBoolean(
 				"vibrate", false)) ? vibrator : null, this);
@@ -894,8 +912,18 @@ public class Nav extends Activity implements PositionSubscriberIf,
 			map.releaseMemory();
 			Intent intent = new Intent(this, DetailedPlaceActivity.class);
 			GlobalDetailedPlace.detailedplace = place.getDetailedPlace();
-			Log.i("fplan", "tripstate = " + GlobalDetailedPlace.detailedplace);
-			startActivity(intent);
+			intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+			//Log.i("fplan", "tripstate = " + GlobalDetailedPlace.detailedplace);
+			startActivity(intent);			
+			
+		} else if (place.getLatLon() != null) {
+			map.releaseMemory();
+			Intent intent = new Intent(this, ViewAdInfo.class);
+			intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+			intent.putExtra("se.flightplanner2.latlon", place.getLatLon());			
+			//GlobalDetailedPlace.detailedplace = place.getDetailedPlace();
+			//Log.i("fplan", "tripstate = " + GlobalDetailedPlace.detailedplace);
+			startActivityForResult(intent,ADINFO);
 		}
 
 		/*

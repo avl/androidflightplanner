@@ -239,9 +239,6 @@ public class DataDownloader {
 	}
 
 
-	public static boolean chartGpsDebugMode() {
-		return false && Config.debugMode();
-	}
 
 
 

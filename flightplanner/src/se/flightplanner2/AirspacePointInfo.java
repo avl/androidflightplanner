@@ -28,7 +28,7 @@ public class AirspacePointInfo implements InformationPanel
 	 * @param is_direct True if this is a simple waypoint, which is the next in the trip, and 
 	 * we want the ETA calculated naively from the current actual groundspeed, using a direct track..
 	 */
-	public AirspacePointInfo(LatLon about,AirspaceLookup lookup,long marker_size13)
+	public AirspacePointInfo(final LatLon about,AirspaceLookup lookup,long marker_size13)
 	{
 		ArrayList<String> details2 = new ArrayList<String>(); 
 		ArrayList<String> extra2 = new ArrayList<String>();
@@ -48,7 +48,7 @@ public class AirspacePointInfo implements InformationPanel
 		if (extended.length==0)
 		{
 			final String human="Selected Point";
-			final DetailedPlace dp=new NakedDetailedPlace(human, about);			
+			//final DetailedPlace dp=new NakedDetailedPlace(human, about);			
 			extended=new Place[]{
 					new Place()
 					{
@@ -62,7 +62,11 @@ public class AirspacePointInfo implements InformationPanel
 						}
 						@Override
 						public DetailedPlace getDetailedPlace() {						
-							return dp;
+							return null;
+						}
+						@Override
+						public LatLon getLatLon() {
+							return about;
 						}
 					}
 			};

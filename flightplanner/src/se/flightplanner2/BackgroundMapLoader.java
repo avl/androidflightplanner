@@ -11,7 +11,7 @@ import android.os.AsyncTask;
 import android.os.SystemClock;
 import android.util.Log;
 
-public class BackgroundMapLoader extends AsyncTask<Key,BackgroundMapLoader.LoadedBitmap,Void>{
+public class BackgroundMapLoader extends AsyncTask<Key,BackgroundMapLoader.LoadedBitmap,Void> {
 
 	MapCache mapcache;
 	ArrayList<Blob> blobs;
@@ -19,14 +19,12 @@ public class BackgroundMapLoader extends AsyncTask<Key,BackgroundMapLoader.Loade
 	UpdatableUI ui;
 	boolean change;
 	boolean running;
-	int cachesize;
 	
-	BackgroundMapLoader(ArrayList<Blob> blobs,MapCache mapcache,UpdatableUI ui,int cachesize)
+	BackgroundMapLoader(ArrayList<Blob> blobs,MapCache mapcache,UpdatableUI ui)
 	{
 		this.blobs=blobs;
 		this.mapcache=mapcache;
 		this.ui=ui;
-		this.cachesize=cachesize;
 		change=false;
 		running=true;
 	}
@@ -67,7 +65,7 @@ public class BackgroundMapLoader extends AsyncTask<Key,BackgroundMapLoader.Loade
 			else
 			{
 				try {
-					//Log.i("fplan.bitmap","Publish a real bitmap:"+key.getPos());
+					Log.i("fplan.bitmap","Publish a real bitmap:"+key.getPos()+" zoomlevel: "+key.getZoomlevel());
 					publishProgress(new LoadedBitmap(key,blobs.get(key.getZoomlevel()).get_bitmap(key.getPos())));
 				} catch (Throwable e) {
 					Log.e("fplan","Background loading of tile "+key.getPos()+" failed."+e);
@@ -87,7 +85,6 @@ public class BackgroundMapLoader extends AsyncTask<Key,BackgroundMapLoader.Loade
     protected void onProgressUpdate(LoadedBitmap... progress) {
 		for(LoadedBitmap bm:progress)
     	{
-			mapcache.garbageCollect(cachesize);
 			//Log.i("fplan.bitmap","Injected a non-fake bitmap"+bm.key.getPos());
     		mapcache.inject(bm.key.getPos(),bm.key.getZoomlevel(),bm.bitmap,false,bm.bitmap==null);
     		change=true;

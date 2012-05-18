@@ -2,8 +2,10 @@ package se.flightplanner2;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 
 import android.location.Location;
+import android.os.SystemClock;
 
 import se.flightplanner2.Project.LatLon;
 import se.flightplanner2.Project.Merc;
@@ -71,6 +73,7 @@ public class AirspaceProximityDetector {
 		if (d1>d2) return +1;
 		return 0;
 	}
+	private HashMap<AirspaceArea,Long> wearein=new HashMap<AirspaceArea, Long>();
 	public void run(Location loc)
 	{
 		final float gs=(float)(loc.getSpeed()*3.6/1.852);
@@ -100,7 +103,28 @@ public class AirspaceProximityDetector {
 		{
 			if (now-a.cleared<Config.clearance_valid_time) continue;		
 		    SectorResult res=a.poly.sector(boundaheadpie,dist_merc);
-		    if (res.inside) continue; //Don't warn for airspaces we're already in.
+		    Long hysteresis=wearein.get(a);
+		    if (res.inside)
+		    {
+		    	if (hysteresis==null)
+		    	{
+		    		hysteresis=now;
+		    		wearein.put(a,now);
+		    	}
+		    	continue; //Don't warn for airspaces we're already in.
+		    }
+		    else
+		    {
+		    	if (hysteresis!=null)
+		    	{
+		    		long delta=now-hysteresis;
+		    		if (delta>1000l*60*5)
+		    		{//we've been in for more than 5 minutes, then exited the area
+		    			a.cleared=0;
+		    		}
+			    	wearein.remove(a);
+		    	}		    	
+		    }
 		    if (res==null) continue; 
 		    if (res.nearest_distance_to_center>dist_merc)
 		    	continue;

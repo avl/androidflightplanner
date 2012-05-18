@@ -637,7 +637,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			if (metapath.delete()==false)
 				throw new FatalBackgroundException("Couldn't delete "+metapath.getName());
 		}
-		for(int dellevel=0;dellevel<=13;++dellevel)
+		for(int dellevel=0;dellevel<=Config.max_zoomlevel;++dellevel)
 		{						
 			File levpath = new File(extpath2,
 					Config.path+prefix+"level" + dellevel);

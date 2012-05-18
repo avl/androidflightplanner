@@ -17,8 +17,16 @@ public class SetupInfo extends Activity {
 
 	int detail;
 	@Override
+	public void onBackPressed() {
+	  super.onBackPressed();
+	  overridePendingTransition(0, 0);
+	}
+	
+	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        //getWindow().setWindowAnimations(android.R.anim.);
+
         
         setContentView(R.layout.settingsinfo);
         final SetupInfo setup=this;
@@ -44,6 +52,7 @@ public class SetupInfo extends Activity {
         button.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
             	Intent ret=new Intent(Intent.ACTION_DEFAULT);
+    			ret.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
             	ret.putExtra("se.flightplanner2.login",edtxt.getText().toString());
             	ret.putExtra("se.flightplanner2.password",edpwd.getText().toString());
             	ret.putExtra("se.flightplanner2.mapdetail",outer_this.detail-1);
@@ -54,6 +63,7 @@ public class SetupInfo extends Activity {
             	ret.putExtra("se.flightplanner2.thenopen", getIntent().getExtras().getString("se.flightplanner2.thenopen"));
             	setup.setResult(RESULT_OK,ret);
             	setup.finish();
+            	setup.overridePendingTransition(0, 0);            	
             }
         });
         
@@ -81,5 +91,4 @@ public class SetupInfo extends Activity {
         spinner.setSelection(detail);
         
     }
-
 }

@@ -30,6 +30,12 @@ public class GuiSituation
 	private TripState tripstate;
 	private InformationPanel currentInfo;
 	private boolean defnorthup;
+	private boolean chartmode=false;
+	
+	boolean getChartMode()
+	{
+		return chartmode;
+	}
 	
 	void setnorthup(boolean d)
 	{
@@ -55,7 +61,8 @@ public class GuiSituation
 		void doInvalidate();	
 		void cancelMapDownload();
 		void doShowExtended(Place[] places);
-		void showAirspaces();				
+		void showAirspaces();
+		void toggle_map();				
 	}
 	public interface Clickable
 	{
@@ -89,7 +96,7 @@ public class GuiSituation
 	}
 	boolean handleOnTouch(MotionEvent ev,float x_dpmm,float y_dpmm) {
 		float x=ev.getX();
-		Transform tf = getTransform();
+		TransformIf tf = getTransform();
 		float y=ev.getY();
 		if (ev.getAction()==MotionEvent.ACTION_DOWN ||
 			ev.getAction()==MotionEvent.ACTION_MOVE)	
@@ -143,7 +150,7 @@ public class GuiSituation
 			return;
 		}
 		{
-			Transform tf = getTransform();
+			TransformIf tf = getTransform();
 			Merc m=tf.screen2merc(new Vector(x,y));
 			LatLon point=Project.merc2latlon(m,zoomlevel);
 			double marker_size_pixels=x_dpmm*7;
@@ -161,6 +168,11 @@ public class GuiSituation
 		//while dragging, in principle.
 		state=GuiState.IDLE;
 	}
+	public void onChartUp(AdChartLoader adc) {
+		drag_heading=adc.getChartUpBearing();
+		movingMap.doInvalidate();
+	}
+	
 	public void onNorthUp()
 	{
 		drag_heading=0;
@@ -205,7 +217,7 @@ public class GuiSituation
 	void resetDragTimeout() {
 		drag_timeout.timeout(new DragTimeout(), 30000);
 	}
-	public void onTouchFingerDown(Transform tf, float x, float y,float x_dpmm,float y_dpmm) {
+	public void onTouchFingerDown(TransformIf tf, float x, float y,float x_dpmm,float y_dpmm) {
 		switch(state)
 		{
 		case IDLE:
@@ -244,8 +256,8 @@ public class GuiSituation
 		}
 			break;
 		case DRAGGING:
-			float deltax1=(x-dragstartx)*(1<<(13-zoomlevel));
-			float deltay1=(y-dragstarty)*(1<<(13-zoomlevel));
+			float deltax1=(float)((x-dragstartx)*Math.pow(2,13-zoomlevel));
+			float deltay1=(float)((y-dragstarty)*Math.pow(2,13-zoomlevel));
 			float hdgrad=tf.getHdgRad();
 			float deltax=(float)(Math.cos(hdgrad)*deltax1-Math.sin(hdgrad)*deltay1);
 			float deltay=(float)(Math.sin(hdgrad)*deltax1+Math.cos(hdgrad)*deltay1);
@@ -260,7 +272,7 @@ public class GuiSituation
 		}
 		
 	}
-	public void onTouchFingerUp(Transform tf, float x, float y,float xdpmm,float ydpmm) {
+	public void onTouchFingerUp(TransformIf tf, float x, float y,float xdpmm,float ydpmm) {
 		switch(state)
 		{
 		case IDLE:
@@ -282,11 +294,18 @@ public class GuiSituation
 		if (zoomlevel<4)
 			zoomlevel=4;
 		else
-		if (zoomlevel>13)
-			zoomlevel=13;		
+		if (zoomlevel>20)
+			zoomlevel=20;		
 		movingMap.doInvalidate();
 	}
-	Transform getTransform() {
+	private TransformFactoryIf tfac=new MercTransformFactory();
+	
+	public void setTransformType(TransformFactoryIf fac)
+	{
+		tfac=fac;
+	}
+	
+	public TransformIf getTransform() {
 		if (lastpos!=null)
 		{
 			Merc mypos;
@@ -308,11 +327,11 @@ public class GuiSituation
 				if (defnorthup)
 					hdg=0;
 			}
-			return new Transform(mypos,getArrow(),(float)hdg,zoomlevel);
+			return tfac.create(mypos,getArrow(),(float)hdg);
 		}
 		else
 		{
-			return new Transform(new Merc(128<<zoomlevel,128<<zoomlevel),getArrow(),0,zoomlevel);			
+			return tfac.create(new Merc(128<<zoomlevel,128<<zoomlevel),getArrow(),0);			
 		}
 	}
 	public Vector getArrow()
@@ -410,5 +429,13 @@ public class GuiSituation
 	public void showAirspaces() {
 		movingMap.showAirspaces();
 	}
+	public void chartMode(boolean b) {
+		chartmode=b;
+	}
+
+	public void toggle_map() {
+		movingMap.toggle_map();
+	}
+
 	
 }

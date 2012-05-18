@@ -163,6 +163,7 @@ public class ViewRecordings extends Activity implements HandleUpload {
 			@Override
 			public void onClick(View arg0) {
 				outerthis.finish();
+				outerthis.overridePendingTransition(0, 0);
 			}        	
         }
         );

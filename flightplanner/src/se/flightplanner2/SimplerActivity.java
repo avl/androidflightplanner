@@ -21,6 +21,13 @@ public class SimplerActivity extends Activity implements PositionSubscriberIf {
 	private long inhibit_relayout; 
 	private Handler handler;
 	private SimplerView simplerView;
+	
+	@Override
+	public void onBackPressed() {
+	  super.onBackPressed();
+	  overridePendingTransition(0, 0);
+	}
+	
 	@Override
     public void onCreate(Bundle savedInstanceState) 
 	{

@@ -47,6 +47,11 @@ public class Blob {
 	};
 	TileNumber get_tile_number(iMerc m)
 	{
+		if (m.x>x2) return null;
+		if (m.y>y2) return null;
+		if (m.x<x1) return null;
+		if (m.y<y1) return null;
+		
 		if (!(m.getX()>=0 && m.getY()>=0)) return null;		
 		if (m.getX()%tilesize!=0 || m.getY()%tilesize!=0)
 			throw new RuntimeException("Invalid tilesize");
@@ -122,7 +127,7 @@ public class Blob {
     byte[] get_tile(iMerc coords,int expected_maxsize) throws IOException
     {    	
     	int imagesize=seekright(coords);
-    	if (imagesize==-1)
+    	if (imagesize<0)
     		return null;
     	if (imagesize>expected_maxsize)
     		throw new IOException("Tile was bigger than expected max: "+expected_maxsize+", it was: "+imagesize);
@@ -139,6 +144,7 @@ public class Blob {
     		return null;
 		Log.i("fplan","Ready to read out bitmap, size "+imagesize);
 		*/
+		Log.i("fplan.bm","Loading bitmap: "+coords+" zoom: "+zoomlevel);
 		BitmapFactory.Options opts = new BitmapFactory.Options();
 		opts.inPreferredConfig=Bitmap.Config.RGB_565;
 		try {

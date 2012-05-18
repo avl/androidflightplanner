@@ -18,6 +18,11 @@ import android.view.MenuItem;
 public class AdChartActivity extends Activity implements PositionSubscriberIf {
 	final static int MENU_BACK=1;
 
+	@Override
+	public void onBackPressed() {
+	  super.onBackPressed();
+	  overridePendingTransition(0, 0);
+	}
 	public boolean onCreateOptionsMenu(Menu menu) {
 	    menu.add(0, MENU_BACK, 0, "Back");
 		return true;
@@ -25,7 +30,8 @@ public class AdChartActivity extends Activity implements PositionSubscriberIf {
 	public boolean onOptionsItemSelected(MenuItem item) {
 	    switch (item.getItemId()) {
 	    case MENU_BACK:
-	    	this.finish();
+	    	finish();
+    	    overridePendingTransition(0, 0);	    	
 	    	return true;
 	    }
 		return false;
@@ -57,6 +63,7 @@ public class AdChartActivity extends Activity implements PositionSubscriberIf {
     		{
     			Log.i("fplan.chart","Failed get chart width");
     			finish();
+        	    overridePendingTransition(0, 0);	    	
     			return;
     		}
 		}
@@ -64,6 +71,7 @@ public class AdChartActivity extends Activity implements PositionSubscriberIf {
 		{
 			e.printStackTrace();
 			finish();
+    	    overridePendingTransition(0, 0);	    	
 			return;
 		}
     	/*

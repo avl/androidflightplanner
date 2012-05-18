@@ -25,11 +25,16 @@ import se.flightplanner2.vector.ConvexPolygon;
 import se.flightplanner2.vector.Vector;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Canvas.VertexMode;
+import android.graphics.BitmapShader;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Shader.TileMode;
 import android.graphics.Typeface;
 import android.graphics.Paint.Style;
 import android.location.Location;
@@ -89,7 +94,7 @@ public class MapDrawer {
 			float screen_size_y) {
 		formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
 		formatter2.setTimeZone(TimeZone.getTimeZone("UTC"));
-
+		
 		this.x_dpmm = px_dpmm;
 		this.y_dpmm = py_dpmm;
 		float factor = (float) Math
@@ -103,8 +108,8 @@ public class MapDrawer {
 		int foreground = Color.WHITE;
 		float textsize = y_dpmm * 2.4f;
 		float smalltextsize = y_dpmm * 2.2f;
-		bigtextsize = y_dpmm * 3.1f; // 6.5 mm text size
-		float hugetextsize = y_dpmm * 3.7f; // 6.5 mm text size
+		bigtextsize = y_dpmm * 3.4f; // 6.5 mm text size
+		float hugetextsize = y_dpmm * 3.4f; // 6.5 mm text size
 
 		textpaint = new Paint();
 		textpaint.setAntiAlias(true);
@@ -286,15 +291,17 @@ public class MapDrawer {
 	private int last_zoomlevel;
 	private double last_mypos_y;
 	private double last_mypos_x;
-
+	
+	
 	public DrawResult draw_actual_map(TripData tripdata, TripState tripstate,
 			AirspaceLookup lookup, Canvas canvas, Rect screen_extent,
 			Location lastpos, GetMapBitmap bitmaps, final GuiSituation gui,
 			long last_real_position, String download_status,
 			InformationPanel panel, View view, String[] prox_warning,
 			int gps_sat_cnt, int gps_sat_fix_cnt, ElevBitmapCache elevbmc,
-			boolean terrwarn) {
+			boolean terrwarn,int battery,boolean charging,final AdChartLoader adloader) {
 
+		
 		long bef = SystemClock.elapsedRealtime();
 
 		redraw_start = bef;
@@ -313,16 +320,18 @@ public class MapDrawer {
 		double gs_kt = lastpos.getSpeed() * 3.6 / 1.852;
 		if (gs_kt < 10)
 			terrwarn = false;
+		boolean havefix = lastpos.getTime() > 3600 * 24 * 10 * 1000
+				&& SystemClock.uptimeMillis() - last_real_position < 15000;
 
 		elevbmc.start_frame(gui.getZoomlevel(), elev_ft);
-		Transform tf = gui.getTransform();
+		TransformIf tf = gui.getTransform();
 		boolean extrainfo = gui.getExtraInfo();
 
 		int extrainfolineoffset = gui.getExtrainfolineoffset();
 		boolean isDragging = (gui.getDrag_center13() != null);
 		int zoomlevel = gui.getZoomlevel();
-		if (zoomlevel > 13)
-			throw new RuntimeException("zoomlevel must be <=13");
+		if (zoomlevel > 22)
+			throw new RuntimeException("zoomlevel must be <=22");
 		gui.clearClickables();
 		ArrayList<GuiSituation.Clickable> clickables = gui.getClickables();
 
@@ -344,18 +353,20 @@ public class MapDrawer {
 		boolean isUserPresentlyMovingMap = gui.getFingerDown();
 		if (delta < 20)
 			isUserPresentlyMovingMap = false;
-
+	
 		Merc mypos13 = Project.merc2merc(tf.getPos(), zoomlevel, 13);
 
 		Vector arrow = gui.getArrow();
 		Merc screen_center = tf.screen2merc(new Vector(sizex / 2, sizey / 2));
 		Merc screen_center13 = Project.merc2merc(screen_center, zoomlevel, 13);
 
-		double fivenm13 = Project.approx_scale(screen_center13.y, 13, 10);
+		double tennm13 = Project.approx_scale(screen_center13.y, 13, 10);
+		
+
 		double diagonal13;
 		{
 			int zoomgap13 = 13 - zoomlevel;
-			diagonal13 = ((1 << zoomgap13) * (Math.sqrt(arrow.x * arrow.x
+			diagonal13 = ((Math.pow(2, zoomgap13)) * (Math.sqrt(arrow.x * arrow.x
 					+ arrow.y * arrow.y) + 50)) + 1;
 		}
 		BoundingBox bb13 = new BoundingBox(screen_center13.x,
@@ -363,9 +374,9 @@ public class MapDrawer {
 				.expand(diagonal13);
 
 		BoundingBox smbb13 = new BoundingBox(mypos13.x, mypos13.y, mypos13.x,
-				mypos13.y).expand(fivenm13);
+				mypos13.y).expand(tennm13);
 
-		if (bitmaps != null) {
+		if (bitmaps != null && adloader==null) {
 			iMerc centertile = new iMerc((int) screen_center.x & (~255),
 					(int) screen_center.y & (~255));
 			// int diagonal = (int) Math.sqrt((sizex / 2) * (sizey / 2))+1;
@@ -375,7 +386,7 @@ public class MapDrawer {
 			// int tot = 2 * minus + 1;
 
 			int tot;
-			int minus;
+			int minuspixels;
 			{
 				float smallres = Math.min(sizex, sizey);
 				float bigres = Math.max(sizex, sizey);
@@ -403,18 +414,22 @@ public class MapDrawer {
 											// memory as well, needing on
 											// average 0.25 less detailed
 											// bitmaps per zoomed in bitmap
-				minus = ((int) diag_length + 256) / 256;
+				minuspixels = ((int) diag_length + 256) / 256;
 			}
 			// Log.i("fplan.drawmap","Total tiles needed:"+tot);
 
-			iMerc topleft = new iMerc(centertile.getX() - (256 * minus),
-					centertile.getY() - 256 * minus);
+			
+			
+			//iMerc topleft = new iMerc(centertile.getX() - (256 * minus),
+			//		centertile.getY() - 256 * minus);
+			iMerc topleft = new iMerc(centertile.getX() - (256 * minuspixels),
+					centertile.getY() - 256 * minuspixels);
 			int cachesize = tot;
-			float hdg = (float) (tf.hdgrad * (180.0 / Math.PI));
+			float hdg = (float) (tf.getHdgRad() * (180.0 / Math.PI));
 			int tilesused = 0;
-			for (int j = 0; j < 2 * minus; ++j) {
+			for (int j = 0; j < 2 * minuspixels; ++j) {
 
-				for (int i = 0; i < 2 * minus; ++i) {
+				for (int i = 0; i < 2 * minuspixels; ++i) {
 
 					iMerc cur = new iMerc(topleft.getX() + 256 * i,
 							topleft.getY() + 256 * j);
@@ -425,6 +440,7 @@ public class MapDrawer {
 						continue;
 					BitmapRes b = null;
 					// Log.i("fplan","Bitmap for "+cur);
+					
 					b = bitmaps.getBitmap(cur, zoomlevel);
 					tilesused += 1;
 					if (b != null && b.b != null) {
@@ -457,6 +473,63 @@ public class MapDrawer {
 
 		elevbmc.delete_all_unused();
 		elevbmc.schedule_background_tasks();
+		
+		
+
+		if (adloader!=null)
+		{
+			double onenmpixels=Project.approx_scale(screen_center.y, zoomlevel, 1);
+			int best_ad_level=adloader.guess_zoomlevel(onenmpixels);
+			Log.i("fplan.bad","Best level: "+best_ad_level);
+			adloader.set_level(best_ad_level);
+			
+			adloader.start();
+			int w=adloader.get_width();
+			int h=adloader.get_height();
+			for(int x=0;x<w;x+=256)
+			{
+				
+				for(int y=0;y<=h;y+=256)
+				{
+					LatLon p1=adloader.pixel2latlon(new Vector(x,y));
+					LatLon p2=adloader.pixel2latlon(new Vector(x+256,y));
+					LatLon p3=adloader.pixel2latlon(new Vector(x,y+256));
+					//LatLon p4=adloader.pixel2latlon(new Vector(x+256,y+256));
+					//Log.i("fplan.bml","Figured latlon = "+p1+" "+p2+" "+p3+" "+p4);
+					Merc m1=Project.latlon2merc(p1, zoomlevel);
+					Merc m2=Project.latlon2merc(p2, zoomlevel);
+					Merc m3=Project.latlon2merc(p3, zoomlevel);
+					Vector s1=tf.merc2screen(m1);
+					Vector s2=tf.merc2screen(m2);
+					Vector s3=tf.merc2screen(m3);
+					BitmapRes bres=adloader.getBitmap(new iMerc(x,y));
+					if (bres!=null && bres.b!=null)
+					{
+						//Log.i("fplan.bml","adloader got bitmap for "+x+","+y+" drawing near"+s1);
+						Vector X=s2.minus(s1).mul(1/256.0);
+						Vector Y=s3.minus(s1).mul(1/256.0);
+						
+						canvas.save();
+						Matrix mat=canvas.getMatrix();
+						mat.preTranslate((float)s1.x, (float)s1.y);
+						Matrix rotscale=new Matrix();
+						rotscale.setValues(new float[]{
+								(float)X.x,(float)Y.x,0,
+								(float)X.y,(float)Y.y,0,
+								0,0,1
+						});
+						mat.preConcat(rotscale);
+						canvas.setMatrix(mat);
+						canvas.drawBitmap(bres.b, bres.rect,new Rect(0,0,256,256),null);
+						
+						canvas.restore();
+					}
+					
+				}
+			}
+			adloader.end();
+		}
+		
 
 		ArrayList<SigPoint> major_airfields = null;
 		if (onlyWithin(60, isUserPresentlyMovingMap))
@@ -476,12 +549,14 @@ public class MapDrawer {
 							linepaint.setColor(Color.BLACK);
 							canvas.drawLine((float) p1.x, (float) p1.y,
 									(float) p2.x, (float) p2.y, linepaint);
+							
 						}
 					}
 				}
 			}
 
-		// sigPointTree.verify();
+		if (true)
+		{
 		if (onlyWithin(60, isUserPresentlyMovingMap))
 			if (zoomlevel >= 8 && lookup != null) {
 				ArrayList<AirspaceArea> areas = lookup.areas.get_areas(bb13);
@@ -508,11 +583,11 @@ public class MapDrawer {
 						vs.add(v);
 					}
 					linepaint.setStrokeWidth(0.5f * x_dpmm);
+					linepaint.setColor(Color.rgb(as.r, as.g, as.b));
 					for (int i = 0; i < vs.size(); ++i) {
 						Vector a = vs.get(i);
 						Vector b = vs.get((i + 1) % vs.size());
 
-						linepaint.setColor(Color.rgb(as.r, as.g, as.b));
 
 						canvas.drawLine((float) a.getx(), (float) a.gety(),
 								(float) b.getx(), (float) b.gety(), linepaint);
@@ -590,8 +665,6 @@ public class MapDrawer {
 				for (SigPoint sp : lookup.allOthers.findall(bb13)) {
 					// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
 					Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
-					// new Merc(sp.pos.x/(1<<zoomgap),
-					// sp.pos.y/(1<<zoomgap));
 					Vector p = tf.merc2screen(m);
 					// Log.i("fplan",String.format("dxsigp: %s: %f %f",sp.name,px,py));
 					// textpaint.setARGB(0, 255,255,255);
@@ -607,12 +680,6 @@ public class MapDrawer {
 
 				for (SigPoint sp : lookup.allObst.findall(smbb13)) {
 					/*
-					 * double x=sp.pos.x/(1<<zoomgap); double
-					 * y=sp.pos.y/(1<<zoomgap);
-					 * //Log.i("fplan",String.format("sigp: %s: %f %f"
-					 * ,sp.name,sp.pos.x,sp.pos.y)); double
-					 * px=rot_x(x-center.x,y-center.y)+ox; double
-					 * py=rot_y(x-center.x,y-center.y)+oy;
 					 */
 					// Merc m=Project.merc2merc(sp.pos,13,zoomlevel);
 					Merc m = Project.latlon2merc(sp.latlon, zoomlevel);
@@ -677,8 +744,6 @@ public class MapDrawer {
 				renderText(canvas, p, wp.name, null, Color.WHITE);
 			}
 		}
-		boolean havefix = lastpos.getTime() > 3600 * 24 * 10 * 1000
-				&& SystemClock.uptimeMillis() - last_real_position < 15000;
 
 		if (!havefix) {
 
@@ -736,7 +801,8 @@ public class MapDrawer {
 			linepaint.setStrokeWidth(2.5f * x_dpmm);
 			linepaint.setColor(Color.RED);
 		}
-
+		}
+		
 		boolean northup = false;
 		if (gui != null)
 			northup = gui.getnorthup();
@@ -1168,6 +1234,7 @@ public class MapDrawer {
 		float yledge =bigtextpaint.getTextSize() * 0.85f;
 		bigtextpaint.setColor(Color.WHITE);
 		RectF r = new RectF(0, 0, right, y + 0.7f*y_dpmm);
+		RectF rledge=new RectF(r);
 		canvas.drawRect(r, blackgroundpaint);
 		addTextIfFits(canvas, "hdg:", "223-",r, "hdg:",String.format("%03.0f°", lastpos.getBearing()),
 				y, smalltextpaint,hugetextpaint);
@@ -1175,19 +1242,31 @@ public class MapDrawer {
 		addTextIfFits(canvas, "gs:","222", r, "gs:",String.format("%.0f", gs_kt),
 				y, smalltextpaint,hugetextpaint);
 		
-		RectF rledge=new RectF(r);
 
 		// canvas.drawText(String.format("%03.0f°",lastpos.getBearing()), 40, y,
 		// bigtextpaint);
 		// canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),100,y,bigtextpaint);
-		NextLanding nextlanding=tripstate.getNextLanding();
-		//int td = tripstate.get_time_to_destination();
-		// canvas.drawText(fmttime(td),150,y,bigtextpaint);asdf
-		addTextIfFits(canvas, "ETA:", "22:22", rledge, "ETA:",formatter2.format(nextlanding.when),  yledge, smalltextpaint,bigtextpaint);
-		//Log.i("fplan.delay","nextlanding: "+nextlanding.where+" when: "+nextlanding.planned);
-		int delay=(int)((nextlanding.when.getTime()-nextlanding.planned.getTime())/(60*1000l));
-		addTextIfFits(canvas, "dehay::", "22:22", rledge, (delay>0) ? "delay:" : "ahead:" ,fmtdelay(delay),  yledge, smalltextpaint,bigtextpaint);
+		if (tripstate!=null)
+		{
+			NextLanding nextlanding=tripstate.getNextLanding();
+			if (nextlanding!=null)
+			{
+				//int td = tripstate.get_time_to_destination();
+				// canvas.drawText(fmttime(td),150,y,bigtextpaint);asdf
+				addTextIfFits(canvas, "ETA:", "22:22", rledge, "ETA:",formatter2.format(nextlanding.when),  yledge, smalltextpaint,bigtextpaint);
+				//Log.i("fplan.delay","nextlanding: "+nextlanding.where+" when: "+nextlanding.planned);
+				int delay=(int)((nextlanding.when.getTime()-nextlanding.planned.getTime())/(60*1000l));
+				addTextIfFits(canvas, (delay>0) ? "delay:" : "ahead:", "22h:22m", rledge, (delay>0) ? "delay:" : "ahead:" ,fmtdelay(delay),  yledge, smalltextpaint,bigtextpaint);
+			}
+		}
 		
+		if (charging)
+			bigtextpaint.setColor(Color.rgb(128,255,128));
+		else
+			bigtextpaint.setColor(Color.rgb(255,128,128));
+		
+		addTextIfFits(canvas, "BAT::", "222%", rledge, (!charging) ? "BAT:" : "bat:" ,(battery<0) ? "--" : ""+battery+"%",  yledge, smalltextpaint,bigtextpaint);
+		bigtextpaint.setColor(Color.WHITE);
 		
 		String amsl_txt="--";
 		if (amsl>-9999)
@@ -1307,8 +1386,30 @@ public class MapDrawer {
 
 		int airspace_button_space_left = left;
 		int airspace_button_space_right = right;
+		if (!isDragging)
+		{
+			float h = smalltextpaint.getTextSize();
+			float topbutton_y = y + h;
+
+			String text = "View";
+			final Rect tr1 = drawButton(canvas, right, topbutton_y, text, -1,
+					0, right, false);
+			airspace_button_space_right = tr1.left - 4;
+			clickables.add(new GuiSituation.Clickable() {
+				@Override
+				public Rect getRect() {
+					return tr1;
+				}
+
+				@Override
+				public void onClick() {
+					gui.toggle_map();
+				}
+			});
+			
+		}
 		if (isDragging) {
-			float h = bigtextpaint.getTextSize();
+			float h = smalltextpaint.getTextSize();
 			float topbutton_y = y + h;
 
 			String text = "Center";
@@ -1328,8 +1429,11 @@ public class MapDrawer {
 			});
 			int edge = tr1.left;
 
-			if (gui != null && gui.getnorthup() == false) {
-				text = "Set North Up";
+			if (gui != null && (gui.getnorthup() == false || gui.getChartMode())) {
+				if (gui.getChartMode())
+					text = "Set Chart Up";
+				else
+					text = "Set North Up";
 				final Rect tr2 = drawButton(canvas, 0, topbutton_y, text, 1, 0,
 						edge, false);
 				if (tr2 != null) {
@@ -1342,7 +1446,10 @@ public class MapDrawer {
 
 						@Override
 						public void onClick() {
-							gui.onNorthUp();
+							if (gui.getChartMode() && adloader!=null)
+								gui.onChartUp(adloader);
+							else
+								gui.onNorthUp();
 						}
 					});
 				}
@@ -1418,10 +1525,10 @@ public class MapDrawer {
 	private Rect drawButton(Canvas canvas, float x, float topbutton_y,
 			String text, int layoutdir, int x1lim, int x2lim,
 			boolean measureOnly) {
-		float h2 = bigtextpaint.getTextSize();
+		float h2 = smalltextpaint.getTextSize();
 		thinlinepaint.setColor(Color.WHITE);
 		final Rect tr1 = new Rect();
-		bigtextpaint.getTextBounds(text, 0, text.length(), tr1);
+		smalltextpaint.getTextBounds(text, 0, text.length(), tr1);
 		tr1.bottom = (int) (tr1.top + h2);
 
 		int xpos;
@@ -1439,7 +1546,7 @@ public class MapDrawer {
 			canvas.drawRect(tr1, thinlinepaint);
 
 			canvas.drawText(text, tr1.left + 0.4f * h2, tr1.bottom - 0.4f * h2,
-					bigtextpaint);
+					smalltextpaint);
 		}
 		return tr1;
 	}
@@ -1516,7 +1623,7 @@ public class MapDrawer {
 		return maxlines;
 	}
 
-	private boolean tileOnScreen(float cx, float cy, Transform tf) {
+	private boolean tileOnScreen(float cx, float cy, TransformIf tf) {
 		float maxdiag = 363;
 		if (left != 0 || top != 0)
 			return false;
@@ -1538,7 +1645,7 @@ public class MapDrawer {
 			for (int i = 0; i < 2; ++i) {
 				v.x = 256 * i;
 				v.y = 256 * j;
-				Vector r = v.rot(-tf.hdgrad);
+				Vector r = v.rot(-tf.getHdgRad());
 				r.x += base.x;
 				r.y += base.y;
 				int idx = i;
@@ -1666,5 +1773,7 @@ public class MapDrawer {
 		int minute=when%60;
 		return String.format("%dh%02dm", hour,minute);
 	}
+
+	
 
 }

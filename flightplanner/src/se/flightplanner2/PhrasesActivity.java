@@ -38,6 +38,11 @@ public class PhrasesActivity extends Activity {
 	private LinearLayout layout;
 	private ArrayList<View> payloads = new ArrayList<View>();
 	private RelDec curreldec;
+	@Override
+	public void onBackPressed() {
+	  super.onBackPressed();
+	  overridePendingTransition(0, 0);
+	}
 
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		if (requestCode == DescribePosition.CHOOSE_POSITION) {
@@ -367,6 +372,7 @@ public class PhrasesActivity extends Activity {
 			public void onClick(View v) {
 				Intent intent = new Intent(PhrasesActivity.this,
 						DescribePosition.class);
+				intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
 				intent.putExtra("se.flightplanner2.selectpos", true);
 				startActivityForResult(intent, DescribePosition.CHOOSE_POSITION);
 			}

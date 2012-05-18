@@ -54,7 +54,7 @@ public class GlobalPositionImpl implements PositionIf, LocationListener {
 	public void onLocationChangedImpl(Location loc) {
 		Location location = bearingspeed.calcBearingSpeed(loc);
 		last_location = location;
-		Log.i("fplan.sensor","Number of subscribers: "+subs.size());
+		//Log.i("fplan.sensor","Number of subscribers: "+subs.size());
 		for(PositionSubscriberIf pos:subs.keySet())
 			pos.gps_update(last_location);
 		when=SystemClock.elapsedRealtime();
@@ -139,7 +139,7 @@ public class GlobalPositionImpl implements PositionIf, LocationListener {
 			BearingSpeedCalc bearingspeed=new BearingSpeedCalc();
 			@Override	
 			public void run() {
-				Log.i("fplan.sensor","Debugspeed: "+debugSpeed+" debugHdg: "+debugHdgRad+" debugTurn: "+debugTurn);
+				//Log.i("fplan.sensor","Debugspeed: "+debugSpeed+" debugHdg: "+debugHdgRad+" debugTurn: "+debugTurn);
 				
 				
 				float debugSpeedMerc=(float)(Project.approx_scale(debugMerc, 13, debugSpeed)/3600.0);

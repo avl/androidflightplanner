@@ -34,6 +34,12 @@ public class DetailedPlaceActivity extends Activity{
 		value.setGravity(Gravity.CENTER);
 		return (TextView)addRow(title,value);
 	}
+	@Override
+	public void onBackPressed() {
+	  super.onBackPressed();
+	  overridePendingTransition(0, 0);
+	}
+	
 	private<VT> VT addRow(String title,VT value)
 	{
 		TableRow row=new TableRow(this);		
@@ -289,6 +295,7 @@ public class DetailedPlaceActivity extends Activity{
 		{
 			Log.i("fplan","Quitting early since place==null: "+GlobalDetailedPlace.detailedplace);
 			finish();
+			overridePendingTransition(0, 0);
 			return;
 		}
         Log.i("fplan","DetailedPlaceActivity create starting:"+place);

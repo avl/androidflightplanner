@@ -157,6 +157,8 @@ public class DescribePosition extends Activity implements PositionSubscriberIf{
 					
 					DescribePosition.this.setResult(RESULT_OK, intent);
 					DescribePosition.this.finish();
+					DescribePosition.this.overridePendingTransition(0, 0);	    	
+					
 				}			
 			});
 	
@@ -212,6 +214,7 @@ public class DescribePosition extends Activity implements PositionSubscriberIf{
 		if (mypos==null)
 		{
 			finish();
+			overridePendingTransition(0, 0);			
 			return;
 		}
 		

@@ -35,5 +35,9 @@ public interface MainMapIf {
 
 	public abstract void set_gps_sat_cnt(int satcnt, int satfixcnt);
 
+	public abstract void set_battery_level(int level,boolean plugged);
+
+	public abstract void selectChart(String chart);
+
 
 }

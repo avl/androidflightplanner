@@ -8,6 +8,10 @@ import java.util.HashMap;
 
 import se.flightplanner2.Airspace.ChartInfo;
 import se.flightplanner2.Airspace.VariantInfo;
+import se.flightplanner2.Project.LatLon;
+import se.flightplanner2.Project.Merc;
+import se.flightplanner2.vector.BoundingBox;
+import se.flightplanner2.vector.Vector;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
@@ -25,9 +29,19 @@ import android.widget.TextView;
 public class ViewAdInfo extends Activity {
 	String icao;
 	SigPoint sp;
+	LatLon latlon;
+	String name="Unknown";
 	
 	private void loadChart(String chartname)
 	{
+		
+    	Intent ret=new Intent(Intent.ACTION_DEFAULT);
+		ret.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+    	ret.putExtra("se.flightplanner2.adchart",chartname);
+    	Log.i("fplan.adchart","Returning with "+chartname);
+    	setResult(RESULT_OK,ret);
+    	finish();
+/*		
 		Intent intent = new Intent(this, AdChartActivity.class);
 		
 		intent.putExtra("se.flightplanner2.user", getPreferences(MODE_PRIVATE).getString("user","")); 
@@ -37,10 +51,11 @@ public class ViewAdInfo extends Activity {
 		intent.putExtra("se.flightplanner2.chartname", chartname);
     	Log.i("fplan.chart","After calling put Serializable");	
 		//map.releaseMemory();
-		startActivity(intent);		
+		startActivity(intent);		*/
 	}
 	private void show_aip(AipText aiptext) {
 		Intent intent = new Intent(ViewAdInfo.this, HtmlViewer.class);
+		intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
 		intent.putExtra("se.flightplanner2.htmlpath", aiptext.get_datapath().getAbsolutePath()); 
 		startActivity(intent);
 	}
@@ -50,40 +65,94 @@ public class ViewAdInfo extends Activity {
 		super.onCreate(savedInstanceState);		
     	StringBuilder sb=new StringBuilder();
     	icao=getIntent().getStringExtra("se.flightplanner2.icao");
-    	if (GlobalLookup.lookup==null)
+    	final AirspaceLookup lookup=GlobalLookup.lookup;
+    	if (lookup==null)
     	{
     		finish();
+    		overridePendingTransition(0, 0);
     		return;
     	}
-    	sp=GlobalLookup.lookup.getByIcao(icao);
-    	if (sp==null)
+    	if (icao!=null)
+    	{
+	    	sp=lookup.getByIcao(icao);
+	    	if (sp==null)
+	    	{
+	    		finish();
+	    		overridePendingTransition(0, 0);
+	    		return;
+	    	}
+	    	latlon=sp.latlon;
+    	}
+    	else
+    	{
+    		latlon=(LatLon)getIntent().getSerializableExtra("se.flightplanner2.latlon");
+    	}
+    	if (latlon==null)
     	{
     		finish();
+    		overridePendingTransition(0, 0);
     		return;
+    		
     	}
-    			
-		sb.append("<h1>"+sp.name+"</h1>");
-		if (sp.extra!=null)
+    	
+
+    	
+    	
+    	if (sp!=null)
+    	{
+			sb.append("<h1>"+sp.name+"</h1>");
+			if (sp.extra!=null)
+			{
+		    	if (sp.extra.icao!=null)
+		    		sb.append("<p>("+sp.extra.icao+")</p>");
+		    	if (sp.extra.metar!=null)
+		    	{
+		    		sb.append("<h2>METAR:</h2><p> "+sp.extra.metar+"</p>");
+		    	}
+		    	if (sp.extra.taf!=null)
+		    	{
+		    		sb.append("<h2>TAF:</h2><p> "+sp.extra.taf+"</p>");
+		    	}
+		    	if (sp.extra.notams.length>0)
+		    	{
+			    	sb.append("<h2>NOTAMs:</h2>");
+		    		for(String notam:sp.extra.notams)
+		    		{
+		    	    	sb.append("<p><pre>"+notam+"</pre></p>");
+		    		}	    		
+		    	}
+			}
+    	}
+    	
+    	sb.append("<h2>Airspaces</h2>");
+    	Vector p=Project.latlon2mercvec(latlon, 13);
+    	for(AirspaceArea area:lookup.areas.get_areas(BoundingBox.nearby(latlon, 0.01f)))
 		{
-	    	if (sp.extra.icao!=null)
-	    		sb.append("<p>("+sp.extra.icao+")</p>");
-	    	if (sp.extra.metar!=null)
-	    	{
-	    		sb.append("<h2>METAR:</h2><p> "+sp.extra.metar+"</p>");
-	    	}
-	    	if (sp.extra.taf!=null)
-	    	{
-	    		sb.append("<h2>TAF:</h2><p> "+sp.extra.taf+"</p>");
-	    	}
-	    	if (sp.extra.notams.length>0)
-	    	{
-		    	sb.append("<h2>NOTAMs:</h2>");
-	    		for(String notam:sp.extra.notams)
-	    		{
-	    	    	sb.append("<p><pre>"+notam+"</pre></p>");
-	    		}	    		
-	    	}
+    		if (!area.poly.is_inside(p))
+    			continue;
+    		sb.append("<p>");
+    		sb.append("<b>"+area.name+"</b>:<br/>");
+    		sb.append(area.floor+" - "+area.ceiling+"<br/>");
+    		for(String freq:area.freqs)
+    		{
+    			sb.append(freq+"<br/>");
+    		}
+    		sb.append("</p>");
 		}
+    	
+    	sb.append("<h2>Elevation</h2>");
+    	if (GlobalGetElev.get_elev!=null)
+    	{
+    		int elv=GlobalGetElev.get_elev.get_elev_ft(latlon, 13, 1);
+    		String elvs;
+    		if (elv>=-10000 && elv<Short.MAX_VALUE)
+    			elvs=""+elv+" feet";
+    		else
+    			elvs="?";
+    		sb.append("<p>Terrain elevation, MSL: "+elvs+"</p>");
+    	}
+    	
+    	    	
         setContentView(R.layout.adinfo);
     	
     	TextView main=(TextView)findViewById(R.id.main_text);
@@ -99,9 +168,10 @@ public class ViewAdInfo extends Activity {
     	{
 			@Override
 			public void onClick(View v) {
-				GlobalDetailedPlace.detailedplace=new NakedDetailedPlace(sp.name,sp.latlon);
+				GlobalDetailedPlace.detailedplace=new NakedDetailedPlace(name,latlon);
 				Log.i("fplan","ViewAdInfo detailedplace:"+GlobalDetailedPlace.detailedplace);
 				Intent intent = new Intent(ViewAdInfo.this, DetailedPlaceActivity.class);
+				intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
 				startActivity(intent);				
 				
 			}    		
@@ -118,7 +188,13 @@ public class ViewAdInfo extends Activity {
     	{
 			@Override
 			public void onClick(View v) {
-				final ChartInfo ci=GlobalLookup.lookup.getChartInfo(icao);
+				if (icao==null)
+				{
+					RookieHelper.showmsg(ViewAdInfo.this, "Click on an airfield on the main map, then select this button to get a list of charts for that field (including VAC etc).");
+					return;					
+				}
+				
+				final ChartInfo ci=lookup.getChartInfo(icao);
 				ArrayList<String> items=new ArrayList<String>();
 				ArrayList<VariantInfo> vars=null;
 				if (ci!=null) 
@@ -159,7 +235,7 @@ public class ViewAdInfo extends Activity {
 					}
 			        		        
 			    	AlertDialog.Builder builder = new AlertDialog.Builder(ViewAdInfo.this);
-			    	builder.setTitle("Choose Trip");
+			    	builder.setTitle("Choose Chart");
 			    	final ArrayList<VariantInfo> fvars=vars;
 			    	builder.setItems(items.toArray(new String[]{}), new DialogInterface.OnClickListener() {
 			    	    public void onClick(DialogInterface dialog, int item) {
@@ -179,7 +255,13 @@ public class ViewAdInfo extends Activity {
     	{
 			@Override
 			public void onClick(View v) {
-				final ArrayList<AipText> aipitems=GlobalLookup.lookup.getAipText(icao);
+				if (icao==null)
+				{
+					RookieHelper.showmsg(ViewAdInfo.this, "Click on an airfield on the main map, then select this button.");
+					return;					
+				}
+				
+				final ArrayList<AipText> aipitems=lookup.getAipText(icao);
 				if (aipitems==null)
 				{
 					RookieHelper.showmsg(ViewAdInfo.this, "No AIP documents for this airfield");

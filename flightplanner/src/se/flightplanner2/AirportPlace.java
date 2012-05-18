@@ -1,5 +1,7 @@
 package se.flightplanner2;
 
+import se.flightplanner2.Project.LatLon;
+
 public class AirportPlace implements Place {
 	private SigPoint sp;
 	public AirportPlace(String icao,AirspaceLookup lookup)
@@ -17,5 +19,9 @@ public class AirportPlace implements Place {
 	@Override
 	public DetailedPlace getDetailedPlace() {
 		return null;
+	}
+	@Override
+	public LatLon getLatLon() {
+		return sp.latlon;
 	}
 }

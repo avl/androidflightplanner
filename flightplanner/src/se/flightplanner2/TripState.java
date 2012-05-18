@@ -127,7 +127,7 @@ public class TripState implements InformationPanel {
 		float along=cur_wp_along();
 		for(EnrouteSigPoints ensp:enroute)
 		{
-			Log.i("fplan.dp","Cur along: "+along+" considering ensp: "+ensp);
+			//Log.i("fplan.dp","Cur along: "+along+" considering ensp: "+ensp);
 			if (ensp.target_wp>target_wp || ensp.target_wp==target_wp && ensp.ratio>along)
 			{
 				NextSigPoints nesp=ensp.nesp;
@@ -198,7 +198,7 @@ public class TripState implements InformationPanel {
 		lastposmerc.y+=3*onesec_speed*delta.y;		
 		float nextbughdg = (float)getBugHdgImpl(Project.merc2latlon(lastposmerc,17));
 					
-		Log.i("fplan.hdg","Heading bug at: "+curbughdg+" estimated next second at: "+nextbughdg);
+		//Log.i("fplan.hdg","Heading bug at: "+curbughdg+" estimated next second at: "+nextbughdg);
 		
 		//spede
 		/*
@@ -256,7 +256,7 @@ public class TripState implements InformationPanel {
 				bank=30;
 			if (turn_rate<0)
 				bank=-bank;
-			Log.i("fplan.hdg","Speed: "+speed+" R: "+R+" acc: "+acceleration+" bank: "+bank);
+			//Log.i("fplan.hdg","Speed: "+speed+" R: "+R+" acc: "+acceleration+" bank: "+bank);
 		}
 		
 		
@@ -278,10 +278,10 @@ public class TripState implements InformationPanel {
 			double remain_advance=(double)corridor_width*0.4f;
 			double along=cur_wp_along2(forpos);
 			int curi=target_wp;
-			Log.i("fplan.hdg","target_wp: "+target_wp+" along: "+along);
+			//Log.i("fplan.hdg","target_wp: "+target_wp+" along: "+along);
 			while(remain_advance>=0f)
 			{
-				Log.i("fplan.hdg","iterate target_wp: "+curi+" along: "+along);
+				//Log.i("fplan.hdg","iterate target_wp: "+curi+" along: "+along);
 				if (w2.d<1e-3)
 					along=10;
 				else
@@ -292,7 +292,7 @@ public class TripState implements InformationPanel {
 					remain_advance-=advance_along*w2.d;
 					along=new_along;
 				}
-				Log.i("fplan.hdg","iterate-step target_wp: "+curi+" along: "+along);
+				//Log.i("fplan.hdg","iterate-step target_wp: "+curi+" along: "+along);
 				if (along>=1.0f-1e-4)
 				{
 					if (curi+1>=tripdata.waypoints.size())
@@ -355,7 +355,7 @@ public class TripState implements InformationPanel {
 				while (miss_angle>180) miss_angle-=360;
 				while (miss_angle<-180) miss_angle+=360;
 				
-				Log.i("fplan.hdg","direct_hdg: "+direct_hdg+" heading corridor ahead: "+hdg+" Max miss angle: "+max_miss_angle+" miss_angle: "+miss_angle);
+				//Log.i("fplan.hdg","direct_hdg: "+direct_hdg+" heading corridor ahead: "+hdg+" Max miss angle: "+max_miss_angle+" miss_angle: "+miss_angle);
 				if (Math.abs(miss_angle)>max_miss_angle)
 				{
 					if (miss_angle>0) miss_angle=max_miss_angle;
@@ -476,6 +476,7 @@ public class TripState implements InformationPanel {
 	
 	public NextLanding getNextLanding()
 	{
+		if (waypointEvents==null || waypointEvents.size()==0) return null;
 		for(int i=target_wp;i<waypointEvents.size();++i)
 		{
 			WaypointInfo esp=waypointEvents.get(i);
@@ -492,6 +493,7 @@ public class TripState implements InformationPanel {
 	}
 	public NextLanding getPrevTakeoff()
 	{
+		if (waypointEvents==null || waypointEvents.size()==0) return null;
 		for(int i=target_wp-1;i>=0;--i)
 		{
 			if (i>=waypointEvents.size()) continue;
@@ -1141,6 +1143,15 @@ public class TripState implements InformationPanel {
 					return !is_own_position();
 				}				
 			};
+		}
+		@Override
+		public LatLon getLatLon() {
+			int i=current_waypoint_idx;
+			if (tripdata==null || i>=tripdata.waypoints.size())
+				return null;
+			if (i==-1) return lastpos;
+			Waypoint wp=tripdata.waypoints.get(i);
+			return wp.latlon;
 		}
 	};
 	private Place[] places=new Place[]{place};

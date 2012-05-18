@@ -241,7 +241,7 @@ public class AdChartView extends View implements UpdatableUI {
 		blobs=new ArrayList<Blob>();
 		maxzoomdata=4;
 		maxzoomgui=6;
-		bitmaps=new GetMapBitmap(mapcache,maxzoomdata);
+		bitmaps=new GetMapBitmap(mapcache);
 		File extpath = Environment.getExternalStorageDirectory();
 		curLostSignalRunnable=null;
 		lostSignalTimer=new Handler();
@@ -322,8 +322,9 @@ public class AdChartView extends View implements UpdatableUI {
 		last_height=height;
 		clamp_scroll();
 		
-		int required_cachesize=((width+255+255)/256)*((height+255+255)/256);
-		//TODO: Limit required cache size to never be bigger than total number of available tiles.
+		int required_cachesize=(((width+255+255)/256)*((height+255+255)/256)*3)/2;
+		//While loading, it is desirable to be able to have the entire previous zoom level,
+		//since it will be loaded to cover missing resized lower-levels, worst case.
 				
 		//Log.i("fplan.adchart","Re-drawing chart!");
 		mapcache.forgetqueries();
@@ -363,7 +364,7 @@ public class AdChartView extends View implements UpdatableUI {
 		{
 			if (loader==null)
 			{
-				loader=new BackgroundMapLoader(blobs, mapcache, this,required_cachesize);
+				loader=new BackgroundMapLoader(blobs, mapcache, this);
 				loader.run();
 				//Log.i("fplan.adchart","Start a background task again");
 			}
@@ -414,19 +415,6 @@ public class AdChartView extends View implements UpdatableUI {
 		
 		double lat=location.getLatitude();
 		double lon=location.getLongitude();
-		if (DataDownloader.chartGpsDebugMode())
-		{
-			//Forcefully move us to middle of Arlanda airport,
-			//So that we can easily test moving around there without
-			//actually being there :-).
-			if (offlat==0)
-			{
-				offlat=lat;
-				offlon=lon;
-			}
-			lat=lat-offlat+59.652011;
-			lon=lon-offlon+17.918701;
-		}
 		//        (lat)
 		//P = A * (   )
 		//        (lon)

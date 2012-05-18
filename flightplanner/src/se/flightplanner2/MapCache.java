@@ -2,6 +2,8 @@ package se.flightplanner2;
 
 import java.util.ArrayList;
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -47,9 +49,9 @@ public class MapCache {
 	}
 	static public class Payload
 	{
-		private long lastuse;
 		Bitmap b;
 		boolean fake;
+		boolean used;
 		public boolean only_fake_available;
 	}
 	private HashMap<Key,MapCache.Payload> map;
@@ -73,7 +75,7 @@ public class MapCache {
 		//Log.i("fplan.adchart","Injected bitmap"+k+" fake: "+fake+" only fake-avail: "+only_fake_avail);
 		long now=SystemClock.uptimeMillis();
 		MapCache.Payload p=new MapCache.Payload();
-		p.lastuse=now;
+		p.used=true;
 		p.b=out;
 		p.fake=fake;
 		p.only_fake_available=only_fake_avail;
@@ -94,8 +96,21 @@ public class MapCache {
 	synchronized Key[] get_and_reset_queryhistory(int count)
 	{
 		HashSet<Key> keys=new HashSet<Key>();
-		HashSet<Key> intersection = new HashSet<Key>(faked);
-		intersection.retainAll(queryhistory);
+		HashSet<Key> intersection2 = new HashSet<Key>(faked);
+		intersection2.retainAll(queryhistory);
+		
+		ArrayList<Key> intersection=new ArrayList<MapCache.Key>();
+		intersection.addAll(intersection2);
+		Collections.sort(intersection,new Comparator<Key>(){
+			@Override
+			public int compare(Key lhs, Key rhs) {
+				if (lhs.zoomlevel<rhs.zoomlevel)
+					return -1;
+				if (lhs.zoomlevel>rhs.zoomlevel)
+					return +1;
+				return 0;
+			}
+		});
 		//intersection now contains faked items which
 		//are also being asked for.
 
@@ -138,76 +153,66 @@ public class MapCache {
 		return cnt;
 		
 	}
-	synchronized public int eject(Key d) {
+	synchronized public void eject(Key d) {
 		//Log.i("fplan.bitmap","Ejecting bitmap "+d);
 		MapCache.Payload p=map.get(d);
-		int cnt=0;
 		if (p!=null)
 		{
 			if (p.b!=null)
 			{
 				p.b.recycle();
 				p.b=null;
-				cnt=1;
 			}
 		}
 		faked.remove(d);
 		map.remove(d);
-		return cnt;
 	}	
 	synchronized public MapCache.Payload query(iMerc m, int zoomlevel,boolean background_load) {
+		
+		
+		if (zoomlevel!=0)
+		{
+			Key keepalive_parent=new Key(Project.imerc2imerc(m, zoomlevel, zoomlevel-1),zoomlevel-1);
+			MapCache.Payload l=map.get(keepalive_parent);
+			if (l!=null)
+				l.used=true;
+		}
+		
+		
 		Key key=new Key(m,zoomlevel);
 		//Log.i("fplan.adchart","Queried: "+m.getX()+","+m.getY());
+		
+		
+		
 		MapCache.Payload l=map.get(key);
 		if (background_load)
 		{
+			//Log.i("fplan.bitmap","Considering adding to queryhist: "+m+" zoom: "+zoomlevel);
 			if (l==null || (l.fake && !l.only_fake_available))
 			{
-				//Log.i("fplan.adchart","Missing, adding to queryhistory: "+m.getX()+","+m.getY()+" zoom: "+zoomlevel+" curr size: "+mapsize()+" history size: "+queryhistory.size());
+				Log.i("fplan.adchart","Missing, adding to queryhistory: "+m.getX()+","+m.getY()+" zoom: "+zoomlevel+" curr size: "+mapsize()+" history size: "+queryhistory.size());
 				queryhistory.add(key);
 			}
 		}
 		if (l!=null)
-			l.lastuse=SystemClock.uptimeMillis();
+			l.used=true;
 		return l;
 	}
-	synchronized public void garbageCollect(int cachesize) {
-		long now=SystemClock.uptimeMillis();
-		int curmapsize=mapsize();
-		while(curmapsize>cachesize)
+	synchronized public void garbageCollect() {
+		ArrayList<Key> deletelist=new ArrayList<Key>();
+		//Log.i("fplan.bitmap","garbageCollect, cache size: "+cachesize+" map: "+map.size());
+		for(Entry<Key, MapCache.Payload> e:map.entrySet())
 		{
-			ArrayList<Key> deletelist=new ArrayList<Key>();
-			long oldest_age=0;
-			Key oldest=null;
-			//Log.i("fplan.bitmap","garbageCollect, cache size: "+cachesize+" map: "+map.size());
-			for(Entry<Key, MapCache.Payload> e:map.entrySet())
-			{
-				Log.i("fplan.adchart","GC Item: "+e.getKey());
-				long age=now-e.getValue().lastuse;
-				if (e.getValue().fake)
-					age+=10000;				
-				/*else if (e.getValue().b==null)
-					age-=30000; //Don't bother evicting non-bitmap-carrying non-fake elements quickly, they're almost free.
-				*/
-				if (age>30000)				
-					deletelist.add(e.getKey());
-				if (age>oldest_age)
-				{
-					oldest_age=age;
-					oldest=e.getKey();
-				}
+			if (!e.getValue().used)
+				deletelist.add(e.getKey());
+			e.getValue().used=false;
 		}
-			if (oldest!=null)
-			{
-				//Log.i("fplan.drawmap","Oldest age:"+oldest_age);
-				deletelist.add(oldest);
-			}
-			for(Key d:deletelist)
-			{
-				Log.i("fplan.adchart","Ejecting:"+d);				
-				curmapsize-=eject(d);
-			}
+		for(Key d:deletelist)
+		{
+			Log.i("fplan.adchart","Ejecting:"+d);				
+			eject(d);
 		}
+		
 	}
 	public void forgetqueries() {
 		queryhistory.clear();
