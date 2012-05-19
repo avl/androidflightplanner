@@ -2,8 +2,10 @@ package se.flightplanner2;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.Html;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
@@ -39,6 +41,7 @@ public class SetupInfo extends Activity {
         boolean startchecked=getIntent().getExtras().getBoolean("se.flightplanner2.northup",false);
         boolean startcheckedvibrate=getIntent().getExtras().getBoolean("se.flightplanner2.vibrate",false);
         boolean startcheckedterrwarn=getIntent().getExtras().getBoolean("se.flightplanner2.terrwarn",false);
+        boolean startcheckedautosync=getIntent().getExtras().getBoolean("se.flightplanner2.autosync",false);
         final SetupInfo outer_this=this;
         final CheckBox northup=(CheckBox)findViewById(R.id.northup_default);
     	northup.setChecked(startchecked);
@@ -49,21 +52,63 @@ public class SetupInfo extends Activity {
     	final CheckBox terrwarn=(CheckBox)findViewById(R.id.terrain_warning_default);
     	terrwarn.setChecked(startcheckedterrwarn);
         
+    	final CheckBox autosync=(CheckBox)findViewById(R.id.autosync_default);
+    	autosync.setChecked(startcheckedautosync);
+        
         button.setOnClickListener(new OnClickListener() {
-            public void onClick(View v) {
+        	void onOk()
+        	{
             	Intent ret=new Intent(Intent.ACTION_DEFAULT);
     			ret.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
-            	ret.putExtra("se.flightplanner2.login",edtxt.getText().toString());
+    			String username2=edtxt.getText().toString();    			
+            	ret.putExtra("se.flightplanner2.login",username2);
             	ret.putExtra("se.flightplanner2.password",edpwd.getText().toString());
             	ret.putExtra("se.flightplanner2.mapdetail",outer_this.detail-1);
             	ret.putExtra("se.flightplanner2.northup",northup.isChecked());
             	ret.putExtra("se.flightplanner2.vibrate",vibrate.isChecked());
             	ret.putExtra("se.flightplanner2.terrwarn",terrwarn.isChecked());
+            	ret.putExtra("se.flightplanner2.autosync",autosync.isChecked());
             	
             	ret.putExtra("se.flightplanner2.thenopen", getIntent().getExtras().getString("se.flightplanner2.thenopen"));
             	setup.setResult(RESULT_OK,ret);
             	setup.finish();
-            	setup.overridePendingTransition(0, 0);            	
+            	setup.overridePendingTransition(0, 0);            	        		
+        	}
+            public void onClick(View v) {
+    			
+    			String username=edtxt.getText().toString();
+    			if (username.length()==0)
+    			{
+    				RookieHelper.showmsg(SetupInfo.this, "You have entered an empty user name!");
+    				return;
+    			}
+    			if (Character.isWhitespace(username.charAt(0)) ||
+    					Character.isWhitespace(username.charAt(username.length()-1)))
+    			{
+    				AlertDialog.Builder builder = new AlertDialog.Builder(SetupInfo.this);
+    				builder.setMessage(
+    						"You have entered a user name that begins or ends with a space! Surely this is by mistake?")
+    						.setCancelable(true)
+    						.setPositiveButton("Oops, let me fix it!",
+    								new DialogInterface.OnClickListener() {
+    									public void onClick(DialogInterface dialog,
+    											int id) {
+    										dialog.dismiss();
+    									}
+    								})
+    						.setNegativeButton("No, my name really is like that (promise)!",
+    								new DialogInterface.OnClickListener() {
+    									public void onClick(DialogInterface dialog,
+    											int id) {
+    										dialog.dismiss();
+    						    			onOk();
+    									}
+    								});
+    				AlertDialog diag = builder.create();
+    				diag.show();    				
+    				return;    				
+    			}
+    			onOk();
             }
         });
         

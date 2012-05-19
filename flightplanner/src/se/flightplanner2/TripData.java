@@ -134,7 +134,7 @@ public class TripData implements Serializable {
 			w.endfuel=is.readFloat();
 			w.fuelburn=is.readFloat();
 			w.depart_dt=is.readLong();
-			Log.i("fplan.depart_dt","Read depart_dt: "+new Date(w.depart_dt*1000));
+			//Log.i("fplan.depart_dt","Read depart_dt: "+new Date(w.depart_dt*1000));
 			w.arrive_dt=is.readLong();
 			w.lastsub=is.readByte();
 			return w;

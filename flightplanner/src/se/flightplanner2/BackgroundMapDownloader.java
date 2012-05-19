@@ -118,7 +118,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				public void report(int percent) {
 					publishProgress("Airspace "+percent+"%");					
 				}
-    		},user,DataDownloader.hashpass(pass));
+    		},user,DataDownloader.hashpass(pass),MapDetailLevels.haveAip(mapdetail));
     		ad.airspace.serialize_to_file("airspace.bin");
 			
 			Log.i("fplan","Building BSP-trees");
@@ -168,17 +168,20 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				return ret;
 			}
 			
-			try {
-				waitAvailable();
-				downloadAdCharts(res);
-			} catch (InterruptedException e2) {			
-				res.error="Cancelled";
-				return res;
-			} catch (Exception e) {
-				e.printStackTrace();
-				res.error=e.getMessage();
-				return res;
-			}						
+			if (MapDetailLevels.getHaveAdChart(mapdetail))
+			{
+				try {
+					waitAvailable();
+					downloadAdCharts(res);
+				} catch (InterruptedException e2) {			
+					res.error="Cancelled";
+					return res;
+				} catch (Exception e) {
+					e.printStackTrace();
+					res.error=e.getMessage();
+					return res;
+				}
+			}
 			
 			downloadBlobs(res,MapDetailLevels.getMaxLevelFromDetail(mapdetail),"nolabel");
 			if (MapDetailLevels.getHaveElevFromDetail(mapdetail))

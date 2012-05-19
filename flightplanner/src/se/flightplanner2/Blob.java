@@ -144,7 +144,7 @@ public class Blob {
     		return null;
 		Log.i("fplan","Ready to read out bitmap, size "+imagesize);
 		*/
-		Log.i("fplan.bm","Loading bitmap: "+coords+" zoom: "+zoomlevel);
+		//Log.i("fplan.bm","Loading bitmap: "+coords+" zoom: "+zoomlevel);
 		BitmapFactory.Options opts = new BitmapFactory.Options();
 		opts.inPreferredConfig=Bitmap.Config.RGB_565;
 		try {

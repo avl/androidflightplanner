@@ -122,6 +122,9 @@ public class PhrasesActivity extends Activity {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<h1>Enroute Phraseology</h1>");
 		sb.append("<h2>Enroute</h2>");
+		sb.append("<p>" + getgnd() + " " + getreg() + " VFR FLIGHT PLAN FROM "
+				+ departure + " TO " + destination + ", " + getpos(false));
+		
 		sb.append("<p>" + getctl() + " " + getreg() + " " + getpos(true)
 				+ "</p>");
 		sb.append("<p>" + getctl() + " " + getreg()
@@ -146,8 +149,6 @@ public class PhrasesActivity extends Activity {
 		SimpleDateFormat formatter = new SimpleDateFormat("mm");
 		formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
 		String nowtime = formatter.format(new Date());
-		sb.append("<p>" + getgnd() + " " + getreg() + " VFR FLIGHT PLAN FROM "
-				+ departure + " TO " + destination + ", " + getpos(false));
 
 		sb.append("<p>"
 				+ getgnd()

@@ -56,12 +56,17 @@ public final class NextSigPointReldec extends RelDec {
 			shortdesc=String.format("%.0f miles %s %s",distance,DescribePosition.roughdir(bearing),name);
 			longdesc=String.format("%03.0f° %.1f miles from %s",bearing,distance,name);
 		}
+		String icao_sigp_format=NextSigPointReldec.getSigPointPosDescrFromEnsp(ensp);
+		
 		if (shorted)
 		{
 			if (exacter)
 				return longdesc;
 			else
+			{
+				if (icao_sigp_format!=null) return icao_sigp_format;
 				return shortdesc;
+			}
 		}
 				
 		//say "Long final rwy" if possible..
@@ -72,7 +77,6 @@ public final class NextSigPointReldec extends RelDec {
 		sb.append("<p>");
 		sb.append(longdesc);
 		sb.append("</p>");
-		String icao_sigp_format=NextSigPointReldec.getSigPointPosDescrFromEnsp(ensp);
 		if (icao_sigp_format!=null)
 		{
 			sb.append("(or)<br/>");

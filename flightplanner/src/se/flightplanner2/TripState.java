@@ -1,5 +1,6 @@
 package se.flightplanner2;
 
+import java.io.Serializable;
 import java.security.acl.LastOwnerException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -65,7 +66,7 @@ public class TripState implements InformationPanel {
 	private ArrayList<EnrouteSigPoints> enroute=new ArrayList<TripState.EnrouteSigPoints>();
 	
 	
-	static public class NextSigPoints
+	static public class NextSigPoints implements Serializable
 	{
 		public Date eta;
 		public Date passed;
@@ -111,7 +112,7 @@ public class TripState implements InformationPanel {
 	{
 		for(EnrouteSigPoints ensp:enroute)
 		{
-			if (ensp.nesp==nesp)
+			if (ensp.latlon.equals(nesp.latlon))
 			{
 				nesp.eta=getEta(ensp);
 				nesp.passed=ensp.passed;
@@ -626,26 +627,8 @@ public class TripState implements InformationPanel {
 					WaypointInfo we=waypointEvents.get(old_target);
 					Log.i("fplan.skip","Skip"+Project.latlon2mercvec(old_wp.latlon,13).minus(mypos).length()+
 							" limit:"+corridor_width*onenm);
-					if (Project.latlon2mercvec(old_wp.latlon,13).minus(mypos).length()<
-							corridor_width*onenm)
-					{
-						if (old_wp.land_at_end)
-						{
-							if (actual_gs<20)
-							{
-								we.eta2=null;
-								we.passed=new Date();
-								we.skipped=false;
-							}							
-						}
-						else
-						{
-							we.eta2=null;
-							we.passed=new Date();
-							we.skipped=false;							
-						}
-					}
-					else
+					if (Project.latlon2mercvec(old_wp.latlon,13).minus(mypos).length()>
+							corridor_width*onenm*1.25)
 					{
 						we.skipped=true;
 						we.eta2=null;
@@ -670,12 +653,42 @@ public class TripState implements InformationPanel {
 				if (target_wp>0 && target_wp<=tripdata.waypoints.size())					
 					prevwp=tripdata.waypoints.get(target_wp-1);
 			}*/
+			
+			if (target_wp>=0 && target_wp<tripdata.waypoints.size())
+			{
+				for(int checkpass=Math.max(0,target_wp-1);checkpass<=target_wp;++checkpass)
+				{
+					Waypoint wp=tripdata.waypoints.get(checkpass);
+					double distnm=Project.exacter_distance(myposlatlon,wp.latlon);
+					if (distnm<corridor_width)
+					{
+						WaypointInfo we=waypointEvents.get(checkpass);
+						if (wp.land_at_end)
+						{
+							if (actual_gs<20)
+							{
+								we.eta2=null;
+								we.passed=new Date();
+								we.skipped=false;
+							}							
+						}
+						else
+						{
+							we.eta2=null;
+							we.passed=new Date();
+							we.skipped=false;							
+						}					
+					}
+				}
+			}
+			
 			for(int i=0;i<target_wp;++i)
 			{
 				if (i>=tripdata.waypoints.size()) break;
 				WaypointInfo we=waypointEvents.get(i);
 				we.distance=-1;
 			}
+			long now=new Date().getTime();
 			for(int i=target_wp;i<tripdata.waypoints.size();++i)
 			{
 				final Waypoint wp=tripdata.waypoints.get(i);
@@ -709,7 +722,6 @@ public class TripState implements InformationPanel {
 					continue;
 				WaypointInfo we=waypointEvents.get(i);
 				we.distance=(float)distance;
-				long now=new Date().getTime();
 				we.eta2=new Date(now+(long)timesec*1000);
 				we.skipped=false;
 			}

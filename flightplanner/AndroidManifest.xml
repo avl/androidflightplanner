@@ -18,9 +18,17 @@
         android:hardwareAccelerated="true"        
  		android:theme="@android:style/Theme.NoTitleBar"     
     	android:icon="@drawable/icon" android:label="@string/app_name">
-  	<provider android:name=".Local"
+  	<provider android:name="se.flightplanner2.Local"
           android:authorities="se.flightplanner2"
       />    	
+      
+	<service android:exported="true"
+             android:icon="@drawable/icon"
+             android:label="@string/app_name"
+             android:name=".AutoSyncService">
+             
+        
+    </service>      
         <activity android:name=".Nav"
                   android:label="SWFlightplanner2"
 				  android:configChanges="keyboardHidden|orientation"

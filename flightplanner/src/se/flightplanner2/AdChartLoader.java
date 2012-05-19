@@ -3,6 +3,7 @@ package se.flightplanner2;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -85,6 +86,40 @@ public class AdChartLoader implements UpdatableUI{
 			startLoad();			
 		}
 	}
+	public static boolean haveproj(String chartname)
+	{
+		File extpath = Environment.getExternalStorageDirectory();
+		
+		File chartprojpath = new File(extpath,
+				Config.path+chartname+".proj");
+		if (!chartprojpath.exists())
+			return false;
+		DataInputStream ds;
+		try {
+			ds = new DataInputStream(
+					new FileInputStream(chartprojpath));
+			
+			boolean isfloat=(chartprojpath.length()==6*4);
+			if (isfloat)
+			{
+				for(int i=0;i<4;++i)
+					if (ds.readFloat()!=0)
+						return true;
+			}
+			else
+			{
+				for(int i=0;i<4;++i)
+					if (ds.readDouble()!=0)
+						return true;
+				
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
+				
+		return false;
+	}
 	public AdChartLoader(String chartname,AdChartOwner owner) {
 		this.owner=owner;
 		loader=null;
@@ -131,7 +166,7 @@ public class AdChartLoader implements UpdatableUI{
 					chart_height=ds.readInt();
 				}catch(Throwable e)
 				{
-					Log.i("fplan.adchart","Failed to get real width/height");
+					//Log.i("fplan.adchart","Failed to get real width/height");
 					e.printStackTrace();
 				}
 				
@@ -240,10 +275,35 @@ public class AdChartLoader implements UpdatableUI{
 
 	public float getChartUpBearing() {
 		
-		LatLon l1=pixel2latlon(new Vector(0,chart_height));
-		LatLon l2=pixel2latlon(new Vector(0,0));
+		LatLon l1=pixel2latlon(maxzoomdata,new Vector(0,chart_height));
+		LatLon l2=pixel2latlon(maxzoomdata,new Vector(0,0));
 		
 		return Project.bearing(l1, l2);
+	}
+
+	public LatLon getChartCenter() {
+		return pixel2latlon(maxzoomdata,new Vector(chart_width/2,chart_height/2));
+	}
+
+	public int best_zoomlevel(int width) {
+		LatLon left=pixel2latlon(maxzoomdata,new Vector(0,0));
+		LatLon right=pixel2latlon(maxzoomdata,new Vector(chart_width,0));
+		Vector m17left=Project.latlon2mercvec(left, 17);
+		Vector m17right=Project.latlon2mercvec(right, 17);
+		int m17size=(int)(m17right.minus(m17left).length());
+		int prev=17;
+		Log.i("fplan.m17","m17 size: "+m17size+" chart width: "+chart_width+" left, right: "+left+","+right);
+		for(int i=17;i>=0;--i)
+		{
+			if ((m17size>>(17-i))<width)
+				return prev;
+			prev=i;			
+		}
+		return 0;
+	}
+
+	public void releaseMemory() {
+		mapcache.releaseMemory();
 	}
 		
 

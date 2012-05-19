@@ -249,6 +249,14 @@ public class AirspaceLookup implements AirspaceLookupIf {
 			return new ArrayList<AirspaceArea>(); 
 		return airspace.spaces;
 	}
+	HashMap<String,Boolean> haveprojcache=new HashMap<String, Boolean>();
+	public boolean haveproj(String chartname) {
+		Boolean b=haveprojcache.get(chartname);
+		if (b!=null) return b;
+		b=AdChartLoader.haveproj(chartname);
+		haveprojcache.put(chartname, b);
+		return b;
+	}
 
 	
 	

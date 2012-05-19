@@ -285,7 +285,7 @@ public class AdChartView extends View implements UpdatableUI {
 				fail_get_width=false;
 			}catch(Throwable e)
 			{
-				Log.i("fplan.adchart","Failed to get real width/height");
+				//Log.i("fplan.adchart","Failed to get real width/height");
 				e.printStackTrace();
 			}
 			

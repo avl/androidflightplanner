@@ -8,10 +8,12 @@
     <string name="Pos">Position Relative</string>
     <string name="app_name">flightplanner</string>
 <string name="detail_prompt">Map Detail</string>
-<string-array name="detail_array"><item>No basemap [500kB download]</item><item>Low Detail [2MB download]</item>
-<item>High Detail [300MB download]</item>
-<item>Very High [1GB download]</item>
-<item>Super High (3GB)</item>
+<string-array name="detail_array">
+<item>No basemap [2MB download]</item>
+<item>Low Detail [10MB download]</item>
+<item>High Detail [1GB download]</item>
+<item>Very High [2GB download]</item>
+<item>Super High (4GB)</item>
 </string-array>
 <string name="ok">OK</string>
 <string name="upload">Upload</string>

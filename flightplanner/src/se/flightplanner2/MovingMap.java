@@ -11,7 +11,6 @@ import se.flightplanner2.Airspace.ChartInfo;
 import se.flightplanner2.Airspace.VariantInfo;
 import se.flightplanner2.BackgroundMapLoader.UpdatableUI;
 import se.flightplanner2.GuiSituation.GuiClientInterface;
-import se.flightplanner2.MapDrawer.DrawResult;
 import se.flightplanner2.Project.LatLon;
 import se.flightplanner2.Project.Merc;
 import se.flightplanner2.Project.iMerc;
@@ -19,6 +18,7 @@ import se.flightplanner2.Timeout.DoSomething;
 import se.flightplanner2.vector.BoundingBox;
 import android.app.Activity;
 import android.content.Context;
+import android.drm.DrmStore.RightsStatus;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Rect;
@@ -41,7 +41,6 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	private int gps_sat_fix_cnt;
 	private long last_real_position;
 	private MapDrawer drawer;
-	private int lastcachesize; //bitmap cache
 	private String download_status;
 	private boolean download_dismissable;
 	private Timeout dismiss_timeout;
@@ -181,7 +180,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			GetMapBitmap usebitmaps=bitmaps;
 			if (MapDetailLevels.getMaxLevelFromDetail(detaillevel)<0)
 				usebitmaps=null;
-			DrawResult res=drawer.draw_actual_map(tripdata, tripstate,
+			drawer.draw_actual_map(tripdata, tripstate,
 					lookup,
 					canvas,					
 					screenExtent,lastpos,
@@ -193,12 +192,13 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 					this,
 					prox_warning,
 					gps_sat_cnt,gps_sat_fix_cnt,
-					elevbmc,terrwarn,batt,charging,adloader
+					elevbmc,terrwarn,batt,charging,adloader,
+					chosen_ad_maps,chosen_ad_map_i,chosen_ad_map_when
 					);
-			lastcachesize=res.lastcachesize;
-			mapcache.garbageCollect();
+			
 			if (mapcache!=null)
 			{
+				mapcache.garbageCollect();
 				if (mapcache.haveUnsatisfiedQueries())
 				{
 					if (loader==null)
@@ -213,8 +213,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 						//Log.i("fplan.bitmap","Cancel running background task, need a new.");
 					}
 				}
-			}
-			
+			}			
 
 		}
         /*
@@ -507,18 +506,29 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 
 	
 	private int cur_toggle_map=-1;
+	private String[] chosen_ad_maps;
+	private int chosen_ad_map_i;
+	private long chosen_ad_map_when;
 	@Override
 	public void selectChart(String chart) {
+		releaseMemory();
 		adloader=new AdChartLoader(chart,this);
-		gui.chartMode(true);
+		gui.chartMode(true,adloader.getChartCenter(),adloader.getChartUpBearing(),
+				adloader.best_zoomlevel(getRight()-getLeft()));
 		doInvalidate();
 	}
 
+	@Override
+	public void clear_map_toggle_list()
+	{
+		chosen_ad_maps=null;
+	}
 	@Override
 	public void toggle_map() {
 		cur_toggle_map+=1;
 		ArrayList<VariantInfo> avail=new ArrayList<VariantInfo>();
 		ArrayList<SigPoint> sps=new ArrayList<SigPoint>();
+		ArrayList<String> names=new ArrayList<String>();
 		for(SigPoint sp:lookup.majorAirports.findall(BoundingBox.nearby(new LatLon(lastpos), 30)))
 		{
 			
@@ -528,21 +538,36 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 				if (cif!=null && cif.getVariants()!=null)
 					for(VariantInfo variant:cif.getVariants())
 					{
-						avail.add(variant);
-						sps.add(sp);
+						if (lookup.haveproj(variant.chartname))
+						{
+							avail.add(variant);
+							sps.add(sp);
+							names.add(sp.name+" "+Airspace.getHumanReadableVariant(variant));
+							
+						}
 					}
 			}
 		}
+		names.add("base map");
+		chosen_ad_maps=names.toArray(new String[]{});
+		
 		if (cur_toggle_map>=avail.size())
 		{
+			chosen_ad_map_i=names.size()-1;
+			chosen_ad_map_when=SystemClock.elapsedRealtime();
+			adloader.releaseMemory();
 			adloader=null;
 			cur_toggle_map=-1;
-			gui.chartMode(false);
+			gui.chartMode(false,null,0,0);
 		}
 		else
 		{
+			releaseMemory();
+			chosen_ad_map_i=cur_toggle_map;
+			chosen_ad_map_when=SystemClock.elapsedRealtime();
 			adloader=new AdChartLoader(avail.get(cur_toggle_map).chartname,this);
-			gui.chartMode(true);			
+			gui.chartMode(true,adloader.getChartCenter(),adloader.getChartUpBearing(),
+					adloader.best_zoomlevel(getRight()-getLeft()));
 		}
 		
 		doInvalidate();

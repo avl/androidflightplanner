@@ -21,4 +21,16 @@ public class MapDetailLevels {
 	public static int getMaxElevLevelFromDetail(int mapdetail) {
 		return 8;
 	}
+
+	public static boolean getHaveAdChart(int mapdetail) {
+		if (mapdetail>=1)
+			return true;
+		return false;
+	}
+
+	public static boolean haveAip(int mapdetail) {
+		if (mapdetail>=1)
+			return true;
+		return false;
+	}
 }

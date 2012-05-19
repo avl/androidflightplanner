@@ -190,7 +190,7 @@ public class MapCache {
 			//Log.i("fplan.bitmap","Considering adding to queryhist: "+m+" zoom: "+zoomlevel);
 			if (l==null || (l.fake && !l.only_fake_available))
 			{
-				Log.i("fplan.adchart","Missing, adding to queryhistory: "+m.getX()+","+m.getY()+" zoom: "+zoomlevel+" curr size: "+mapsize()+" history size: "+queryhistory.size());
+				//Log.i("fplan.adchart","Missing, adding to queryhistory: "+m.getX()+","+m.getY()+" zoom: "+zoomlevel+" curr size: "+mapsize()+" history size: "+queryhistory.size());
 				queryhistory.add(key);
 			}
 		}
@@ -209,7 +209,7 @@ public class MapCache {
 		}
 		for(Key d:deletelist)
 		{
-			Log.i("fplan.adchart","Ejecting:"+d);				
+			//Log.i("fplan.adchart","Ejecting:"+d);				
 			eject(d);
 		}
 		

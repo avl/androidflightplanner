@@ -461,11 +461,11 @@ public class Airspace implements Serializable{
 		spaces=pspaces;
 	}
 	
-	public static Airspace download(Airspace previous,AirspaceProgress prog,String user,String pass) throws Exception
+	public static Airspace download(Airspace previous,AirspaceProgress prog,String user,String pass,boolean aip) throws Exception
 	{
-		return download(null,previous,prog,user,pass);
+		return download(null,previous,prog,user,pass,aip);
 	}
-	public static Airspace download(InputStream fakeDataForTest,Airspace previous,AirspaceProgress prog,String user,String pass) throws Exception
+	public static Airspace download(InputStream fakeDataForTest,Airspace previous,AirspaceProgress prog,String user,String pass,boolean aip) throws Exception
 	{
 		
 		System.out.println("Start download operation");
@@ -481,6 +481,7 @@ public class Airspace implements Serializable{
 			nvps.add(new BasicNameValuePair("version","8"));
 			nvps.add(new BasicNameValuePair("user",user));
 			nvps.add(new BasicNameValuePair("password",pass));
+			nvps.add(new BasicNameValuePair("aip",aip ? "1" : "0"));
 			if (previous==null)
 				nvps.add(new BasicNameValuePair("aipgen",""));
 			else
@@ -782,6 +783,31 @@ public class Airspace implements Serializable{
 				return t;
 		}
 		return null;
+	}
+	static public String getHumanReadableVariant(VariantInfo vi) {
+		String what;
+		if (vi.variant.equals(""))
+			what="Airport Chart";
+		else if (vi.variant.equals(".landing"))
+			what="Landing Chart";
+		else if (vi.variant.equals(".VAC") || vi.variant.equals(".vac"))
+			what="Visual Approach Chart";
+		else if (vi.variant.equals(".parking"))
+			what="Parking Chart";
+		else
+			what=vi.variant;
+		return what;
+	}
+	
+	
+	private static File getLastLoadFile() {
+		File extpath = Environment.getExternalStorageDirectory();
+		File dirpath = new File(extpath,
+				Config.path);
+		if (!dirpath.exists())
+			dirpath.mkdirs();
+		File path = new File(dirpath,"lastload.ms");
+		return path;
 	}
 	
 }

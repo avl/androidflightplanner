@@ -34,9 +34,16 @@ public class Local extends ContentProvider {
 
    @Override
    public String getType(Uri uri) {
-       throw new UnsupportedOperationException("Not supported by this provider");
+	   return "text/html";
    }
 
+   @Override
+   public String[] getStreamTypes (Uri uri, String mimeTypeFilter)
+   {
+	   return new String[]{"text/html"};
+   }
+   
+   
    @Override
    public Uri insert(Uri uri, ContentValues contentvalues) {
        throw new UnsupportedOperationException("Not supported by this provider");
@@ -44,7 +51,7 @@ public class Local extends ContentProvider {
 
    @Override
    public Cursor query(Uri uri, String[] as, String s, String[] as1, String s1) {
-       throw new UnsupportedOperationException("Not supported by this provider");
+	   throw new UnsupportedOperationException("Not supported by this provider");
    }
 
    @Override

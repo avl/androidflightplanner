@@ -62,7 +62,8 @@ public class GuiSituation
 		void cancelMapDownload();
 		void doShowExtended(Place[] places);
 		void showAirspaces();
-		void toggle_map();				
+		void toggle_map();
+		void clear_map_toggle_list();				
 	}
 	public interface Clickable
 	{
@@ -215,9 +216,12 @@ public class GuiSituation
 		}
 	}
 	void resetDragTimeout() {
-		drag_timeout.timeout(new DragTimeout(), 30000);
+		if (!chartmode)
+			drag_timeout.timeout(new DragTimeout(), 30000);
 	}
 	public void onTouchFingerDown(TransformIf tf, float x, float y,float x_dpmm,float y_dpmm) {
+		
+		
 		switch(state)
 		{
 		case IDLE:
@@ -231,6 +235,7 @@ public class GuiSituation
 			float thresh=4.0f*x_dpmm;
 			if (dist>thresh*thresh)
 			{
+				movingMap.clear_map_toggle_list();
 				dragstartx=x;
 				dragstarty=y;
 				float h=0.25f*(ysize);
@@ -256,6 +261,7 @@ public class GuiSituation
 		}
 			break;
 		case DRAGGING:
+			movingMap.clear_map_toggle_list();
 			float deltax1=(float)((x-dragstartx)*Math.pow(2,13-zoomlevel));
 			float deltay1=(float)((y-dragstarty)*Math.pow(2,13-zoomlevel));
 			float hdgrad=tf.getHdgRad();
@@ -273,6 +279,7 @@ public class GuiSituation
 		
 	}
 	public void onTouchFingerUp(TransformIf tf, float x, float y,float xdpmm,float ydpmm) {
+		movingMap.clear_map_toggle_list();
 		switch(state)
 		{
 		case IDLE:
@@ -429,8 +436,20 @@ public class GuiSituation
 	public void showAirspaces() {
 		movingMap.showAirspaces();
 	}
-	public void chartMode(boolean b) {
+	public void chartMode(boolean b, LatLon chart_center, float chart_hdg,int zoom) {
 		chartmode=b;
+		if (b)
+		{
+			drag_center13=Project.latlon2merc(chart_center, 13);
+			drag_heading=chart_hdg;
+			zoomlevel=zoom;
+			
+		}
+		else
+		{
+			drag_center13=null;
+			zoomlevel=9;
+		}
 	}
 
 	public void toggle_map() {

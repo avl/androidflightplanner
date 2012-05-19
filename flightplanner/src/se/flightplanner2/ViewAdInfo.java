@@ -34,14 +34,22 @@ public class ViewAdInfo extends Activity {
 	
 	private void loadChart(String chartname)
 	{
-		
-    	Intent ret=new Intent(Intent.ACTION_DEFAULT);
-		ret.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
-    	ret.putExtra("se.flightplanner2.adchart",chartname);
-    	Log.i("fplan.adchart","Returning with "+chartname);
-    	setResult(RESULT_OK,ret);
-    	finish();
-/*		
+		AirspaceLookup lookup=GlobalLookup.lookup;
+		if (lookup!=null)
+		{
+			if (lookup.haveproj(chartname))
+			{
+		    	Intent ret=new Intent(Intent.ACTION_DEFAULT);
+				ret.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+		    	ret.putExtra("se.flightplanner2.adchart",chartname);
+		    	//Log.i("fplan.adchart","Returning with "+chartname);
+		    	setResult(RESULT_OK,ret);
+		    	
+		    	finish();
+		    	return;				
+			}
+		}
+
 		Intent intent = new Intent(this, AdChartActivity.class);
 		
 		intent.putExtra("se.flightplanner2.user", getPreferences(MODE_PRIVATE).getString("user","")); 
@@ -51,13 +59,47 @@ public class ViewAdInfo extends Activity {
 		intent.putExtra("se.flightplanner2.chartname", chartname);
     	Log.i("fplan.chart","After calling put Serializable");	
 		//map.releaseMemory();
-		startActivity(intent);		*/
+		startActivity(intent);
 	}
 	private void show_aip(AipText aiptext) {
-		Intent intent = new Intent(ViewAdInfo.this, HtmlViewer.class);
-		intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+		//Intent intent = new Intent();
+		try
+		{
+			Intent intent = new Intent("android.intent.action.VIEW", Uri.parse("file:/"+aiptext.get_datapath().getAbsolutePath()));
+			//Uri uri = Uri.parse("content://se.flightplanner2/"+aiptext.get_datapath().getAbsolutePath());//Uri.parse("file://"+aiptext.get_datapath().getAbsolutePath());
+			//intent.setData(uri);
+			intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+			intent.setClassName("com.android.browser", "com.android.browser.BrowserActivity");			
+			startActivity(intent);
+		}
+		catch(Throwable e)
+		{
+			Intent intent = new Intent(ViewAdInfo.this, HtmlViewer.class);
+			intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+			intent.putExtra("se.flightplanner2.htmlpath", aiptext.get_datapath().getAbsolutePath()); 
+			startActivity(intent);			
+		}
+		
+		//Intent intent = new Intent(ViewAdInfo.this, HtmlViewer.class);
+		
+		
+	    //Intent intent = new Intent("android.intent.action.VIEW", Uri.parse("content://se.flightplanner2/"+aiptext.get_datapath().getAbsolutePath()));  
+		//Intent intent = new Intent("android.intent.action.VIEW", Uri.parse("http://www.google.com"));
+		//RookieHelper.showmsg(this,"Path: "+aiptext.get_datapath().getAbsolutePath());
+		
+		
+		//Intent intent = new Intent("android.intent.action.VIEW", Uri.parse("file://"+aiptext.get_datapath().getAbsolutePath()));
+
+		//Intent intent = new Intent("android.intent.action.VIEW", 
+		//		Uri.parse("content://com.android.htmlfileprovider"+aiptext.get_datapath().getAbsolutePath()));
+			
+		//intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+		//
+	    //startActivity(intent);  
+	    
+		/*intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
 		intent.putExtra("se.flightplanner2.htmlpath", aiptext.get_datapath().getAbsolutePath()); 
-		startActivity(intent);
+		startActivity(intent);*/
 	}
 
 	@Override
@@ -220,17 +262,7 @@ public class ViewAdInfo extends Activity {
 					{
 					for(VariantInfo vi:vars)
 					{
-						String what;
-						if (vi.variant.equals(""))
-							what="Airport Chart";
-						else if (vi.variant.equals(".landing"))
-							what="Landing Chart";
-						else if (vi.variant.equals(".VAC") || vi.variant.equals(".vac"))
-							what="Visual Approach Chart";
-						else if (vi.variant.equals(".parking"))
-							what="Parking Chart";
-						else
-							what=vi.variant;
+						String what = Airspace.getHumanReadableVariant(vi);
 						items.add(what);
 					}
 			        		        

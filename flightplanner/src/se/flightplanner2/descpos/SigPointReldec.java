@@ -40,7 +40,7 @@ public final class SigPointReldec extends RelDec {
 		{
 			if (shorted)
 				return icao_sigp_format;
-			sb.append("<p>"+icao_sigp_format+"</p");
+			sb.append("<p>"+icao_sigp_format+"</p>(or)<br/>");
 		}
 		String shortdesc;
 		String longdesc;
