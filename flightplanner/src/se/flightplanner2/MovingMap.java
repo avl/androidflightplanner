@@ -470,7 +470,10 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		@Override
 		public void run() {
 			MovingMap.this.invalidate();
-			next_invalidate_time=Long.MAX_VALUE;
+			long now=SystemClock.elapsedRealtime();
+			long delta=30000;
+			next_invalidate_time=now+delta;
+			handler.postDelayed(this,delta);
 			//Log.i("fplan.mmupd","Delayed invalidate running");			
 		}
 	};
@@ -480,6 +483,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		long scheduled_delta=next_invalidate_time-now;
 		if (scheduled_delta<ms) return;
 		next_invalidate_time=now+ms;
+		handler.removeCallbacks(invalidate_within_runner);
 		handler.postDelayed(invalidate_within_runner,ms);
 		//Log.i("fplan.mmupd","Posting a delayed invalidate in "+ms+"ms");
 	}

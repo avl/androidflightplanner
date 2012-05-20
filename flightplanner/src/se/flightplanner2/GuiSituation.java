@@ -2,6 +2,7 @@ package se.flightplanner2;
 
 import java.util.ArrayList;
 
+
 import se.flightplanner2.GuiSituation.Clickable;
 import se.flightplanner2.Project.LatLon;
 import se.flightplanner2.Project.Merc;
@@ -54,7 +55,8 @@ public class GuiSituation
 	{
 		IDLE, //Normal
 		MAYBE_DRAG, //about to start dragging
-		DRAGGING
+		DRAGGING,
+		DEAD
 	}
 	public interface GuiClientInterface
 	{
@@ -96,17 +98,95 @@ public class GuiSituation
 
 	}
 	boolean handleOnTouch(MotionEvent ev,float x_dpmm,float y_dpmm) {
-		float x=ev.getX();
+		float x;
 		TransformIf tf = getTransform();
-		float y=ev.getY();
+		float y;
+		if (ev.getPointerCount()>=2)
+		{
+			onMaybePinch(tf,ev,x_dpmm,y_dpmm);
+			float[] xy = avgpos(ev);
+			x=xy[0];
+			y=xy[1];
+		}
+		else
+		{
+			x=ev.getX();
+			y=ev.getY();
+		}
 		if (ev.getAction()==MotionEvent.ACTION_DOWN ||
 			ev.getAction()==MotionEvent.ACTION_MOVE)	
 			onTouchFingerDown(tf, x,y,x_dpmm,y_dpmm);	
-		else
+		
 		if (ev.getAction()==MotionEvent.ACTION_UP)
 			onTouchFingerUp(tf, x,y, x_dpmm, y_dpmm);
 		return true;
 	}
+
+	private float[] avgpos(MotionEvent ev) {
+		float tx=0;
+		float ty=0;
+		if (ev.getPointerCount()>0)
+		{
+			for(int i=0;i<ev.getPointerCount();++i)
+			{
+				tx+=ev.getX(i);
+				ty+=ev.getY(i);
+			}
+			tx/=(float)ev.getPointerCount();
+			ty/=(float)ev.getPointerCount();
+		}
+		float[] xy=new float[]{tx,ty};
+		return xy;
+	}
+	private boolean ispinch=false;
+	private float beginPinchDist=0;
+	private void onMaybePinch(TransformIf tf, MotionEvent ev, float x_dpmm, float y_dpmm) {
+		if (state==GuiState.DEAD) return;
+		float dx=ev.getX(0)-ev.getX(1);
+		float dy=ev.getY(0)-ev.getY(1);
+		float dist=(float) Math.sqrt(dx*dx+dy*dy);
+		if (!ispinch)
+		{			
+			beginPinchDist=dist;
+			float[] xy = avgpos(ev);
+			dragstartx=xy[0];
+			dragstarty=xy[1];
+			if (beginPinchDist<1e-3)
+			{
+			}
+			else
+			{
+				ispinch=true;
+			}
+		}
+		else
+		{
+			float delta=dist/beginPinchDist;
+			int nlevel=0;
+			if (delta<0.85)
+			{
+				nlevel-=1;
+			}
+			else
+			if (delta>1.15)
+			{
+				nlevel+=1;
+			}
+			if (nlevel!=0)
+			{
+				float[] xy = avgpos(ev);
+				changeZoomAim(nlevel,tf,(int)xy[0],(int)xy[1]);
+				/*float avgx=0.5f*(ev.getX(0)+ev.getX(1));
+				float avgy=0.5f*(ev.getY(0)+ev.getY(1));
+				zoom(scroll_x+(int)avgx,scroll_y+(int)avgy,nlevel);							
+				invalidate();*/
+				state=GuiState.DEAD;
+			}
+		}
+
+		
+	}
+
 	public void onClassicalClick(float x, float y,float x_dpmm,float y_dpmm)
 	{
 		int best_idx=-1;
@@ -167,7 +247,7 @@ public class GuiSituation
 	{ 
 		//this is called when gui.zoomlevel is changed, which can happen
 		//while dragging, in principle.
-		state=GuiState.IDLE;
+		state=GuiState.DEAD;
 	}
 	public void onChartUp(AdChartLoader adc) {
 		drag_heading=adc.getChartUpBearing();
@@ -224,6 +304,10 @@ public class GuiSituation
 		
 		switch(state)
 		{
+		case DEAD:
+			
+			break;
+		
 		case IDLE:
 			dragstartx=x;
 			dragstarty=y;
@@ -232,6 +316,7 @@ public class GuiSituation
 		case MAYBE_DRAG:
 		{
 			float dist=(dragstartx-x)*(dragstartx-x)+(dragstarty-y)*(dragstarty-y);
+			Log.i("fplan.drag","Drag dist: "+dist);
 			float thresh=4.0f*x_dpmm;
 			if (dist>thresh*thresh)
 			{
@@ -280,8 +365,12 @@ public class GuiSituation
 	}
 	public void onTouchFingerUp(TransformIf tf, float x, float y,float xdpmm,float ydpmm) {
 		movingMap.clear_map_toggle_list();
+		ispinch=false;
 		switch(state)
 		{
+		case DEAD:
+			state=GuiState.IDLE;
+			break;
 		case IDLE:
 			break;
 		case MAYBE_DRAG:
@@ -305,6 +394,32 @@ public class GuiSituation
 			zoomlevel=20;		
 		movingMap.doInvalidate();
 	}
+	void changeZoomAim(int zd,TransformIf tf,int screenx,int screeny) {
+
+		int prevzoom=zoomlevel;
+		zoomlevel+=zd;
+		if (zoomlevel<4)
+			zoomlevel=4;
+		else
+		if (zoomlevel>20)
+			zoomlevel=20;		
+		
+		if (drag_center13!=null)
+		{
+			Merc aimcenter13=Project.merc2merc(tf.screen2merc(new Vector(screenx,screeny)),prevzoom,13);
+			Vector aimcentvec13=new Vector(aimcenter13.x,aimcenter13.y);
+			Vector delta=aimcentvec13.minus(new Vector(drag_center13.x,drag_center13.y));
+			double factor=Math.pow(2,zoomlevel-prevzoom);
+			Vector delta2=delta.mul(1.0/factor);
+			drag_center13=new Merc(aimcentvec13.minus(delta2));
+			//drag_center13=aimcenter13;
+		}
+
+		state=GuiSituation.GuiState.IDLE;
+		
+		movingMap.doInvalidate();
+	}
+	
 	private TransformFactoryIf tfac=new MercTransformFactory();
 	
 	public void setTransformType(TransformFactoryIf fac)
