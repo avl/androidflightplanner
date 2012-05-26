@@ -46,6 +46,7 @@
  <CheckBox android:id="@+id/vibrate_default" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Vibrate to warn of airspaces ahead"></CheckBox>
  <CheckBox android:id="@+id/terrain_warning_default" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Show terrain warnings (always only when moving 10kt+)"></CheckBox>
  <CheckBox android:id="@+id/autosync_default" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Automatically sync weather and airspace data 30m and 10m before each scheduled trip."></CheckBox>
+ <CheckBox android:id="@+id/cvr_default" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cockpit Voice Recorder. Automatically record all audio to /mnt/sdcard/CVR directory."></CheckBox>
  
 <Button
         android:id="@+id/button"

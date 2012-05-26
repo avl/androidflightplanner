@@ -376,106 +376,6 @@ public class MapDrawer {
 
 		BoundingBox smbb13 = new BoundingBox(mypos13.x, mypos13.y, mypos13.x,
 				mypos13.y).expand(tennm13);
-
-		if (bitmaps != null) {
-			iMerc centertile = new iMerc((int) screen_center.x & (~255),
-					(int) screen_center.y & (~255));
-			// int diagonal = (int) Math.sqrt((sizex / 2) * (sizey / 2))+1;
-			// Log.i("fplan.bitmap","Diagonal: "+diagonal+" sizex:"+sizex+" sizey: "+sizey);
-			// int minus = (diagonal + 255) / 256;
-			// minus=2;
-			// int tot = 2 * minus + 1;
-
-			//int tot;
-			int minuspixels;
-			{
-				float smallres = Math.min(sizex, sizey);
-				float bigres = Math.max(sizex, sizey);
-				double diag_length = Math.sqrt(smallres * smallres + bigres
-						* bigres);
-				double diag_angle = Math.atan2(smallres, bigres);
-				// double hdiag_length=diag_length/2.0;
-				final int tilesize = 256;
-				float base = bigres;
-				// b= 180 - 90 - diag_angle
-				double ba = Math.PI - Math.PI / 2 - diag_angle;
-				// maxh/base = sin(b)
-				// maxh = sin(b)*base
-				double maxh = Math.sin(ba) * base;
-				// print "diag_length:",diag_length
-				// print "max height:",maxh
-				int iu = (int) (Math.floor((diag_length) / tilesize)) + 2;
-				// print "diag tiles",u
-				int iv = (int) (Math.floor((maxh) / tilesize)) + 2;
-
-				//tot = iu * iv;
-				//tot = (tot * 5 + 1) / 4; // because of how zoom past max
-											// zoomlevel works - it always keeps
-											// the max zoomlevel bitmaps in
-											// memory as well, needing on
-											// average 0.25 less detailed
-											// bitmaps per zoomed in bitmap
-				minuspixels = ((int) diag_length + 256) / 256;
-			}
-			// Log.i("fplan.drawmap","Total tiles needed:"+tot);
-
-			
-			
-			//iMerc topleft = new iMerc(centertile.getX() - (256 * minus),
-			//		centertile.getY() - 256 * minus);
-			iMerc topleft = new iMerc(centertile.getX() - (256 * minuspixels),
-					centertile.getY() - 256 * minuspixels);
-			float hdg = (float) (tf.getHdgRad() * (180.0 / Math.PI));
-			int tilesused = 0;
-			for (int j = 0; j < 2 * minuspixels; ++j) {
-
-				for (int i = 0; i < 2 * minuspixels; ++i) {
-
-					iMerc cur = new iMerc(topleft.getX() + 256 * i,
-							topleft.getY() + 256 * j);
-					if (cur.getX() < 0 || cur.getY() < 0)
-						continue;
-					Vector v = tf.merc2screen(new Merc(cur.getX(), cur.getY()));
-					if (!tileOnScreen((float) v.x, (float) v.y, tf))
-						continue;
-					BitmapRes b = null;
-					// Log.i("fplan","Bitmap for "+cur);
-					canvas.save();
-					canvas.rotate(-hdg, (float) v.x, (float) v.y);
-					RectF trg = new RectF((float) v.x, (float) v.y,
-							(float) v.x + 256, (float) v.y + 256);
-					
-					b = bitmaps.getBitmap(cur, zoomlevel);
-					tilesused += 1;
-					if (adloader==null && b != null && b.b != null) {
-						// float px=(float)(v.x+i*256);
-						// float py=(float)(v.y+j*256);
-
-						// Log.i("fplan","Drawing bitmap at "+v.x+","+v.y);
-						Rect src = b.rect;
-						canvas.drawBitmap(b.b, src, trg, null);
-						// Log.i("fplan.terr","Queried "+cur);
-						
-
-					}
-					if (terrwarn && !isUserPresentlyMovingMap) {
-						BMResult elevbm = elevbmc.query2(cur);
-						if (elevbm != null && elevbm.bm != null)
-							canvas.drawBitmap(elevbm.bm, elevbm.r, trg,
-									null);
-					}
-					canvas.restore();
-
-				}
-			}
-			// Log.i("fplan.drawmap","Tiles used:"+tilesused);
-		}
-
-		elevbmc.delete_all_unused();
-		elevbmc.schedule_background_tasks();
-		
-		
-
 		if (adloader!=null)
 		{
 			double onenmpixels=Project.approx_scale(screen_center.y, zoomlevel, 1);
@@ -536,6 +436,92 @@ public class MapDrawer {
 			}
 			adloader.end();
 		}
+
+		if (bitmaps != null) {
+			iMerc centertile = new iMerc((int) screen_center.x & (~255),
+					(int) screen_center.y & (~255));
+			// int diagonal = (int) Math.sqrt((sizex / 2) * (sizey / 2))+1;
+			// Log.i("fplan.bitmap","Diagonal: "+diagonal+" sizex:"+sizex+" sizey: "+sizey);
+			// int minus = (diagonal + 255) / 256;
+			// minus=2;
+			// int tot = 2 * minus + 1;
+
+			//int tot;
+			int minuspixels;
+			{
+				float smallres = Math.min(sizex, sizey);
+				float bigres = Math.max(sizex, sizey);
+				double diag_length = Math.sqrt(smallres * smallres + bigres
+						* bigres);
+				double diag_angle = Math.atan2(smallres, bigres);
+				// double hdiag_length=diag_length/2.0;
+				final int tilesize = 256;
+				float base = bigres;
+				// b= 180 - 90 - diag_angle
+				double ba = Math.PI - Math.PI / 2 - diag_angle;
+				// maxh/base = sin(b)
+				// maxh = sin(b)*base
+				// print "diag_length:",diag_length
+				// print "max height:",maxh
+				minuspixels = ((int) diag_length + 256) / 256;
+			}
+			// Log.i("fplan.drawmap","Total tiles needed:"+tot);
+
+			
+			
+			//iMerc topleft = new iMerc(centertile.getX() - (256 * minus),
+			//		centertile.getY() - 256 * minus);
+			iMerc topleft = new iMerc(centertile.getX() - (256 * minuspixels),
+					centertile.getY() - 256 * minuspixels);
+			float hdg = (float) (tf.getHdgRad() * (180.0 / Math.PI));
+			for (int j = 0; j < 2 * minuspixels; ++j) {
+
+				for (int i = 0; i < 2 * minuspixels; ++i) {
+
+					iMerc cur = new iMerc(topleft.getX() + 256 * i,
+							topleft.getY() + 256 * j);
+					if (cur.getX() < 0 || cur.getY() < 0)
+						continue;
+					Vector v = tf.merc2screen(new Merc(cur.getX(), cur.getY()));
+					if (!tileOnScreen((float) v.x, (float) v.y, tf))
+						continue;
+					BitmapRes b = null;
+					// Log.i("fplan","Bitmap for "+cur);
+					canvas.save();
+					canvas.rotate(-hdg, (float) v.x, (float) v.y);
+					RectF trg = new RectF((float) v.x, (float) v.y,
+							(float) v.x + 256, (float) v.y + 256);
+					
+					b = bitmaps.getBitmap(cur, zoomlevel);
+					if (adloader==null && b != null && b.b != null) {
+						// float px=(float)(v.x+i*256);
+						// float py=(float)(v.y+j*256);
+
+						// Log.i("fplan","Drawing bitmap at "+v.x+","+v.y);
+						Rect src = b.rect;
+						canvas.drawBitmap(b.b, src, trg, null);
+						// Log.i("fplan.terr","Queried "+cur);
+						
+
+					}
+					if (terrwarn && !isUserPresentlyMovingMap) {
+						BMResult elevbm = elevbmc.query2(cur);
+						if (elevbm != null && elevbm.bm != null)
+							canvas.drawBitmap(elevbm.bm, elevbm.r, trg,
+									null);
+					}
+					canvas.restore();
+
+				}
+			}
+			// Log.i("fplan.drawmap","Tiles used:"+tilesused);
+		}
+
+		elevbmc.delete_all_unused();
+		elevbmc.schedule_background_tasks();
+		
+		
+
 		
 
 		ArrayList<SigPoint> major_airfields = null;
@@ -835,7 +821,7 @@ public class MapDrawer {
 					(int) arrow.x, (int) arrow.y - fivemin + 4, arrowpaint);
 			canvas.drawRect((int) arrow.x - 2, (int) 0, (int) arrow.x + 2,
 					(int) arrow.y, arrowpaint);
-			arrowpaint.setColor(Color.WHITE);
+			arrowpaint.setColor(Color.rgb(230,230,255));
 			path = new Path();
 			path.moveTo((int) arrow.x - 1.0f*x_dpmm, (int) arrow.y);
 			path.lineTo((int) arrow.x + 1.0f*x_dpmm, (int) arrow.y);
@@ -848,6 +834,7 @@ public class MapDrawer {
 					(int) arrow.x, (int) arrow.y - fivemin + 3, arrowpaint);
 			canvas.drawRect((int) arrow.x - 1, (int) 0, (int) arrow.x + 1,
 					(int) arrow.y, arrowpaint);
+			arrowpaint.setColor(Color.WHITE);
 		}
 
 		else {
@@ -883,7 +870,7 @@ public class MapDrawer {
 
 				canvas.drawLine((float) screenpos.x, (float) screenpos.y,
 						(float) screenpos2.x, (float) screenpos2.y, arrowpaint);
-				arrowpaint.setColor(Color.WHITE);
+				arrowpaint.setColor(Color.rgb(230,230,255));
 				arrowpaint.setStrokeWidth(2);
 				path = new Path();
 				path.moveTo((int) (screenpos.x + 7 * left.x),
@@ -897,6 +884,7 @@ public class MapDrawer {
 
 				canvas.drawLine((float) screenpos.x, (float) screenpos.y,
 						(float) screenpos2.x, (float) screenpos2.y, arrowpaint);
+				arrowpaint.setColor(Color.WHITE);
 
 			}
 

@@ -29,6 +29,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.util.Log;
+import android.widget.Toast;
 
 public class AutoSyncService extends Service implements BackgroundMapDownloadOwner {
 
@@ -46,7 +47,7 @@ public class AutoSyncService extends Service implements BackgroundMapDownloadOwn
 		binder.mService = new WeakReference<AutoSyncService>(this);
 	}
 
-	static public void schedule(Context appctx, Airspace space) {
+	static public void schedule(Context appctx, Airspace space,boolean toast) {
 		ArrayList<Long> wakeups = new ArrayList<Long>();
 		if (space==null)
 		{
@@ -82,6 +83,37 @@ public class AutoSyncService extends Service implements BackgroundMapDownloadOwn
 		if (next-lastsyncsec<60*5)
 			next=lastsyncsec+60*5;
 		Log.i("fplan.autosync","Scheduling wakeup in "+(next-now)/(60l)+" minutes = "+new Date(next*1000l));
+		if (toast)
+		{
+			
+			
+			
+			long mins=(next-now)/(60l);
+			String timestr;
+			if (mins==0)
+				timestr="1 minute";
+			else if (mins<=90)
+				timestr=""+mins+" minutes";
+			else
+			{
+				long hours=mins/60;
+				if (hours==1)
+					timestr="1 hour";
+				else if (hours<48)
+					timestr=""+hours+" hours";
+				else
+				{
+					long days=hours/24;
+					if (days==1)
+						timestr="1 day";
+					else
+						timestr=""+days+" days";
+				}
+				
+			}
+				
+			Toast.makeText(appctx, "Autosync active, running in: "+timestr, Toast.LENGTH_LONG).show();
+		}
 
 		alarmManager.set(AlarmManager.RTC, next * 1000l, pendingIntent);
 	}
@@ -158,9 +190,20 @@ public class AutoSyncService extends Service implements BackgroundMapDownloadOwn
 			gui.onFinish(airspace, lookup, error);
 		}
 		if (lookup!=null && lookup.airspace!=null)
-			schedule(this, airspace);
+			schedule(this, airspace,false);
 		stopSelf();
 		
+	}
+
+
+
+	public static void cancel(Context appctx) {
+		AlarmManager alarmManager = (AlarmManager) appctx
+				.getSystemService(Context.ALARM_SERVICE);
+		Intent intent = new Intent(appctx, AutoSyncService.class);
+		PendingIntent pendingIntent = PendingIntent.getService(appctx, 0,
+				intent, 0);
+		alarmManager.cancel(pendingIntent);	
 	}
 
 }

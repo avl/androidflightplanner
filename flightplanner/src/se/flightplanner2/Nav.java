@@ -159,12 +159,11 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		menu.add(0, MENU_VIEW_CHARTS, 0, "Airports");
 		menu.add(0, MENU_SYNC, 0, "Sync");
 
+		//menu.add(0, MENU_HELP, 0, "Help");
 		menu.add(0, MENU_LOGIN, 0, "Select Trip");
-		menu.add(0, MENU_FINISH, 0, "Exit");
 		menu.add(0, MENU_SETTINGS, 0, "Settings");
-		menu.add(0, MENU_HELP, 0, "Help");
-
 		menu.add(0, MENU_VIEW_RECORDINGS, 0, "Recorded Trips");
+		menu.add(0, MENU_FINISH, 0, "Exit");
 		return true;
 	}
 
@@ -199,6 +198,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 					"se.flightplanner2.terrwarn", false);
 			final boolean autosync= data.getBooleanExtra(
 					"se.flightplanner2.autosync", false);
+			final boolean cvr= data.getBooleanExtra(
+					"se.flightplanner2.cvr", false);
 			// RookieHelper.showmsg(this,"mapdetail now:"+mapdetail);
 			SharedPreferences prefs = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE);
 			SharedPreferences.Editor pedit = prefs.edit();
@@ -209,7 +210,20 @@ public class Nav extends Activity implements PositionSubscriberIf,
 			pedit.putBoolean("vibrate", vibrate);
 			pedit.putBoolean("terrwarn", terrwarn);
 			pedit.putBoolean("autosync", autosync);
+			pedit.putBoolean("cvr", cvr);
 			pedit.commit();
+			if (airspace!=null && autosync)
+			{
+				AutoSyncService.schedule(this.getApplicationContext(), airspace,true);
+			}
+			else
+			{
+				AutoSyncService.cancel(this.getApplicationContext());
+			}
+			if (cvr)
+				this.cvr.start();
+			else
+				this.cvr.stop();
 
 			String then = data.getStringExtra("se.flightplanner2.thenopen");
 			map.update_detail(
@@ -345,6 +359,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		switch (item.getItemId()) {
 		case MENU_FINISH:
 			finish();
+			cvr.stop();
 			overridePendingTransition(0, 0);
 			break;
 		case MENU_SETTINGS: {
@@ -560,6 +575,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("terrwarn", false));
 		intent.putExtra("se.flightplanner2.autosync",
 				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("autosync", false));
+		intent.putExtra("se.flightplanner2.cvr",
+				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("cvr", false));
 		// RookieHelper.showmsg(this,"Got mapd"+mapd);
 		intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
 		return intent;
@@ -637,6 +654,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 	 * //text.setText("Default!"); return dialog; } else { assert false; return
 	 * null; } }
 	 */
+	CVR cvr;
 	@Override
     public void onCreate(Bundle savedInstanceState) {
     	super.onCreate(savedInstanceState);
@@ -701,7 +719,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
         {
     		if (getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("autosync", false))
     		{        	
-    			AutoSyncService.schedule(this.getApplicationContext(), airspace);
+    			AutoSyncService.schedule(this.getApplicationContext(), airspace,false);
     		}
         }
         
@@ -775,6 +793,9 @@ public class Nav extends Activity implements PositionSubscriberIf,
 					},
 	        		 sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
 		}
+		cvr=new CVR();
+		if (getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("cvr", false))			
+			cvr.start();
 		
     }
 
@@ -828,6 +849,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 
 	@Override
 	public void onDestroy() {
+		cvr.stop();
+
     	AppState.gui=null;
 
 		try {
@@ -876,10 +899,10 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		if (getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("autosync", false))
 		{
 			if (airspace!=null)
-				AutoSyncService.schedule(this.getApplicationContext(), airspace);
+				AutoSyncService.schedule(this.getApplicationContext(), airspace,true);
 			else
 			if (this.airspace!=null)
-				AutoSyncService.schedule(this.getApplicationContext(), this.airspace);
+				AutoSyncService.schedule(this.getApplicationContext(), this.airspace,true);
 		}
 
 		if (do_load_trips) {

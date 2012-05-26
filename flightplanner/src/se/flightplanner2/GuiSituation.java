@@ -47,7 +47,8 @@ public class GuiSituation
 	{
 		@Override
 		public void run() {
-			doCenterDragging();
+			if (!chartmode)
+				doCenterDragging();
 		}	
 	}
 	
