@@ -1028,12 +1028,22 @@ public class MapDrawer {
 			RectF r = new RectF(0, topy1, right, bottom);
 			canvas.drawLine(0, topy1, right, topy1, thinlinepaint);
 			canvas.drawRect(r, backgroundpaint);
+			String dir=DescribePosition.roughdirshort((float)((we.getHeading()+180.0)%360.0));
 			if (dist >= 0)
+			{
+				addTextIfFits(canvas, "you:","NWW ",
+						r, "you:",String.format(dir+" ", dist),  y1, smalltextpaint,bigtextpaint);
 				addTextIfFits(canvas, "1222.2nm", "",
 						r, String.format("%.1fnm", dist), "", y1, bigtextpaint, smalltextpaint);
+			}
+
+
+			//addTextIfFits(canvas, "(SWW)", "", r, "("+dir+")", "", y1, bigtextpaint, smalltextpaint);
+			
 			// canvas.drawText(String.format("%.1fnm",we.getDistance()),
 			// 2,y1,bigtextpaint);
 			addTextIfFits(canvas, whentempl, "", r, whenstr, "", y1, bigtextpaint, smalltextpaint);
+			
 			// canvas.drawText(String.format("T:%s",whenstr),
 			// 70,y1,bigtextpaint);
 			
@@ -1299,7 +1309,8 @@ public class MapDrawer {
 						float hdgdelta=(float)(bug.hdg-lastpos.getBearing());
 						if (hdgdelta<-180) hdgdelta+=360;
 						if (hdgdelta>180) hdgdelta-=360;
-						hdgdelta/=30;
+						double ang=(180.0/Math.PI)*Math.atan2(sizex/2,(3*sizey)/4);
+						hdgdelta/=ang;
 						arrowpaint.setColor(Color.WHITE);
 						Vector bugvec=new Vector(right/2+(right/2)*hdgdelta,y);
 						if (hdgdelta>1)

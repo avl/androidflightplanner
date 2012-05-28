@@ -38,6 +38,8 @@ public interface DetailedPlace {
 
 	Float getPlannedGs();
 	
+	String getPlannedAlt();
+	
 	boolean hasPrevNext();
 	void prev();
 	void next();

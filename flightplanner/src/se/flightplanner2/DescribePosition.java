@@ -62,6 +62,29 @@ public class DescribePosition extends Activity implements PositionSubscriberIf{
 		if (brg<11.25+22.5*15) return "north-north-west";
 		return "north";
 	}
+	public static String roughdirshort(float brg)
+	{
+		if (brg<11.25+22.5*0) return "N";
+		if (brg<11.25+22.5*1) return "NNE";
+		if (brg<11.25+22.5*2) return "NE";
+		if (brg<11.25+22.5*3) return "ENE";
+		
+		if (brg<11.25+22.5*4) return "E";
+		if (brg<11.25+22.5*5) return "ESE";
+		if (brg<11.25+22.5*6) return "SE";
+		if (brg<11.25+22.5*7) return "SSE";
+		
+		if (brg<11.25+22.5*8) return "S";
+		if (brg<11.25+22.5*9) return "SSW";
+		if (brg<11.25+22.5*10) return "SW";
+		if (brg<11.25+22.5*11) return "WSW";
+		
+		if (brg<11.25+22.5*12) return "W";
+		if (brg<11.25+22.5*13) return "WNW";
+		if (brg<11.25+22.5*14) return "NW";
+		if (brg<11.25+22.5*15) return "NNW";
+		return "N";
+	}
 	public static String aviation_format_time(Date when) {
 		Date now=new Date();
 		long lnow=now.getTime();

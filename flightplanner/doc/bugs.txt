@@ -12,7 +12,7 @@
 * FIXED: Borde ha skala på displayen. (5 NM märke på pinnen)
 * FIXED: Refactorera MovingMap. Klassen är för stor!!!
 * FIXED: Need declutter-functionality. 	
-* Need more testing of trip functionality and general stability testing.
+* FIXED: Need more testing of trip functionality and general stability testing.
 * FIXED: Feature freeze in effect 2011-01-28.
 * TRIAGED: Need declutter-deflicker-functionality.
 * FIXED: Altitude mode for log
@@ -24,13 +24,13 @@
 * Center och "north up" knapparna funkar inget bra på xperia.
 * FIXED: Se till att triploggen sparas när man gör destroy på appen.
 * FIXED: Borde verkligen ladda airspacedata i bakgrunden också.
-* Borde skapa ny nolabel-karta, utan openstreetmap flygplats-namn!
-* Roterande kompassros skulle vara schysst.
-* "Styr såhär"-"bug" skulle vara bra.
-* Waypoints som är efter 'current waypoint' borde inte kunna visas som "skipped".
+* FIXED: Borde skapa ny nolabel-karta, utan openstreetmap flygplats-namn!
+* FIXED: Roterande kompassros skulle vara schysst.
+* FIXED: "Styr såhär"-"bug" skulle vara bra.
+* FIXED: Waypoints som är efter 'current waypoint' borde inte kunna visas som "skipped".
 * FIXAD: Notam-hinder och notam-areor borde visas i appen!
-* Elevation-data borde vi ha också.
-* Should show time/estimated times. Good to see if you're on schedule.
-* Test if the MapDrawer.tileOnScreen function really works.
-* Borde vara Z-tid på GPS-fixen, som det står!
-* Om man är i flightmode borde det inte gå att försöka ladda ner kartor.
+* FIXED: Elevation-data borde vi ha också.
+* FIXED: Should show time/estimated times. Good to see if you're on schedule.
+* FIXED: Test if the MapDrawer.tileOnScreen function really works.
+* FIXED: Borde vara Z-tid på GPS-fixen, som det står!
+* FIXED: Om man är i flightmode borde det inte gå att försöka ladda ner kartor.

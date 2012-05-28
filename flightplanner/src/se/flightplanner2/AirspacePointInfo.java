@@ -132,6 +132,12 @@ public class AirspacePointInfo implements InformationPanel
 				pos);
 		return distance;
 	}
+	@Override
+	public double getHeading() {
+		return Project.bearing(
+				new LatLon(lastloc),
+				pos);
+	}
 	
 	@Override
 	public boolean hasLeft() {
@@ -185,5 +191,6 @@ public class AirspacePointInfo implements InformationPanel
 	public boolean getEmpty() {
 		return false;
 	}
+
 
 }

@@ -91,6 +91,7 @@ public class DetailedPlaceActivity extends Activity{
 	private TextView delay;
 	private TextView planned_fuel;
 	private TextView planned_gs;
+	private TextView planned_alt;
 	private Location last_location;
 	private TextView terr_elev;
 	private TextView planned_field;
@@ -113,6 +114,7 @@ public class DetailedPlaceActivity extends Activity{
 		if (delay!=null) delay.setText("--");
 		if (planned_fuel!=null) planned_fuel.setText("--");
 		if (planned_gs!=null) planned_gs.setText("--");
+		if (planned_alt!=null) planned_alt.setText("--");
 		if (planned_field!=null) planned_field.setText("--");
 		if (waypoint_hdg!=null) waypoint_hdg.setText("--");
 			
@@ -125,36 +127,84 @@ public class DetailedPlaceActivity extends Activity{
 		return String.format("%d:%02d", when / 60, when % 60);
 	}*/
 	
-	private BearingSpeedCalc bsca=new BearingSpeedCalc();
 	private LatLon last_elev_placepos;
 	private short last_elev;
-	private void update_location(Location location)
+	private void update_location(Location location_)
 	{
-		if (location==null || place==null)
+		if (place==null)
 		{
 			fail();
 			return;
 		}
-		location=bsca.calcBearingSpeed(location);
 		
-		gs.setText(""+(int)(location.getSpeed()*3.6f/1.852f)+"kt");
+		SimpleDateFormat df=new SimpleDateFormat("HH:mm:ss",Locale.US);
+		df.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+		if (location_!=null)
+		{
+			Location location=location_;
+			gs.setText(""+(int)(location.getSpeed()*3.6f/1.852f)+"kt");
+			LatLon ownlatlon=new LatLon(location);
+			place.update_pos(location);
+			
+			double dv=place.getDistance();
+			String dtxt=(dv>=0) ? String.format("%.2fNM", dv) : "--";
+			if (d!=null) d.setText(dtxt);
+			//Log.i("fplan.tmp","Settign distance to:"+dtxt);		
+			//Date when=tripstate.getETA2();
+			
+			//GregorianCalendar greg=new GregorianCalendar(TimeZone.getTimeZone("UTC"),Locale.ROOT);
+			
+						
+			tod.setText(df.format(new Date())+"Z");
+			
+			float hdg=location.getBearing();
+			LatLon placepos=place.getPos();
+			if (placepos!=null)
+			{
+				this.hdg.setText(String.format("%03.0f°", hdg));
+				float brg=Project.bearing(ownlatlon,placepos);
+				if (waypoint_hdg!=null) waypoint_hdg.setText(String.format("%03.0f°", brg));
+				if (compass!=null)
+				{
+					if (dv<0.01)
+						compass.set(hdg, -1000); //so close we can't really tell the direction
+					else
+						compass.set(hdg, brg);
+				}
+				
+				GetElevation gelv=GlobalGetElev.get_elev;
+				if (gelv!=null)
+				{
+					
+					int elev;
+					if (last_elev_placepos!=null && last_elev_placepos.equals(placepos))
+						elev=last_elev;
+					else
+						elev=gelv.get_elev_ft(placepos,13,1);
+					terr_elev.setText(""+elev+"ft");
+				}
+				else
+				{
+					terr_elev.setText("--");				
+				}
+				
+			}
+			else
+			{
+				if (waypoint_hdg!=null) waypoint_hdg.setText("--");
+				if (compass!=null)
+					compass.set(hdg, -1000);
+			}
+			
+		}
+		else
+		{
+			fail();
+		}
 
 		
 		//Log.i("fplan.tmp","Update location:"+location.getLatitude()+","+location.getLongitude());
-		LatLon ownlatlon=new LatLon(location);
-		place.update_pos(location);
-		
-		double dv=place.getDistance();
-		String dtxt=(dv>=0) ? String.format("%.2fNM", dv) : "--";
-		if (d!=null) d.setText(dtxt);
-		//Log.i("fplan.tmp","Settign distance to:"+dtxt);		
-		//Date when=tripstate.getETA2();
-		
-		//GregorianCalendar greg=new GregorianCalendar(TimeZone.getTimeZone("UTC"),Locale.ROOT);
-		SimpleDateFormat df=new SimpleDateFormat("HH:mm:ss",Locale.US);
-		df.setTimeZone(TimeZone.getTimeZone("UTC"));
-		
-		tod.setText(df.format(new Date())+"Z");
 		
 		Date waspassed=place.getPassed();
 		if (passed!=null)
@@ -242,45 +292,16 @@ public class DetailedPlaceActivity extends Activity{
 			if (gs!=null)
 				planned_gs.setText(String.format("%.0fkt",(float)gs));
 		}
-		
-		float hdg=location.getBearing();
-		LatLon placepos=place.getPos();
-		if (placepos!=null)
+		if (planned_alt!=null)
 		{
-			this.hdg.setText(String.format("%03.0f°", hdg));
-			float brg=Project.bearing(ownlatlon,placepos);
-			if (waypoint_hdg!=null) waypoint_hdg.setText(String.format("%03.0f°", brg));
-			if (compass!=null)
-			{
-				if (dv<0.01)
-					compass.set(hdg, -1000); //so close we can't really tell the direction
-				else
-					compass.set(hdg, brg);
-			}
-			
-			GetElevation gelv=GlobalGetElev.get_elev;
-			if (gelv!=null)
-			{
-				
-				int elev;
-				if (last_elev_placepos!=null && last_elev_placepos.equals(placepos))
-					elev=last_elev;
-				else
-					elev=gelv.get_elev_ft(placepos,13,1);
-				terr_elev.setText(""+elev+"ft");
-			}
-			else
-			{
-				terr_elev.setText("--");				
-			}
-			
+			String alt=place.getPlannedAlt();
+			if (alt!=null)
+				planned_alt.setText(alt);
 		}
-		else
-		{
-			if (waypoint_hdg!=null) waypoint_hdg.setText("--");
-			if (compass!=null)
-				compass.set(hdg, -1000);
-		}		
+
+		if (location_!=null)
+		{			
+		}
 				
 	}
 	//private Button prev;
@@ -363,6 +384,7 @@ public class DetailedPlaceActivity extends Activity{
 			delay=addRow("Delay");
 			planned_fuel=addRow("Planned Fuel");
 			planned_gs=addRow("Planned GS");
+			planned_alt=addRow("Planned Alt.");
 		}
 		
 		terr_elev=addRow("Terrain Elev.");

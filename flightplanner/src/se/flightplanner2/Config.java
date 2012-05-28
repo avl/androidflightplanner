@@ -7,7 +7,7 @@ public class Config {
 	//Assume a given clearance is valid for 1 hour.
 	public static long clearance_valid_time=1*3600*1000l;
 
-	public static int max_zoomlevel=20; //not likely to change
+	public static int max_zoomlevel=20;
 
 	public static int max_elev_zoomlevel=8;
 	
@@ -17,10 +17,10 @@ public class Config {
 	/**
 	 * Use accelerometers to drive fake gps signals.
 	 */
-	public static boolean gpsdrive=false;
+	public static boolean gpsdrive=true;
 
 	public static boolean debugMode() {
-		return false;
+		return true;
 	}
 
 	static String get_addr()

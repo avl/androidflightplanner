@@ -772,7 +772,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 							int TRN=0;
 							int DOWN=2;
 							///Log.i("fplan.sensor","Sensors: X: "+event.values[1]+" Y: "+event.values[0]+" Z: "+event.values[2]);
-							float speed=-speed_sign*event.values[SPD]*20;
+							float speed=-speed_sign*event.values[SPD]*40;
 							if (speed<0) speed=0;
 							float turn_rate=0;
 							float bank_angle=(float)Math.atan2(event.values[TRN],event.values[DOWN]);

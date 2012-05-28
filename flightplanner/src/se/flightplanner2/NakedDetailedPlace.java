@@ -109,6 +109,11 @@ public class NakedDetailedPlace implements DetailedPlace {
 	public boolean hasPassed() {
 		return false;
 	}
+
+	@Override
+	public String getPlannedAlt() {
+		return "?";
+	}
 	
 
 }

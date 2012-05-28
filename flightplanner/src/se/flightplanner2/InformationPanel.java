@@ -41,6 +41,7 @@ public interface InformationPanel {
 	 * when there are no waypoints. 
 	 */
 	boolean getEmpty();
+	public abstract double getHeading();
 
 
 }

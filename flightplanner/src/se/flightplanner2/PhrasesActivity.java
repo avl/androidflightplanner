@@ -352,6 +352,16 @@ public class PhrasesActivity extends Activity {
 		}
 		return closest;
 	}
+	@Override
+	protected void onResume()
+	{
+		super.onResume();
+		SigPoint sp = getClosestSigp();
+		if (sp != null)
+			curreldec = new SigPointReldec(sp);
+		else
+			curreldec=null;
+	}
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -393,18 +403,33 @@ public class PhrasesActivity extends Activity {
 					i += 500;
 			}
 			fill_spinner(spn_alt, alts.toArray(new String[alts.size()]));
+			
+			final ArrayList<String> lvls = new ArrayList<String>();
+			lvls.add("[FL]");
+			for (int i = 35; i < 100; i += 5) {
+				lvls.add("FL" + i);
+			}
+			fill_spinner(spn_lvl, lvls.toArray(new String[lvls.size()]));
+			
 
-			String cand = fetch_stored_presel(spn_alt, alts, "presel_altitude");
-			if (cand != null)
-				sel_alt = cand;
-
+			{
+				String cand = fetch_stored_presel(spn_alt, alts, "presel_altitude");
+				if (cand != null && !cand.startsWith("["))
+					sel_alt = cand;			
+				cand = fetch_stored_presel(spn_lvl, lvls, "presel_level");
+				if (cand != null && !cand.startsWith("["))
+					sel_alt = cand;
+			}
+			
 			spn_alt.setOnItemSelectedListener(new OnItemSelectedListener() {
 				@Override
 				public void onItemSelected(AdapterView<?> arg0, View arg1,
 						int pos, long arg3) {
 					sel_alt = alts.get(pos);
 					store_setting("presel_altitude", sel_alt);
-					spn_lvl.setSelection(0);
+					Log.i("fplan.presel","Storing "+sel_alt);
+					if (pos!=0)
+						spn_lvl.setSelection(0);
 					update();
 				}
 
@@ -415,26 +440,17 @@ public class PhrasesActivity extends Activity {
 				}
 			});
 
-		}
-		{
-			final ArrayList<String> lvls = new ArrayList<String>();
-			lvls.add("[FL]");
-			for (int i = 35; i < 100; i += 5) {
-				lvls.add("FL" + i);
-			}
-			fill_spinner(spn_lvl, lvls.toArray(new String[lvls.size()]));
-
-			String cand = fetch_stored_presel(spn_lvl, lvls, "presel_altitude");
-			if (cand != null)
-				sel_alt = cand;
+		
 
 			spn_lvl.setOnItemSelectedListener(new OnItemSelectedListener() {
 				@Override
 				public void onItemSelected(AdapterView<?> arg0, View arg1,
 						int pos, long arg3) {
 					sel_alt = lvls.get(pos);
-					store_setting("presel_altitude", sel_alt);
-					spn_alt.setSelection(0);
+					store_setting("presel_level", sel_alt);
+					Log.i("fplan.presel","Storing "+sel_alt);
+					if (pos!=0)
+						spn_alt.setSelection(0);
 					update();
 				}
 
@@ -474,9 +490,8 @@ public class PhrasesActivity extends Activity {
 				fill_spinner(spn_chn,
 						stations2.toArray(new String[stations2.size()]));
 
-				final String setting_name = "presel_station";
 				String presel = fetch_stored_presel(spn_chn, stations2,
-						setting_name);
+						"presel_station");
 				if (presel == null) {
 					String best = "?";
 					int best_score = -100000;
@@ -563,6 +578,7 @@ public class PhrasesActivity extends Activity {
 						+ " to item: " + stat);
 				if (presel.equals(stat)) {
 					spn.setSelection(index);
+					Log.i("fplan.presel","--- match!, set to: "+index+" out of "+spn.getCount());
 					found = true;
 					break;
 				}
