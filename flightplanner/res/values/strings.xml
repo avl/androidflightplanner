@@ -12,8 +12,8 @@
 <item>No basemap [2MB download]</item>
 <item>Low Detail [10MB download]</item>
 <item>High Detail [1GB download]</item>
-<item>Very High [2GB download]</item>
-<item>Super High (4GB)</item>
+<item>Very High - recommended [2GB]</item>
+<item>Super High [4GB]</item>
 </string-array>
 <string name="ok">OK</string>
 <string name="upload">Upload</string>

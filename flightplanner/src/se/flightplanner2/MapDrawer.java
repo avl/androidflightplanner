@@ -1031,10 +1031,12 @@ public class MapDrawer {
 			String dir=DescribePosition.roughdirshort((float)((we.getHeading()+180.0)%360.0));
 			if (dist >= 0)
 			{
-				addTextIfFits(canvas, "you:","NWW ",
-						r, "you:",String.format(dir+" ", dist),  y1, smalltextpaint,bigtextpaint);
-				addTextIfFits(canvas, "1222.2nm", "",
-						r, String.format("%.1fnm", dist), "", y1, bigtextpaint, smalltextpaint);
+				addTextIfFits(canvas, "you:","",
+						r, "you:","",  y1, smalltextpaint,bigtextpaint);
+				addTextIfFits(canvas, "1222.2","NM",
+						r, String.format("%.1f", dist), "NM", y1, bigtextpaint,smalltextpaint,false,true);
+				addTextIfFits(canvas, "NWW ", "",
+						r, String.format(dir+" ", dist), "", y1, bigtextpaint, smalltextpaint);
 			}
 
 
@@ -1282,12 +1284,12 @@ public class MapDrawer {
 		
 		if (havefix) // if significantly after 1970-0-01
 		{
-			addTextIfFits(canvas, "GPS:","100%", 
-					r, "GPS:",String.format("%d%%",gps_sat_fix_cnt), y, smalltextpaint, bigtextpaint,false);
+			addTextIfFits(canvas, "GPS:","200%", 
+					r, "GPS:",String.format("%d%%",gps_sat_fix_cnt/2), y, smalltextpaint, bigtextpaint,false, false);
 		} else {
 			bigtextpaint.setColor(Color.RED);
-			addTextIfFits(canvas, "GPS:","100%", 
-					r, "GPS:",String.format("%d%%",gps_sat_fix_cnt), y, smalltextpaint, bigtextpaint,true);
+			addTextIfFits(canvas, "GPS:","200%", 
+					r, "GPS:",String.format("%d%%",gps_sat_fix_cnt/2), y, smalltextpaint, bigtextpaint,true, false);
 			bigtextpaint.setColor(Color.WHITE);
 		}
 		
@@ -1750,11 +1752,11 @@ public class MapDrawer {
 	boolean addTextIfFits(Canvas canvas, String sizetext, String sizetext2,
 			RectF r, String realtext, String realtext2, float y, Paint tp, Paint tp2) {
 		return addTextIfFits(canvas, sizetext, sizetext2,
-				r, realtext, realtext2, y, tp, tp2,false); 
+				r, realtext, realtext2, y, tp, tp2,false, false); 
 	}
 
 	boolean addTextIfFits(Canvas canvas, String sizetext, String sizetext2,
-			RectF r, String realtext, String realtext2, float y, Paint tp, Paint tp2,boolean strikethrough) {
+			RectF r, String realtext, String realtext2, float y, Paint tp, Paint tp2,boolean strikethrough, boolean tight) {
 		if (sizetext == null) {
 			Rect rect = new Rect();
 			getTextBounds(realtext, tp, rect);
@@ -1770,7 +1772,18 @@ public class MapDrawer {
 			
 			if (r.left + rect.width() + rect2.width() < r.right) {
 				canvas.drawText(realtext, r.left, y, tp);
-				canvas.drawText(realtext2, r.left+rect.width()+0.25f*x_dpmm, y, tp2);
+				float x2;
+				if (!tight)
+				{
+					x2=r.left+rect.width()+0.25f*x_dpmm;
+				}
+				else
+				{
+					Rect realsize1=new Rect();
+					getTextBounds(realtext, tp, realsize1);
+					x2=r.left+realsize1.width()+0.25f*x_dpmm;
+				}
+				canvas.drawText(realtext2, x2, y, tp2);
 				if (strikethrough)
 				{
 					Rect rect3 = new Rect();

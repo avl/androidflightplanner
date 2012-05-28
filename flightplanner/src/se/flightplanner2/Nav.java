@@ -159,7 +159,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		menu.add(0, MENU_VIEW_CHARTS, 0, "Airports");
 		menu.add(0, MENU_SYNC, 0, "Sync");
 
-		//menu.add(0, MENU_HELP, 0, "Help");
+		menu.add(0, MENU_HELP, 0, "Help");
 		menu.add(0, MENU_LOGIN, 0, "Select Trip");
 		menu.add(0, MENU_SETTINGS, 0, "Settings");
 		menu.add(0, MENU_VIEW_RECORDINGS, 0, "Recorded Trips");
@@ -381,6 +381,12 @@ public class Nav extends Activity implements PositionSubscriberIf,
 				viewRecordings();
 			}
 
+			break;
+		}
+		case MENU_HELP: {
+			Intent intent = new Intent(this, HelpActivity.class);
+			intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+			startActivity(intent);
 			break;
 		}
 		case MENU_LOGIN: {

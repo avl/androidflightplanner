@@ -84,6 +84,13 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <activity android:name=".HelpActivity"
+                  android:label="Swflightplanner Help">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         
         <activity android:name=".DetailedPlaceActivity"
                   android:label="@string/app_name">
