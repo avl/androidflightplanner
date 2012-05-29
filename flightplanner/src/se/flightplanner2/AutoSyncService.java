@@ -71,6 +71,8 @@ public class AutoSyncService extends Service implements BackgroundMapDownloadOwn
 				}
 			}
 		}
+		if (wakeups.size()==0)
+			return;
 		long next = Collections.min(wakeups);
 		long now=new Date().getTime()/1000l;
 		Intent intent = new Intent(appctx, AutoSyncService.class);
