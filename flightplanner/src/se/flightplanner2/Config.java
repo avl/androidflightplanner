@@ -17,10 +17,10 @@ public class Config {
 	/**
 	 * Use accelerometers to drive fake gps signals.
 	 */
-	public static boolean gpsdrive=true;
+	public static boolean gpsdrive=false;
 
 	public static boolean debugMode() {
-		return true;
+		return false;
 	}
 
 	static String get_addr()
