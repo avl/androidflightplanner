@@ -330,7 +330,11 @@ public class MapDrawer {
 		int extrainfolineoffset = gui.getExtrainfolineoffset();
 		boolean isDragging = (gui.getDrag_center13() != null);
 		boolean chartmode=gui.getChartMode();
-				
+		boolean elevonly=gui.getElevOnly();
+		if (elevonly)
+			elevbmc.setMode(ElevBitmapCache.Mode.EXPLORE);
+		else
+			elevbmc.setMode(ElevBitmapCache.Mode.WARNING);
 		int zoomlevel = gui.getZoomlevel();
 		if (zoomlevel > 22)
 			throw new RuntimeException("zoomlevel must be <=22");
@@ -384,7 +388,7 @@ public class MapDrawer {
 		if (bitmaps != null) {
 			drawBitmapMap(canvas, bitmaps, elevbmc, terrwarn, adloader, tf,
 					zoomlevel, sizex, sizey, isUserPresentlyMovingMap,
-					screen_center);
+					screen_center,elevonly);
 		}
 
 		elevbmc.delete_all_unused();
@@ -849,7 +853,7 @@ public class MapDrawer {
 			ElevBitmapCache elevbmc, boolean terrwarn,
 			final AdChartLoader adloader, TransformIf tf, int zoomlevel,
 			int sizex, int sizey, boolean isUserPresentlyMovingMap,
-			Merc screen_center) {
+			Merc screen_center,boolean elevonly) {
 		iMerc centertile = new iMerc((int) screen_center.x & (~255),
 				(int) screen_center.y & (~255));
 		// int diagonal = (int) Math.sqrt((sizex / 2) * (sizey / 2))+1;
@@ -903,20 +907,22 @@ public class MapDrawer {
 				canvas.rotate(-hdg, (float) v.x, (float) v.y);
 				RectF trg = new RectF((float) v.x, (float) v.y,
 						(float) v.x + 256, (float) v.y + 256);
-				
-				b = bitmaps.getBitmap(cur, zoomlevel);
-				if (adloader==null && b != null && b.b != null) {
-					// float px=(float)(v.x+i*256);
-					// float py=(float)(v.y+j*256);
-
-					// Log.i("fplan","Drawing bitmap at "+v.x+","+v.y);
-					Rect src = b.rect;
-					canvas.drawBitmap(b.b, src, trg, null);
-					// Log.i("fplan.terr","Queried "+cur);
-					
-
+				if (adloader==null && !elevonly)
+				{
+					b = bitmaps.getBitmap(cur, zoomlevel);
+					if (b != null && b.b != null) {
+						// float px=(float)(v.x+i*256);
+						// float py=(float)(v.y+j*256);
+	
+						// Log.i("fplan","Drawing bitmap at "+v.x+","+v.y);
+						Rect src = b.rect;
+						canvas.drawBitmap(b.b, src, trg, null);
+						// Log.i("fplan.terr","Queried "+cur);
+						
+	
+					}
 				}
-				if (terrwarn && !isUserPresentlyMovingMap) {
+				if (elevonly || (terrwarn && !isUserPresentlyMovingMap)) {
 					BMResult elevbm = elevbmc.query2(cur);
 					if (elevbm != null && elevbm.bm != null)
 						canvas.drawBitmap(elevbm.bm, elevbm.r, trg,

@@ -20,6 +20,7 @@ import android.os.AsyncTask;
 import android.os.Environment;
 import android.os.SystemClock;
 import android.util.Log;
+import se.flightplanner2.ElevBitmapCache.Mode;
 import se.flightplanner2.GlobalGetElev.GetElevation;
 import se.flightplanner2.Project.LatLon;
 import se.flightplanner2.Project.iMerc;
@@ -29,7 +30,11 @@ public class ElevBitmapCache implements GetElevation {
 	{
 		public void updated(boolean fully_updated); //Called when background loading of a requested tile has finished.
 	}
-
+	static public enum Mode
+	{
+		WARNING,
+		EXPLORE
+	}
 	private ClientIf client;
 	static final int tilesize=256; 
 	private Blob[] blobs;
@@ -169,6 +174,20 @@ public class ElevBitmapCache implements GetElevation {
 		for(CachedItem ci:items.values())		
 			ci.used=false;
 	}
+	public void purge_all()
+	{
+		if (stopping) return;
+		for(CachedItem ci:items.values())
+		{
+			if (ci!=null)
+			{
+				if (ci.bm!=null)
+					ci.bm.recycle();
+			}
+		}
+		items.clear();
+		
+	}
 	public void delete_all_unused()
 	{
 		if (stopping) return;
@@ -189,6 +208,16 @@ public class ElevBitmapCache implements GetElevation {
 				//Log.i("fplan.terr","Item was used: "+ci.pos);				
 			}
 		}
+	}
+	static class Range
+	{
+		public Range(int margin,int r,int g,int b)
+		{
+			this.margin=margin;
+			this.r=r;this.g=g;this.b=b;
+		}
+		int margin;
+		int r,g,b;
 	}
 	
 	private class BackgroundLoader extends AsyncTask<iMerc, Void, CachedItem>
@@ -240,20 +269,27 @@ public class ElevBitmapCache implements GetElevation {
 					}
 				}
 				int outi=0;
-				for(int i=0;i<shorts.length;i+=1)
+				if (mode==Mode.WARNING)
 				{
-					short celev1=shorts[i]; 
-					/*if (i<10)
+					for(int i=0;i<shorts.length;i+=1)
 					{
-						Log.i("fplan.terr","Read alts: "+celev1+" and "+celev2dummy);
-					}*/					
-					{
+						short celev1=shorts[i]; 
 						int margin=this.curelev-celev1;													
-						output[outi]=colorize_margin(margin);						
+						output[outi]=colorize_margin_warn(margin);											
+						outi+=1;
 					}
-					
-					outi+=1;
-				}		
+				}
+				else
+				{
+					for(int i=0;i<shorts.length;i+=1)
+					{
+						short celev1=shorts[i]; 
+						int margin=this.curelev-celev1;													
+						output[outi]=colorize_margin_expl(margin);											
+						outi+=1;
+					}					
+				}
+				
 				Bitmap bm=Bitmap.createBitmap(output, tilesize, tilesize, Bitmap.Config.ARGB_4444);
 				CachedItem ret=new CachedItem();
 				ret.bm=bm;
@@ -275,7 +311,7 @@ public class ElevBitmapCache implements GetElevation {
 				return ret;
 			}						
 		}	
-		private int colorize_margin(int margin) {
+		private int colorize_margin_warn(int margin) {
 			if (margin<=500)
 				return Color.argb(0x80,0xff,0,0);
 			if (margin<500+512)
@@ -291,6 +327,35 @@ public class ElevBitmapCache implements GetElevation {
 				return Color.argb(0x80-margin/2,0xff,0xff,0);								
 			}
 			return Color.argb(0,0,0,0);
+		}
+		Range[] ranges=new Range[]{
+				new Range(-7000,  255,0,0),
+				new Range(-2000,  255,255,0),
+				new Range(0,     0,255,0),
+				new Range(2000, 0,0,255),
+				new Range(7000, 0,0,0),
+		};
+		
+		private int colorize_margin_expl(int margin) {
+			Range prev=ranges[0];
+			if (margin<prev.margin)
+				return Color.rgb(prev.r,prev.g,prev.b);
+			for(int i=1;i<ranges.length;++i)
+			{
+				Range next=ranges[i];
+				if (margin<next.margin)
+				{
+					int delta=margin-prev.margin;
+					delta<<=8;
+					delta/=(next.margin-prev.margin);
+					int r=(prev.r*(256-delta)+next.r*delta)>>8;
+					int g=(prev.g*(256-delta)+next.g*delta)>>8;
+					int b=(prev.b*(256-delta)+next.b*delta)>>8;
+					return Color.rgb(r, g, b);  
+				}				
+				prev=next;
+			}
+			return Color.rgb(255,255,255);
 		}
 		@Override
 		protected void onPostExecute(CachedItem result)
@@ -444,6 +509,14 @@ public class ElevBitmapCache implements GetElevation {
 		int msb=bs[0]&0xff;
 		short elev=(short)(lsb+(msb<<8));
 		return elev;
+	}
+
+	private Mode mode=Mode.WARNING;
+	public void setMode(Mode mode_) {
+		if (this.mode!=mode_)
+			purge_all();
+		Log.i("fplan.elev","Mode:"+mode_);
+		this.mode=mode_;		
 	}
 	
 }

@@ -191,8 +191,7 @@ public class GuiSituation
 	public void onClassicalClick(float x, float y,float x_dpmm,float y_dpmm)
 	{
 		int best_idx=-1;
-		float bestdist=
-			Math.max((0.9f*x_dpmm)+5f,xsize*0.15f);
+		float bestdist=3f*x_dpmm+5f;
 		int idx=0;
 		for(GuiSituation.Clickable click : clickables)
 		{			
@@ -552,7 +551,9 @@ public class GuiSituation
 	public void showAirspaces() {
 		movingMap.showAirspaces();
 	}
-	public void chartMode(boolean b, LatLon chart_center, float chart_hdg,int zoom) {
+	private boolean elevonly;
+	public void chartMode(boolean b, LatLon chart_center, float chart_hdg,int zoom, boolean elevonly) {
+		this.elevonly=elevonly;
 		chartmode=b;
 		if (b)
 		{
@@ -570,6 +571,10 @@ public class GuiSituation
 
 	public void toggle_map() {
 		movingMap.toggle_map();
+	}
+
+	public boolean getElevOnly() {
+		return elevonly;
 	}
 
 	

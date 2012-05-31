@@ -518,7 +518,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		releaseMemory();
 		adloader=new AdChartLoader(chart,this);
 		gui.chartMode(true,adloader.getChartCenter(),adloader.getChartUpBearing(),
-				adloader.best_zoomlevel(getRight()-getLeft()));
+				adloader.best_zoomlevel(getRight()-getLeft()),false);
 		doInvalidate();
 	}
 
@@ -553,16 +553,23 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			}
 		}
 		names.add("base map");
+		names.add("elevation map");
 		chosen_ad_maps=names.toArray(new String[]{});
 		
 		if (cur_toggle_map>=avail.size())
 		{
-			chosen_ad_map_i=names.size()-1;
+			chosen_ad_map_i=cur_toggle_map;
 			chosen_ad_map_when=SystemClock.elapsedRealtime();
-			adloader.releaseMemory();
+			if (adloader!=null)
+				adloader.releaseMemory();
 			adloader=null;
-			cur_toggle_map=-1;
-			gui.chartMode(false,null,0,0);
+			boolean elevonly=false;
+			if (cur_toggle_map>=avail.size()+1)
+			{
+				elevonly=true;
+				cur_toggle_map=-1;
+			}
+			gui.chartMode(false,null,0,0,elevonly);
 		}
 		else
 		{
@@ -571,7 +578,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			chosen_ad_map_when=SystemClock.elapsedRealtime();
 			adloader=new AdChartLoader(avail.get(cur_toggle_map).chartname,this);
 			gui.chartMode(true,adloader.getChartCenter(),adloader.getChartUpBearing(),
-					adloader.best_zoomlevel(getRight()-getLeft()));
+					adloader.best_zoomlevel(getRight()-getLeft()),false);
 		}
 		
 		doInvalidate();
