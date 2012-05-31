@@ -183,7 +183,8 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				}
 			}
 			
-			downloadBlobs(res,MapDetailLevels.getMaxLevelFromDetail(mapdetail),"nolabel");
+			
+			downloadBlobs(res,MapDetailLevels.getMaxLevelFromDetail(mapdetail),"bignolabel");
 			if (MapDetailLevels.getHaveElevFromDetail(mapdetail))
 				downloadBlobs(res,MapDetailLevels.getMaxElevLevelFromDetail(mapdetail),"elev");
 			
@@ -449,7 +450,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		boolean first=true;
 		for (;;) {
 			String prefix=kind;
-			if (prefix.equals("nolabel"))
+			if (prefix.equals("bignolabel"))
 				prefix="";
 			File extpath = Environment.getExternalStorageDirectory();
 			File metapath = new File(extpath,

@@ -216,6 +216,7 @@ public class AirspaceProximityDetector {
 		if (areanames==null) return new String[]{};
 		return areanames;
 	}
+	
 	public ArrayList<AirspaceArea> getAreas() {
 		return areas;
 	}
