@@ -76,6 +76,8 @@ public class AirspaceProximityDetector {
 	private HashMap<AirspaceArea,Long> wearein=new HashMap<AirspaceArea, Long>();
 	public void run(Location loc)
 	{
+		if (lookup==null || loc==null)
+			return;
 		final float gs=(float)(loc.getSpeed()*3.6/1.852);
 		warning=null;
 		dist=-1;

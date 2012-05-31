@@ -481,6 +481,7 @@ public class Airspace implements Serializable{
 			nvps.add(new BasicNameValuePair("version","8"));
 			nvps.add(new BasicNameValuePair("user",user));
 			nvps.add(new BasicNameValuePair("password",pass));
+			nvps.add(new BasicNameValuePair("sectors","1"));
 			nvps.add(new BasicNameValuePair("aip",aip ? "1" : "0"));
 			if (previous==null)
 				nvps.add(new BasicNameValuePair("aipgen",""));

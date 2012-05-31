@@ -1151,7 +1151,14 @@ public class TripState implements InformationPanel {
 				@Override
 				public String getPlannedAlt() {
 					int i=current_waypoint_idx;
-					if (i==-1) i=target_wp;
+					if (i==-1) 
+					{
+						if (target_wp>=tripdata.waypoints.size()) return "?";
+						Waypoint wp0=tripdata.waypoints.get(target_wp);						
+						float along=TripState.this.cur_wp_along();
+						return String.format("%.0f",wp0.startalt*(1.0f-along)+wp0.endalt*along);
+						
+					}
 					if (tripdata==null || i>=tripdata.waypoints.size())
 						return "?";
 					Waypoint wp=tripdata.waypoints.get(i);

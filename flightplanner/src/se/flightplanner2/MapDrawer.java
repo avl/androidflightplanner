@@ -378,143 +378,13 @@ public class MapDrawer {
 				mypos13.y).expand(tennm13);
 		if (adloader!=null)
 		{
-			double onenmpixels=Project.approx_scale(screen_center.y, zoomlevel, 1);
-			int best_ad_level=adloader.guess_zoomlevel(onenmpixels);
-			Log.i("fplan.bad","Best level: "+best_ad_level);
-			adloader.set_level(best_ad_level);
-			
-			adloader.start();
-			int w=adloader.get_width();
-			int h=adloader.get_height();
-			for(int x=0;x<w;x+=256)
-			{
-				
-				for(int y=0;y<=h;y+=256)
-				{
-					LatLon p1=adloader.pixel2latlon(new Vector(x,y));
-					LatLon p2=adloader.pixel2latlon(new Vector(x+256,y));
-					LatLon p3=adloader.pixel2latlon(new Vector(x,y+256));
-					//LatLon p4=adloader.pixel2latlon(new Vector(x+256,y+256));
-					//Log.i("fplan.bml","Figured latlon = "+p1+" "+p2+" "+p3+" "+p4);
-					Merc m1=Project.latlon2merc(p1, zoomlevel);
-					Merc m2=Project.latlon2merc(p2, zoomlevel);
-					Merc m3=Project.latlon2merc(p3, zoomlevel);
-					Vector s1=tf.merc2screen(m1);
-					Vector s2=tf.merc2screen(m2);
-					Vector s3=tf.merc2screen(m3);
-					
-					
-					//Log.i("fplan.bml","adloader got bitmap for "+x+","+y+" drawing near"+s1);
-					Vector X=s2.minus(s1).mul(1/256.0);
-					Vector Y=s3.minus(s1).mul(1/256.0);
-					
-					canvas.save();
-					Matrix mat=canvas.getMatrix();
-					mat.preTranslate((float)s1.x, (float)s1.y);
-					Matrix rotscale=new Matrix();
-					rotscale.setValues(new float[]{
-							(float)X.x,(float)Y.x,0,
-							(float)X.y,(float)Y.y,0,
-							0,0,1
-					});
-					mat.preConcat(rotscale);
-					canvas.setMatrix(mat);
-					RectF trg=new RectF(0,0,256,256);
-					boolean qr=canvas.quickReject(trg, EdgeType.BW);
-					if (!qr)
-					{
-						BitmapRes bres=adloader.getBitmap(new iMerc(x,y));
-						if (bres!=null && bres.b!=null)
-						{
-							canvas.drawBitmap(bres.b, bres.rect,trg,null);
-						}
-					}
-					canvas.restore();
-					
-					
-				}
-			}
-			adloader.end();
+			drawAdMap(canvas, adloader, tf, zoomlevel, screen_center);
 		}
 
 		if (bitmaps != null) {
-			iMerc centertile = new iMerc((int) screen_center.x & (~255),
-					(int) screen_center.y & (~255));
-			// int diagonal = (int) Math.sqrt((sizex / 2) * (sizey / 2))+1;
-			// Log.i("fplan.bitmap","Diagonal: "+diagonal+" sizex:"+sizex+" sizey: "+sizey);
-			// int minus = (diagonal + 255) / 256;
-			// minus=2;
-			// int tot = 2 * minus + 1;
-
-			//int tot;
-			int minuspixels;
-			{
-				float smallres = Math.min(sizex, sizey);
-				float bigres = Math.max(sizex, sizey);
-				double diag_length = Math.sqrt(smallres * smallres + bigres
-						* bigres);
-				double diag_angle = Math.atan2(smallres, bigres);
-				// double hdiag_length=diag_length/2.0;
-				final int tilesize = 256;
-				float base = bigres;
-				// b= 180 - 90 - diag_angle
-				double ba = Math.PI - Math.PI / 2 - diag_angle;
-				// maxh/base = sin(b)
-				// maxh = sin(b)*base
-				// print "diag_length:",diag_length
-				// print "max height:",maxh
-				minuspixels = ((int) diag_length + 256) / 256;
-			}
-			// Log.i("fplan.drawmap","Total tiles needed:"+tot);
-
-			
-			
-			//iMerc topleft = new iMerc(centertile.getX() - (256 * minus),
-			//		centertile.getY() - 256 * minus);
-			iMerc topleft = new iMerc(centertile.getX() - (256 * minuspixels),
-					centertile.getY() - 256 * minuspixels);
-			float hdg = (float) (tf.getHdgRad() * (180.0 / Math.PI));
-			for (int j = 0; j < 2 * minuspixels; ++j) {
-
-				for (int i = 0; i < 2 * minuspixels; ++i) {
-
-					iMerc cur = new iMerc(topleft.getX() + 256 * i,
-							topleft.getY() + 256 * j);
-					if (cur.getX() < 0 || cur.getY() < 0)
-						continue;
-					Vector v = tf.merc2screen(new Merc(cur.getX(), cur.getY()));
-					if (!tileOnScreen((float) v.x, (float) v.y, tf))
-						continue;
-					BitmapRes b = null;
-					// Log.i("fplan","Bitmap for "+cur);
-					canvas.save();
-					canvas.rotate(-hdg, (float) v.x, (float) v.y);
-					RectF trg = new RectF((float) v.x, (float) v.y,
-							(float) v.x + 256, (float) v.y + 256);
-					
-					b = bitmaps.getBitmap(cur, zoomlevel);
-					if (adloader==null && b != null && b.b != null) {
-						// float px=(float)(v.x+i*256);
-						// float py=(float)(v.y+j*256);
-
-						// Log.i("fplan","Drawing bitmap at "+v.x+","+v.y);
-						Rect src = b.rect;
-						canvas.drawBitmap(b.b, src, trg, null);
-						// Log.i("fplan.terr","Queried "+cur);
-						
-
-					}
-					if (terrwarn && !isUserPresentlyMovingMap) {
-						BMResult elevbm = elevbmc.query2(cur);
-						if (elevbm != null && elevbm.bm != null)
-							canvas.drawBitmap(elevbm.bm, elevbm.r, trg,
-									null);
-					}
-					canvas.restore();
-
-				}
-			}
-			// Log.i("fplan.drawmap","Tiles used:"+tilesused);
+			drawBitmapMap(canvas, bitmaps, elevbmc, terrwarn, adloader, tf,
+					zoomlevel, sizex, sizey, isUserPresentlyMovingMap,
+					screen_center);
 		}
 
 		elevbmc.delete_all_unused();
@@ -548,6 +418,583 @@ public class MapDrawer {
 				}
 			}
 
+		drawBaseVectorMap(tripdata, lookup, canvas, havefix, tf, isDragging,
+				chartmode, zoomlevel, isUserPresentlyMovingMap, bb13, smbb13,
+				major_airfields);
+		
+		boolean northup = false;
+		if (gui != null)
+			northup = gui.getnorthup();
+		if (!isDragging && !northup) {
+			arrowpaint.setColor(Color.BLACK);
+			Path path = new Path();
+			path.moveTo((int) arrow.x - 1.5f*x_dpmm, (int) arrow.y + 0.3f*x_dpmm);
+			path.lineTo((int) arrow.x + 1.5f*x_dpmm, (int) arrow.y + 0.3f*x_dpmm);
+			path.lineTo((int) arrow.x, (int) arrow.y - 2.25f*x_dpmm);
+			path.close();
+			canvas.drawPath(path, arrowpaint);
+			int fivenm = (int) Project.approx_scale(mypos.y, zoomlevel, 5);
+			int fivemin = 0;
+
+			if (lastpos.hasSpeed()) {
+				float fivemindist = (float) ((lastpos.getSpeed() * 60 * 5) / 1852.0f);
+				fivemin = (int) Project.approx_scale(mypos.y, zoomlevel,
+						fivemindist);
+			}
+			canvas.drawRect((int) arrow.x, (int) arrow.y - fivenm,
+					(int) arrow.x + 6, (int) arrow.y - fivenm + 4, arrowpaint);
+			canvas.drawRect((int) arrow.x - 10, (int) arrow.y - fivemin,
+					(int) arrow.x, (int) arrow.y - fivemin + 4, arrowpaint);
+			canvas.drawRect((int) arrow.x - 2, (int) 0, (int) arrow.x + 2,
+					(int) arrow.y, arrowpaint);
+			arrowpaint.setColor(Color.rgb(230,230,255));
+			path = new Path();
+			path.moveTo((int) arrow.x - 1.0f*x_dpmm, (int) arrow.y);
+			path.lineTo((int) arrow.x + 1.0f*x_dpmm, (int) arrow.y);
+			path.lineTo((int) arrow.x, (int) arrow.y - 1.5f*x_dpmm);
+			path.close();
+			canvas.drawPath(path, arrowpaint);
+			canvas.drawRect((int) arrow.x, (int) arrow.y - fivenm + 1,
+					(int) arrow.x + 5, (int) arrow.y - fivenm + 3, arrowpaint);
+			canvas.drawRect((int) arrow.x - 9, (int) arrow.y - fivemin + 1,
+					(int) arrow.x, (int) arrow.y - fivemin + 3, arrowpaint);
+			canvas.drawRect((int) arrow.x - 1, (int) 0, (int) arrow.x + 1,
+					(int) arrow.y, arrowpaint);
+			arrowpaint.setColor(Color.WHITE);
+		}
+
+		else {
+			if (lastpos != null) {
+				Merc pos = Project.latlon2merc(new LatLon(
+						lastpos.getLatitude(), lastpos.getLongitude()),
+						zoomlevel);
+				Merc dest;
+				if (lastpos != null && lastpos.hasBearing()) {
+					float hdg = lastpos.getBearing();
+					Vector d = new Vector(0, -150);
+					Vector d2 = d.rot(hdg / (180.0f / Math.PI));
+					dest = new Merc(pos.x + d2.x, pos.y + d2.y);
+				} else {
+					dest = pos;
+				}
+				Vector screenpos = tf.merc2screen(pos);
+				Vector screenpos2 = tf.merc2screen(dest);
+				Vector forward = screenpos2.minus(screenpos).normalized();
+				Vector left = forward.rot90l();
+				Vector right = forward.rot90r();
+				arrowpaint.setColor(Color.BLACK);
+				arrowpaint.setStrokeWidth(4);
+				Path path = new Path();
+				path.moveTo((int) (screenpos.x + 10 * left.x - 2 * forward.x),
+						(int) (screenpos.y + 10 * left.y - 2 * forward.y));
+				path.lineTo((int) (screenpos.x + 10 * right.x - 2 * forward.x),
+						(int) (screenpos.y + 10 * right.y - 2 * forward.y));
+				path.lineTo((int) (screenpos.x + 15 * forward.x),
+						(int) (screenpos.y + 15 * forward.y));
+				path.close();
+				canvas.drawPath(path, arrowpaint);
+
+				canvas.drawLine((float) screenpos.x, (float) screenpos.y,
+						(float) screenpos2.x, (float) screenpos2.y, arrowpaint);
+				arrowpaint.setColor(Color.rgb(230,230,255));
+				arrowpaint.setStrokeWidth(2);
+				path = new Path();
+				path.moveTo((int) (screenpos.x + 7 * left.x),
+						(int) (screenpos.y + 7 * left.y));
+				path.lineTo((int) (screenpos.x + 7 * right.x),
+						(int) (screenpos.y + 7 * right.y));
+				path.lineTo((int) (screenpos.x + 12 * forward.x),
+						(int) (screenpos.y + 12 * forward.y));
+				path.close();
+				canvas.drawPath(path, arrowpaint);
+
+				canvas.drawLine((float) screenpos.x, (float) screenpos.y,
+						(float) screenpos2.x, (float) screenpos2.y, arrowpaint);
+				arrowpaint.setColor(Color.WHITE);
+
+			}
+
+		}
+
+		InformationPanel we = panel;
+		if (we != null) {
+			drawInfoPanel(canvas, gui, tf, extrainfo, extrainfolineoffset,
+					zoomlevel, clickables, we);
+
+		} else {
+			float y = bottom - (bigtextpaint.getTextSize() * 1.5f + 2);
+
+			final Rect tr3 = drawButton(canvas, right, y, "Wpts", -1, left,
+					right, false);
+			if (tr3 != null) {
+				clickables.add(new GuiSituation.Clickable() {
+					@Override
+					public Rect getRect() {
+						return tr3;
+					}
+
+					@Override
+					public void onClick() {
+						gui.onShowWaypoints();
+					}
+				});
+				int rightedge = tr3.left - 5;
+				if (zoom_in_text == null) {
+					Rect tr1 = drawButton(canvas, left, y, "Zoom +", 1, left,
+							rightedge, true);
+
+					int edge = (tr1 != null) ? tr1.right + 5 : right;
+					Rect tr2 = drawButton(canvas, edge, y, "Zoom -", 1, edge,
+							rightedge, true);
+					if (tr2 == null) {
+						tr1 = drawButton(canvas, left, y, "+", 1, left,
+								rightedge, true);
+						edge = tr1.right + 5;
+						tr2 = drawButton(canvas, edge, y, "-", 1, edge,
+								rightedge, true);
+						if (tr2 != null) {
+							zoom_buttons = true;
+							zoom_in_text = "+";
+							zoom_out_text = "-";
+						} else {
+							zoom_buttons = false;
+							zoom_in_text = "none";
+							zoom_out_text = "none";
+						}
+					} else {
+						zoom_buttons = true;
+						zoom_in_text = "Zoom +";
+						zoom_out_text = "Zoom -";
+					}
+
+				}
+				if (zoom_buttons) {
+					final Rect tr1 = drawButton(canvas, left, y, zoom_in_text,
+							1, left, rightedge, false);
+					clickables.add(new GuiSituation.Clickable() {
+						@Override
+						public Rect getRect() {
+							return tr1;
+						}
+
+						@Override
+						public void onClick() {
+							gui.changeZoom(+1);
+						}
+					});
+					int edge = tr1.right + 5;
+
+					final Rect tr2 = drawButton(canvas, edge, y, zoom_out_text,
+							1, edge, rightedge, false);
+					clickables.add(new GuiSituation.Clickable() {
+						@Override
+						public Rect getRect() {
+							return tr2;
+						}
+
+						@Override
+						public void onClick() {
+							gui.changeZoom(-1);
+						}
+					});
+				}
+			}
+		}
+
+		linepaint.setColor(Color.RED);
+		float y = Math.max(hugetextpaint.getTextSize() * 0.85f,bigtextpaint.getTextSize()*1.85f);
+		float yledge =bigtextpaint.getTextSize() * 0.85f;
+		bigtextpaint.setColor(Color.WHITE);
+		RectF r = new RectF(0, 0, right, y + 0.7f*y_dpmm);
+		RectF rledge=new RectF(r);
+		canvas.drawRect(r, blackgroundpaint);
+		addTextIfFits(canvas, "hdg:", "223-",r, "hdg:",String.format("%03.0f°", lastpos.getBearing()),
+				y, smalltextpaint,hugetextpaint);
+
+		addTextIfFits(canvas, "gs:","222", r, "gs:",String.format("%.0f", gs_kt),
+				y, smalltextpaint,hugetextpaint);
+		
+
+		// canvas.drawText(String.format("%03.0f°",lastpos.getBearing()), 40, y,
+		// bigtextpaint);
+		// canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),100,y,bigtextpaint);
+		if (tripstate!=null)
+		{
+			NextLanding nextlanding=tripstate.getNextLanding();
+			if (nextlanding!=null)
+			{
+				//int td = tripstate.get_time_to_destination();
+				// canvas.drawText(fmttime(td),150,y,bigtextpaint);asdf
+				addTextIfFits(canvas, "ETA:", "22:22", rledge, "ETA:",formatter2.format(nextlanding.when),  yledge, smalltextpaint,bigtextpaint);
+				//Log.i("fplan.delay","nextlanding: "+nextlanding.where+" when: "+nextlanding.planned);
+				int delay=(int)((nextlanding.when.getTime()-nextlanding.planned.getTime())/(60*1000l));
+				addTextIfFits(canvas, (delay>0) ? "delay:" : "ahead:", "22h:22m", rledge, (delay>0) ? "delay:" : "ahead:" ,fmtdelay(delay),  yledge, smalltextpaint,bigtextpaint);
+			}
+		}
+		
+		if (charging)
+			bigtextpaint.setColor(Color.rgb(128,255,128));
+		else
+			bigtextpaint.setColor(Color.rgb(255,128,128));
+		
+		String curtime_s=formatter2.format(new Date());
+		addTextIfFits(canvas, "BAT:", "222%", rledge, (!charging) ? "BAT:" : "bat:" ,(battery<0) ? "--" : ""+battery+"%",  yledge, smalltextpaint,bigtextpaint);
+		bigtextpaint.setColor(Color.WHITE);
+		addTextIfFits(canvas, "", "22:22", rledge, "" ,curtime_s,  yledge, smalltextpaint,bigtextpaint);
+		
+		String amsl_txt="--";
+		if (amsl>-9999)
+			amsl_txt=""+amsl;
+		addTextIfFits(canvas, "ETA:", "22:22", r, "msl:",amsl_txt,  y, smalltextpaint,bigtextpaint);
+		
+		if (havefix) // if significantly after 1970-0-01
+		{
+			addTextIfFits(canvas, "GPS:","200%", 
+					r, "GPS:",String.format("%d%%",gps_sat_fix_cnt/2), y, smalltextpaint, bigtextpaint,false, false);
+		} else {
+			bigtextpaint.setColor(Color.RED);
+			addTextIfFits(canvas, "GPS:","200%", 
+					r, "GPS:",String.format("%d%%",gps_sat_fix_cnt/2), y, smalltextpaint, bigtextpaint,true, false);
+			bigtextpaint.setColor(Color.WHITE);
+		}
+		
+		// /canvas.drawText(String.format("Z%d",zoomlevel), 0,y,bigtextpaint);
+		if (Config.debugMode())
+			addTextIfFits(canvas, "Z13", "", r, String.format("Z%d", zoomlevel),
+				"", y, bigtextpaint, smalltextpaint);
+		
+		if (havefix && !isDragging)
+		{
+			drawBug(tripstate, canvas, lastpos, sizex, sizey, y);
+			
+		}
+		
+
+		int airspace_button_space_left = left;
+		int airspace_button_space_right = right;
+		if (!isDragging || gui.getChartMode())
+		{
+			float h = smalltextpaint.getTextSize();
+			float topbutton_y = y + h;
+
+			String text = "View";
+			final Rect tr1 = drawButton(canvas, right, topbutton_y, text, -1,
+					0, right, false);
+			airspace_button_space_right = tr1.left - 4;
+			clickables.add(new GuiSituation.Clickable() {
+				@Override
+				public Rect getRect() {
+					return tr1;
+				}
+
+				@Override
+				public void onClick() {
+					gui.toggle_map();
+				}
+			});
+			
+			if (chosen_ad_maps!=null && now-chosen_ad_map_when<4500)
+			{
+				float cury=topbutton_y+y_dpmm*5.0f;
+				linepaint.setStrokeWidth(0.5f*x_dpmm);
+				linepaint.setColor(Color.WHITE);
+				bigtextpaint.setTextSize(2.5f*y_dpmm);
+				int start=Math.max(chosen_ad_map_i-10,0);
+				//boolean sec2=now-chosen_ad_map_when>2000;
+				for(int ii=start;ii<start+Math.min(chosen_ad_maps.length,8);++ii)
+				{
+					int i=ii%chosen_ad_maps.length;
+					
+					String chosen_ad_map=chosen_ad_maps[i];
+					//Log.i("fplan.chosen","Drawimg chosen ad map:"+chosen_ad_map);
+					//smalltextpaint.setTextSize(bigtextsize);
+					Rect rect=new Rect();
+					bigtextpaint.getTextBounds(chosen_ad_map, 0, chosen_ad_map.length(), rect);
+					//float 
+					//rect.offset(((right-left)-rect.width())/2, (int) ((cury-rect.top)-rect.height()));
+					Rect bgrect=new Rect(rect);
+					if (i==chosen_ad_map_i)
+					{
+						bigtextpaint.setColor(Color.WHITE);
+					}
+					else
+					{
+						bigtextpaint.setColor(Color.rgb(200,200,200));
+					}
+					bgrect.offset(0, (int) ((cury)-rect.top));
+					bgrect.left=left;
+					bgrect.right=right;
+					canvas.drawRect(bgrect, blackgroundpaint);
+					canvas.drawText(chosen_ad_map, bgrect.left+2.6f*x_dpmm-rect.left, bgrect.top-rect.top, bigtextpaint);
+					if (i==chosen_ad_map_i)
+					{
+						float mid=cury+rect.height()*0.4f;
+						canvas.drawLine(bgrect.left, mid, bgrect.left+x_dpmm*2.3f, mid, linepaint);
+						canvas.drawLine(bgrect.left+x_dpmm*1, mid-1*x_dpmm, bgrect.left+x_dpmm*2.3f, mid, linepaint);
+						canvas.drawLine(bgrect.left+x_dpmm*1, mid+1*x_dpmm, bgrect.left+x_dpmm*2.3f, mid, linepaint);
+					}
+					cury+=rect.height();
+				}
+				bigtextpaint.setTextSize(bigtextsize);
+				
+			}			 			
+		}
+		if (isDragging && !gui.getChartMode()) {
+			float h = smalltextpaint.getTextSize();
+			float topbutton_y = y + h;
+
+			String text = "Center";
+			final Rect tr1 = drawButton(canvas, right, topbutton_y, text, -1,
+					0, right, false);
+			airspace_button_space_right = tr1.left - 4;
+			clickables.add(new GuiSituation.Clickable() {
+				@Override
+				public Rect getRect() {
+					return tr1;
+				}
+
+				@Override
+				public void onClick() {
+					gui.doCenterDragging();
+				}
+			});
+			int edge = tr1.left;
+
+			if (gui != null && (gui.getnorthup() == false || gui.getChartMode())) {
+				if (gui.getChartMode())
+					text = "Set Chart Up";
+				else
+					text = "Set North Up";
+				final Rect tr2 = drawButton(canvas, 0, topbutton_y, text, 1, 0,
+						edge, false);
+				if (tr2 != null) {
+					airspace_button_space_left = tr2.right + 4;
+					clickables.add(new GuiSituation.Clickable() {
+						@Override
+						public Rect getRect() {
+							return tr2;
+						}
+
+						@Override
+						public void onClick() {
+							if (gui.getChartMode() && adloader!=null)
+								gui.onChartUp(adloader);
+							else
+								gui.onNorthUp();
+						}
+					});
+				}
+			}
+
+		} else {
+			if (download_status != null && !download_status.equals("")) {
+				float y2 = (y + bigtextpaint.getTextSize() * 1.1f);
+
+				String text = "Load:" + download_status;
+				final Rect tr1 = drawButton(canvas, 0, y2, text, 1, 0,
+						Integer.MAX_VALUE, false);
+				clickables.add(new GuiSituation.Clickable() {
+					@Override
+					public Rect getRect() {
+						return tr1;
+					}
+
+					@Override
+					public void onClick() {
+						Log.i("fplan", "Cancel download");
+						gui.cancelMapDownload();
+					}
+				});
+
+			}
+		}
+		// Log.i("fplan","prox warning coords "
+		// +airspace_button_space_left+".."+airspace_button_space_right);
+		if (prox_warning != null
+				&& airspace_button_space_right > airspace_button_space_left) {
+			final Rect tr1 = drawAirspaceAhead(canvas, (y * 3) / 2,
+					prox_warning, airspace_button_space_left,
+					airspace_button_space_right);
+			clickables.add(new GuiSituation.Clickable() {
+				@Override
+				public Rect getRect() {
+					return tr1;
+				}
+
+				@Override
+				public void onClick() {
+					gui.showAirspaces();
+				}
+			});
+
+		}
+
+		long aft = SystemClock.elapsedRealtime();
+
+		if (cached.size() > 120) {
+			int was = cached.size();
+			for (Entry<CacheKey, Bitmap> e : cached.entrySet()) {
+				if (!used.containsKey(e.getKey())) {
+					e.getValue().recycle();
+				}
+			}
+			cached = used;
+			// Log.i("fplan.fps","Clear cache with "+was+" items new size: "+cached.size());
+		}
+		used = new HashMap<MapDrawer.CacheKey, Bitmap>();
+		// Log.i("fplan.fps","Time to draw: "+(aft-bef)+"ms");
+	}
+
+	private void drawBitmapMap(Canvas canvas, GetMapBitmap bitmaps,
+			ElevBitmapCache elevbmc, boolean terrwarn,
+			final AdChartLoader adloader, TransformIf tf, int zoomlevel,
+			int sizex, int sizey, boolean isUserPresentlyMovingMap,
+			Merc screen_center) {
+		iMerc centertile = new iMerc((int) screen_center.x & (~255),
+				(int) screen_center.y & (~255));
+		// int diagonal = (int) Math.sqrt((sizex / 2) * (sizey / 2))+1;
+		// Log.i("fplan.bitmap","Diagonal: "+diagonal+" sizex:"+sizex+" sizey: "+sizey);
+		// int minus = (diagonal + 255) / 256;
+		// minus=2;
+		// int tot = 2 * minus + 1;
+
+		//int tot;
+		int minuspixels;
+		{
+			float smallres = Math.min(sizex, sizey);
+			float bigres = Math.max(sizex, sizey);
+			double diag_length = Math.sqrt(smallres * smallres + bigres
+					* bigres);
+			double diag_angle = Math.atan2(smallres, bigres);
+			// double hdiag_length=diag_length/2.0;
+			final int tilesize = 256;
+			float base = bigres;
+			// b= 180 - 90 - diag_angle
+			double ba = Math.PI - Math.PI / 2 - diag_angle;
+			// maxh/base = sin(b)
+			// maxh = sin(b)*base
+			// print "diag_length:",diag_length
+			// print "max height:",maxh
+			minuspixels = ((int) diag_length + 256) / 256;
+		}
+		// Log.i("fplan.drawmap","Total tiles needed:"+tot);
+
+		
+		
+		//iMerc topleft = new iMerc(centertile.getX() - (256 * minus),
+		//		centertile.getY() - 256 * minus);
+		iMerc topleft = new iMerc(centertile.getX() - (256 * minuspixels),
+				centertile.getY() - 256 * minuspixels);
+		float hdg = (float) (tf.getHdgRad() * (180.0 / Math.PI));
+		for (int j = 0; j < 2 * minuspixels; ++j) {
+
+			for (int i = 0; i < 2 * minuspixels; ++i) {
+
+				iMerc cur = new iMerc(topleft.getX() + 256 * i,
+						topleft.getY() + 256 * j);
+				if (cur.getX() < 0 || cur.getY() < 0)
+					continue;
+				Vector v = tf.merc2screen(new Merc(cur.getX(), cur.getY()));
+				if (!tileOnScreen((float) v.x, (float) v.y, tf))
+					continue;
+				BitmapRes b = null;
+				// Log.i("fplan","Bitmap for "+cur);
+				canvas.save();
+				canvas.rotate(-hdg, (float) v.x, (float) v.y);
+				RectF trg = new RectF((float) v.x, (float) v.y,
+						(float) v.x + 256, (float) v.y + 256);
+				
+				b = bitmaps.getBitmap(cur, zoomlevel);
+				if (adloader==null && b != null && b.b != null) {
+					// float px=(float)(v.x+i*256);
+					// float py=(float)(v.y+j*256);
+
+					// Log.i("fplan","Drawing bitmap at "+v.x+","+v.y);
+					Rect src = b.rect;
+					canvas.drawBitmap(b.b, src, trg, null);
+					// Log.i("fplan.terr","Queried "+cur);
+					
+
+				}
+				if (terrwarn && !isUserPresentlyMovingMap) {
+					BMResult elevbm = elevbmc.query2(cur);
+					if (elevbm != null && elevbm.bm != null)
+						canvas.drawBitmap(elevbm.bm, elevbm.r, trg,
+								null);
+				}
+				canvas.restore();
+
+			}
+		}
+		// Log.i("fplan.drawmap","Tiles used:"+tilesused);
+	}
+
+	private void drawAdMap(Canvas canvas, final AdChartLoader adloader,
+			TransformIf tf, int zoomlevel, Merc screen_center) {
+		double onenmpixels=Project.approx_scale(screen_center.y, zoomlevel, 1);
+		int best_ad_level=adloader.guess_zoomlevel(onenmpixels);
+		Log.i("fplan.bad","Best level: "+best_ad_level);
+		adloader.set_level(best_ad_level);
+		
+		adloader.start();
+		int w=adloader.get_width();
+		int h=adloader.get_height();
+		for(int x=0;x<w;x+=256)
+		{
+			
+			for(int y=0;y<=h;y+=256)
+			{
+				LatLon p1=adloader.pixel2latlon(new Vector(x,y));
+				LatLon p2=adloader.pixel2latlon(new Vector(x+256,y));
+				LatLon p3=adloader.pixel2latlon(new Vector(x,y+256));
+				//LatLon p4=adloader.pixel2latlon(new Vector(x+256,y+256));
+				//Log.i("fplan.bml","Figured latlon = "+p1+" "+p2+" "+p3+" "+p4);
+				Merc m1=Project.latlon2merc(p1, zoomlevel);
+				Merc m2=Project.latlon2merc(p2, zoomlevel);
+				Merc m3=Project.latlon2merc(p3, zoomlevel);
+				Vector s1=tf.merc2screen(m1);
+				Vector s2=tf.merc2screen(m2);
+				Vector s3=tf.merc2screen(m3);
+				
+				
+				//Log.i("fplan.bml","adloader got bitmap for "+x+","+y+" drawing near"+s1);
+				Vector X=s2.minus(s1).mul(1/256.0);
+				Vector Y=s3.minus(s1).mul(1/256.0);
+				
+				canvas.save();
+				Matrix mat=canvas.getMatrix();
+				mat.preTranslate((float)s1.x, (float)s1.y);
+				Matrix rotscale=new Matrix();
+				rotscale.setValues(new float[]{
+						(float)X.x,(float)Y.x,0,
+						(float)X.y,(float)Y.y,0,
+						0,0,1
+				});
+				mat.preConcat(rotscale);
+				canvas.setMatrix(mat);
+				RectF trg=new RectF(0,0,256,256);
+				boolean qr=canvas.quickReject(trg, EdgeType.BW);
+				if (!qr)
+				{
+					BitmapRes bres=adloader.getBitmap(new iMerc(x,y));
+					if (bres!=null && bres.b!=null)
+					{
+						canvas.drawBitmap(bres.b, bres.rect,trg,null);
+					}
+				}
+				canvas.restore();
+				
+				
+			}
+		}
+		adloader.end();
+	}
+
+	private void drawBaseVectorMap(TripData tripdata, AirspaceLookup lookup,
+			Canvas canvas, boolean havefix, TransformIf tf, boolean isDragging,
+			boolean chartmode, int zoomlevel, boolean isUserPresentlyMovingMap,
+			BoundingBox bb13, BoundingBox smbb13,
+			ArrayList<SigPoint> major_airfields) {
 		if (true)
 		{
 		if (onlyWithin(60, isUserPresentlyMovingMap))
@@ -569,6 +1016,8 @@ public class MapDrawer {
 					}
 				});
 				for (AirspaceArea as : areas) {
+					if (as.a==0)
+						continue;
 					ArrayList<Vector> vs = new ArrayList<Vector>();
 					for (LatLon latlon : as.points) {
 						Merc m = Project.latlon2merc(latlon, zoomlevel);
@@ -795,778 +1244,369 @@ public class MapDrawer {
 			linepaint.setColor(Color.RED);
 		}
 		}
-		
-		boolean northup = false;
-		if (gui != null)
-			northup = gui.getnorthup();
-		if (!isDragging && !northup) {
-			arrowpaint.setColor(Color.BLACK);
-			Path path = new Path();
-			path.moveTo((int) arrow.x - 1.5f*x_dpmm, (int) arrow.y + 0.3f*x_dpmm);
-			path.lineTo((int) arrow.x + 1.5f*x_dpmm, (int) arrow.y + 0.3f*x_dpmm);
-			path.lineTo((int) arrow.x, (int) arrow.y - 2.25f*x_dpmm);
-			path.close();
-			canvas.drawPath(path, arrowpaint);
-			int fivenm = (int) Project.approx_scale(mypos.y, zoomlevel, 5);
-			int fivemin = 0;
+	}
 
-			if (lastpos.hasSpeed()) {
-				float fivemindist = (float) ((lastpos.getSpeed() * 60 * 5) / 1852.0f);
-				fivemin = (int) Project.approx_scale(mypos.y, zoomlevel,
-						fivemindist);
+	private void drawInfoPanel(Canvas canvas, final GuiSituation gui,
+			TransformIf tf, boolean extrainfo, int extrainfolineoffset,
+			int zoomlevel, ArrayList<GuiSituation.Clickable> clickables,
+			InformationPanel we) {
+		float tsy = bigtextpaint.getTextSize() + 2;
+		final int maxlines = getNumInfoLines(bottom - top);
+		Vector point = we.getPoint();
+		if (point != null) {
+			Merc me = Project.merc2merc(new Merc(point), 13, zoomlevel);
+			if (me != null) {
+				// float
+				// px=(float)rot_x(p.getx()-center.x,p.gety()-center.y)+ox;
+				// float
+				// py=(float)rot_y(p.getx()-center.x,p.gety()-center.y)+oy;
+				Vector p = tf.merc2screen(me);
+				thinlinepaint.setARGB(180, 40, 40, 255);
+				thinlinepaint.setStrokeWidth(1 * x_dpmm);
+				canvas.drawCircle((float) p.x, (float) p.y, 2 * x_dpmm,
+						thinlinepaint);
+				thinlinepaint.setStrokeWidth(0.7f * x_dpmm);
+				canvas.drawLine((float) p.x + 1.7f * x_dpmm, (float) p.y,
+						(float) p.x + 2.5f * x_dpmm, (float) p.y,
+						thinlinepaint);
+				canvas.drawLine((float) p.x - 1.7f * x_dpmm, (float) p.y,
+						(float) p.x - 2.5f * x_dpmm, (float) p.y,
+						thinlinepaint);
+				canvas.drawLine((float) p.x, (float) p.y + 1.7f * x_dpmm,
+						(float) p.x, (float) p.y + 2.5f * x_dpmm,
+						thinlinepaint);
+				canvas.drawLine((float) p.x, (float) p.y - 1.7f * x_dpmm,
+						(float) p.x, (float) p.y - 2.5f * x_dpmm,
+						thinlinepaint);
+				thinlinepaint.setStrokeWidth(1f * x_dpmm);
 			}
-			canvas.drawRect((int) arrow.x, (int) arrow.y - fivenm,
-					(int) arrow.x + 6, (int) arrow.y - fivenm + 4, arrowpaint);
-			canvas.drawRect((int) arrow.x - 10, (int) arrow.y - fivemin,
-					(int) arrow.x, (int) arrow.y - fivemin + 4, arrowpaint);
-			canvas.drawRect((int) arrow.x - 2, (int) 0, (int) arrow.x + 2,
-					(int) arrow.y, arrowpaint);
-			arrowpaint.setColor(Color.rgb(230,230,255));
-			path = new Path();
-			path.moveTo((int) arrow.x - 1.0f*x_dpmm, (int) arrow.y);
-			path.lineTo((int) arrow.x + 1.0f*x_dpmm, (int) arrow.y);
-			path.lineTo((int) arrow.x, (int) arrow.y - 1.5f*x_dpmm);
-			path.close();
-			canvas.drawPath(path, arrowpaint);
-			canvas.drawRect((int) arrow.x, (int) arrow.y - fivenm + 1,
-					(int) arrow.x + 5, (int) arrow.y - fivenm + 3, arrowpaint);
-			canvas.drawRect((int) arrow.x - 9, (int) arrow.y - fivemin + 1,
-					(int) arrow.x, (int) arrow.y - fivemin + 3, arrowpaint);
-			canvas.drawRect((int) arrow.x - 1, (int) 0, (int) arrow.x + 1,
-					(int) arrow.y, arrowpaint);
-			arrowpaint.setColor(Color.WHITE);
 		}
 
-		else {
-			if (lastpos != null) {
-				Merc pos = Project.latlon2merc(new LatLon(
-						lastpos.getLatitude(), lastpos.getLongitude()),
-						zoomlevel);
-				Merc dest;
-				if (lastpos != null && lastpos.hasBearing()) {
-					float hdg = lastpos.getBearing();
-					Vector d = new Vector(0, -150);
-					Vector d2 = d.rot(hdg / (180.0f / Math.PI));
-					dest = new Merc(pos.x + d2.x, pos.y + d2.y);
-				} else {
-					dest = pos;
-				}
-				Vector screenpos = tf.merc2screen(pos);
-				Vector screenpos2 = tf.merc2screen(dest);
-				Vector forward = screenpos2.minus(screenpos).normalized();
-				Vector left = forward.rot90l();
-				Vector right = forward.rot90r();
-				arrowpaint.setColor(Color.BLACK);
-				arrowpaint.setStrokeWidth(4);
-				Path path = new Path();
-				path.moveTo((int) (screenpos.x + 10 * left.x - 2 * forward.x),
-						(int) (screenpos.y + 10 * left.y - 2 * forward.y));
-				path.lineTo((int) (screenpos.x + 10 * right.x - 2 * forward.x),
-						(int) (screenpos.y + 10 * right.y - 2 * forward.y));
-				path.lineTo((int) (screenpos.x + 15 * forward.x),
-						(int) (screenpos.y + 15 * forward.y));
-				path.close();
-				canvas.drawPath(path, arrowpaint);
-
-				canvas.drawLine((float) screenpos.x, (float) screenpos.y,
-						(float) screenpos2.x, (float) screenpos2.y, arrowpaint);
-				arrowpaint.setColor(Color.rgb(230,230,255));
-				arrowpaint.setStrokeWidth(2);
-				path = new Path();
-				path.moveTo((int) (screenpos.x + 7 * left.x),
-						(int) (screenpos.y + 7 * left.y));
-				path.lineTo((int) (screenpos.x + 7 * right.x),
-						(int) (screenpos.y + 7 * right.y));
-				path.lineTo((int) (screenpos.x + 12 * forward.x),
-						(int) (screenpos.y + 12 * forward.y));
-				path.close();
-				canvas.drawPath(path, arrowpaint);
-
-				canvas.drawLine((float) screenpos.x, (float) screenpos.y,
-						(float) screenpos2.x, (float) screenpos2.y, arrowpaint);
-				arrowpaint.setColor(Color.WHITE);
-
-			}
-
-		}
-
-		InformationPanel we = panel;
-		if (we != null) {
-			float tsy = bigtextpaint.getTextSize() + 2;
-			final int maxlines = getNumInfoLines(bottom - top);
-			Vector point = we.getPoint();
-			if (point != null) {
-				Merc me = Project.merc2merc(new Merc(point), 13, zoomlevel);
-				if (me != null) {
-					// float
-					// px=(float)rot_x(p.getx()-center.x,p.gety()-center.y)+ox;
-					// float
-					// py=(float)rot_y(p.getx()-center.x,p.gety()-center.y)+oy;
-					Vector p = tf.merc2screen(me);
-					thinlinepaint.setARGB(180, 40, 40, 255);
-					thinlinepaint.setStrokeWidth(1 * x_dpmm);
-					canvas.drawCircle((float) p.x, (float) p.y, 2 * x_dpmm,
-							thinlinepaint);
-					thinlinepaint.setStrokeWidth(0.7f * x_dpmm);
-					canvas.drawLine((float) p.x + 1.7f * x_dpmm, (float) p.y,
-							(float) p.x + 2.5f * x_dpmm, (float) p.y,
-							thinlinepaint);
-					canvas.drawLine((float) p.x - 1.7f * x_dpmm, (float) p.y,
-							(float) p.x - 2.5f * x_dpmm, (float) p.y,
-							thinlinepaint);
-					canvas.drawLine((float) p.x, (float) p.y + 1.7f * x_dpmm,
-							(float) p.x, (float) p.y + 2.5f * x_dpmm,
-							thinlinepaint);
-					canvas.drawLine((float) p.x, (float) p.y - 1.7f * x_dpmm,
-							(float) p.x, (float) p.y - 2.5f * x_dpmm,
-							thinlinepaint);
-					thinlinepaint.setStrokeWidth(1f * x_dpmm);
-				}
-			}
-
-			thinlinepaint.setColor(Color.WHITE);
-			float y = bottom - 3.0f * y_dpmm;//
-			bigtextpaint.setColor(Color.WHITE);
-			// long when = we.getWhen();
-			double dist = we.getDistance();
-			boolean skipped = we.getSkipped();
-			boolean empty = we.getEmpty();
-			String whenstr;
-			String whentempl;
-			// Log.i("fplan","When: "+when);
-			Date passed = we.getPassed();
-			Date eta2 = we.getETA2();
-			if (eta2 != null) {
-				int when = (int) ((eta2.getTime() - new Date().getTime()) / 1000l);
-				whenstr = fmttime((int) when);
-				whentempl="22:22_";
-				// whenstr="T:"+formatter.format(eta2)+"Z";
+		thinlinepaint.setColor(Color.WHITE);
+		float y = bottom - 3.0f * y_dpmm;//
+		bigtextpaint.setColor(Color.WHITE);
+		// long when = we.getWhen();
+		double dist = we.getDistance();
+		boolean skipped = we.getSkipped();
+		boolean empty = we.getEmpty();
+		String whenstr;
+		String whentempl;
+		// Log.i("fplan","When: "+when);
+		Date passed = we.getPassed();
+		Date eta2 = we.getETA2();
+		if (eta2 != null) {
+			int when = (int) ((eta2.getTime() - new Date().getTime()) / 1000l);
+			whenstr = fmttime((int) when);
+			whentempl="22:22_";
+			// whenstr="T:"+formatter.format(eta2)+"Z";
+		} else {
+			if (empty) {
+				whenstr = "";
+				whentempl="";
+			} else if (skipped) {
+				whenstr = "Skipped.";
+				whentempl="Skipped.";
 			} else {
-				if (empty) {
-					whenstr = "";
-					whentempl="";
-				} else if (skipped) {
-					whenstr = "Skipped.";
-					whentempl="Skipped.";
-				} else {
-					if (passed != null)
-						whenstr = "Passed " + formatter.format(passed) + "Z";
-					else
-						whenstr = "--:--";
-					whentempl="Passed 22:22Z.";
-				}
-			}
-
-			/*
-			 * #error: Move position into base class of WarningEvent #Then move
-			 * calculation of distance also to baseclass. #don't store time and
-			 * distance, just store position. #Let moving map calculate time,
-			 * based on distance (or even based on position?)
-			 */
-			boolean extrainfo_available = we.getHasExtraInfo();
-
-			String[] details;
-			if (extrainfo)
-				details = we.getExtraDetails();
-			else
-				details = we.getDetails();
-
-			final Place[] extended_available = we.getHasExtendedInfo();
-
-			int actuallines = details.length;
-			// Log.i("fplan", "details.length 1 : " + details.length);
-			if (extrainfolineoffset >= actuallines)
-				extrainfolineoffset = actuallines - 1;
-			if (extrainfolineoffset < 0)
-				extrainfolineoffset = 0;
-
-			actuallines = actuallines - extrainfolineoffset;
-			if (actuallines > maxlines)
-				actuallines = maxlines;
-			if (actuallines < 0)
-				actuallines = 0;
-			int page = 1 + extrainfolineoffset / maxlines;
-			int totpage = 1 + details.length / maxlines;
-			actuallines += 1;
-			int y1 = (int) (y - tsy * (actuallines - 1)) - 2;
-
-			float topy1 = y - tsy * actuallines - 4;
-
-			final Rect tr3 = drawButton(canvas, right - 5, topy1 - tsy * 1.4f,
-					"Close", -1, left, right, false);
-			if (extended_available.length > 0) {
-				final Rect tr4 = drawButton(canvas, left + 5, topy1 - tsy
-						* 1.4f, "More", 1, left, right, false);
-
-				clickables.add(new GuiSituation.Clickable() {
-					@Override
-					public Rect getRect() {
-						return tr4;
-					}
-
-					@Override
-					public void onClick() {
-						gui.onShowExtended(extended_available);
-					}
-				});
-			}
-			clickables.add(new GuiSituation.Clickable() {
-				@Override
-				public Rect getRect() {
-					return tr3;
-				}
-
-				@Override
-				public void onClick() {
-					gui.onCloseInfoPanel();
-				}
-			});
-			
-			bigtextpaint.setTextSize(bigtextsize);
-			
-
-			RectF r = new RectF(0, topy1, right, bottom);
-			canvas.drawLine(0, topy1, right, topy1, thinlinepaint);
-			canvas.drawRect(r, backgroundpaint);
-			String dir=DescribePosition.roughdirshort((float)((we.getHeading()+180.0)%360.0));
-			if (dist >= 0)
-			{
-				addTextIfFits(canvas, "you:","",
-						r, "you:","",  y1, smalltextpaint,bigtextpaint);
-				addTextIfFits(canvas, "1222.2","NM",
-						r, String.format("%.1f", dist), "NM", y1, bigtextpaint,smalltextpaint,false,true);
-				addTextIfFits(canvas, "NWW ", "",
-						r, String.format(dir+" ", dist), "", y1, bigtextpaint, smalltextpaint);
-			}
-
-
-			//addTextIfFits(canvas, "(SWW)", "", r, "("+dir+")", "", y1, bigtextpaint, smalltextpaint);
-			
-			// canvas.drawText(String.format("%.1fnm",we.getDistance()),
-			// 2,y1,bigtextpaint);
-			addTextIfFits(canvas, whentempl, "", r, whenstr, "", y1, bigtextpaint, smalltextpaint);
-			
-			// canvas.drawText(String.format("T:%s",whenstr),
-			// 70,y1,bigtextpaint);
-			
-			addTextIfFits(canvas, null, null, r, we.getPointTitle(), "", y1, bigtextpaint, smalltextpaint);
-			// canvas.drawText(we.getTitle(), 140,y1,bigtextpaint);
-			for (int i = 0; i < actuallines - 1; ++i) {
-				/*
-				 * Log.i("fplan", "Actuallines:" + actuallines + " offset: " +
-				 * extrainfolineoffset + " details length:" + details.length);
-				 */
-				if (extrainfolineoffset + i < details.length)
-					canvas.drawText(details[extrainfolineoffset + i], 2, y1
-							+ tsy + i * tsy, bigtextpaint);
-			}
-			if (we.hasLeft()) {
-				canvas.drawLine((int) (0 + 2.8f * x_dpmm),
-						(int) (bottom - 0.7f * y_dpmm),
-						(int) (0 + 2.0f * x_dpmm),
-						(int) (bottom - 1.5f * y_dpmm), thinlinepaint);
-				canvas.drawLine((int) (0 + 2.0f * x_dpmm),
-						(int) (bottom - 1.5f * y_dpmm),
-						(int) (0 + 2.8f * x_dpmm),
-						(int) (bottom - 2.3f * y_dpmm), thinlinepaint);
-
-				canvas.drawRect((int) (0.2f * x_dpmm),
-						(int) (bottom - 2.8f * y_dpmm), (int) (4.8f * x_dpmm),
-						(int) (bottom - 0.2f * y_dpmm), thinlinepaint);
-			}
-			final Rect leftrect = new Rect(left, (int) topy1,
-					(right - left) / 4, bottom);
-			clickables.add(new GuiSituation.Clickable() {
-				@Override
-				public Rect getRect() {
-					return leftrect;
-				}
-
-				@Override
-				public void onClick() {
-					gui.onInfoPanelBrowse(-1);
-				}
-			});
-			float off = right - (5.0f * x_dpmm);
-			if (we.hasRight()) {
-				canvas.drawLine((int) (0 + 2.0f * x_dpmm + off),
-						(int) (bottom - 0.7f * y_dpmm),
-						(int) (0 + 2.8f * x_dpmm + off),
-						(int) (bottom - 1.5f * y_dpmm), thinlinepaint);
-				canvas.drawLine((int) (0 + 2.8f * x_dpmm + off),
-						(int) (bottom - 1.5f * y_dpmm),
-						(int) (0 + 2.0f * x_dpmm + off),
-						(int) (bottom - 2.3f * y_dpmm), thinlinepaint);
-				canvas.drawRect((int) (0.2f * x_dpmm + off),
-						(int) (bottom - 2.8f * y_dpmm),
-						(int) (4.8f * x_dpmm + off),
-						(int) (bottom - 0.2f * y_dpmm), thinlinepaint);
-			}
-			final Rect rightrect = new Rect(right - (right - left) / 4,
-					(int) topy1, right, bottom);
-			clickables.add(new GuiSituation.Clickable() {
-				@Override
-				public Rect getRect() {
-					return rightrect;
-				}
-
-				@Override
-				public void onClick() {
-					gui.onInfoPanelBrowse(+1);
-				}
-			});
-
-			{
-				canvas.drawRect((int) (5.2f * x_dpmm),
-						(int) (bottom - 2.8f * y_dpmm),
-						(int) (-0.2f * x_dpmm + off),
-						(int) (bottom - 0.2f * y_dpmm), thinlinepaint);
-				if (extrainfo_available) {
-					String t;
-					if (extrainfo) {
-						if (totpage > 1)
-							t = String.format("Freq. %d of %d", page, totpage);
-						else
-							t = "Toggle Freq. Info (on)";
-					} else {
-						t = "Toggle Freq. Info (off)";
-					}
-					Rect tbounds = new Rect();
-					textpaint.getTextBounds(t, 0, t.length(), tbounds);
-					canvas.drawText(t, (right - left) * 0.5f - tbounds.width()
-							/ 2, (int) (bottom - 1.0 * y_dpmm), textpaint);
-				}
-				int w = (right - left) / 4;
-				final Rect midrect = new Rect(left + w, (int) topy1, right - w,
-						bottom);
-				clickables.add(new GuiSituation.Clickable() {
-					@Override
-					public Rect getRect() {
-						return midrect;
-					}
-
-					@Override
-					public void onClick() {
-						gui.cycleextrainfo();
-					}
-				});
-
-			}
-			// canvas.drawText(String.format("%03.0f°",lastpos.getBearing()),
-			// 50, y, bigtextpaint);
-			// canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),150,y,textpaint);
-
-		} else {
-			float y = bottom - (bigtextpaint.getTextSize() * 1.5f + 2);
-
-			final Rect tr3 = drawButton(canvas, right, y, "Wpts", -1, left,
-					right, false);
-			if (tr3 != null) {
-				clickables.add(new GuiSituation.Clickable() {
-					@Override
-					public Rect getRect() {
-						return tr3;
-					}
-
-					@Override
-					public void onClick() {
-						gui.onShowWaypoints();
-					}
-				});
-				int rightedge = tr3.left - 5;
-				if (zoom_in_text == null) {
-					Rect tr1 = drawButton(canvas, left, y, "Zoom +", 1, left,
-							rightedge, true);
-
-					int edge = (tr1 != null) ? tr1.right + 5 : right;
-					Rect tr2 = drawButton(canvas, edge, y, "Zoom -", 1, edge,
-							rightedge, true);
-					if (tr2 == null) {
-						tr1 = drawButton(canvas, left, y, "+", 1, left,
-								rightedge, true);
-						edge = tr1.right + 5;
-						tr2 = drawButton(canvas, edge, y, "-", 1, edge,
-								rightedge, true);
-						if (tr2 != null) {
-							zoom_buttons = true;
-							zoom_in_text = "+";
-							zoom_out_text = "-";
-						} else {
-							zoom_buttons = false;
-							zoom_in_text = "none";
-							zoom_out_text = "none";
-						}
-					} else {
-						zoom_buttons = true;
-						zoom_in_text = "Zoom +";
-						zoom_out_text = "Zoom -";
-					}
-
-				}
-				if (zoom_buttons) {
-					final Rect tr1 = drawButton(canvas, left, y, zoom_in_text,
-							1, left, rightedge, false);
-					clickables.add(new GuiSituation.Clickable() {
-						@Override
-						public Rect getRect() {
-							return tr1;
-						}
-
-						@Override
-						public void onClick() {
-							gui.changeZoom(+1);
-						}
-					});
-					int edge = tr1.right + 5;
-
-					final Rect tr2 = drawButton(canvas, edge, y, zoom_out_text,
-							1, edge, rightedge, false);
-					clickables.add(new GuiSituation.Clickable() {
-						@Override
-						public Rect getRect() {
-							return tr2;
-						}
-
-						@Override
-						public void onClick() {
-							gui.changeZoom(-1);
-						}
-					});
-				}
-			}
-		}
-
-		linepaint.setColor(Color.RED);
-		float y = Math.max(hugetextpaint.getTextSize() * 0.85f,bigtextpaint.getTextSize()*1.85f);
-		float yledge =bigtextpaint.getTextSize() * 0.85f;
-		bigtextpaint.setColor(Color.WHITE);
-		RectF r = new RectF(0, 0, right, y + 0.7f*y_dpmm);
-		RectF rledge=new RectF(r);
-		canvas.drawRect(r, blackgroundpaint);
-		addTextIfFits(canvas, "hdg:", "223-",r, "hdg:",String.format("%03.0f°", lastpos.getBearing()),
-				y, smalltextpaint,hugetextpaint);
-
-		addTextIfFits(canvas, "gs:","222", r, "gs:",String.format("%.0f", gs_kt),
-				y, smalltextpaint,hugetextpaint);
-		
-
-		// canvas.drawText(String.format("%03.0f°",lastpos.getBearing()), 40, y,
-		// bigtextpaint);
-		// canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),100,y,bigtextpaint);
-		if (tripstate!=null)
-		{
-			NextLanding nextlanding=tripstate.getNextLanding();
-			if (nextlanding!=null)
-			{
-				//int td = tripstate.get_time_to_destination();
-				// canvas.drawText(fmttime(td),150,y,bigtextpaint);asdf
-				addTextIfFits(canvas, "ETA:", "22:22", rledge, "ETA:",formatter2.format(nextlanding.when),  yledge, smalltextpaint,bigtextpaint);
-				//Log.i("fplan.delay","nextlanding: "+nextlanding.where+" when: "+nextlanding.planned);
-				int delay=(int)((nextlanding.when.getTime()-nextlanding.planned.getTime())/(60*1000l));
-				addTextIfFits(canvas, (delay>0) ? "delay:" : "ahead:", "22h:22m", rledge, (delay>0) ? "delay:" : "ahead:" ,fmtdelay(delay),  yledge, smalltextpaint,bigtextpaint);
-			}
-		}
-		
-		if (charging)
-			bigtextpaint.setColor(Color.rgb(128,255,128));
-		else
-			bigtextpaint.setColor(Color.rgb(255,128,128));
-		
-		String curtime_s=formatter2.format(new Date());
-		addTextIfFits(canvas, "BAT:", "222%", rledge, (!charging) ? "BAT:" : "bat:" ,(battery<0) ? "--" : ""+battery+"%",  yledge, smalltextpaint,bigtextpaint);
-		bigtextpaint.setColor(Color.WHITE);
-		addTextIfFits(canvas, "", "22:22", rledge, "" ,curtime_s,  yledge, smalltextpaint,bigtextpaint);
-		
-		String amsl_txt="--";
-		if (amsl>-9999)
-			amsl_txt=""+amsl;
-		addTextIfFits(canvas, "ETA:", "22:22", r, "msl:",amsl_txt,  y, smalltextpaint,bigtextpaint);
-		
-		if (havefix) // if significantly after 1970-0-01
-		{
-			addTextIfFits(canvas, "GPS:","200%", 
-					r, "GPS:",String.format("%d%%",gps_sat_fix_cnt/2), y, smalltextpaint, bigtextpaint,false, false);
-		} else {
-			bigtextpaint.setColor(Color.RED);
-			addTextIfFits(canvas, "GPS:","200%", 
-					r, "GPS:",String.format("%d%%",gps_sat_fix_cnt/2), y, smalltextpaint, bigtextpaint,true, false);
-			bigtextpaint.setColor(Color.WHITE);
-		}
-		
-		// /canvas.drawText(String.format("Z%d",zoomlevel), 0,y,bigtextpaint);
-		if (Config.debugMode())
-			addTextIfFits(canvas, "Z13", "", r, String.format("Z%d", zoomlevel),
-				"", y, bigtextpaint, smalltextpaint);
-		
-		if (havefix && !isDragging)
-		{
-			try
-			{
-				if (tripstate!=null) 
-				{
-					BugInfo bug=tripstate.getBug();
-					if (bug!=null)
-					{
-						canvas.save();
-						float hdgdelta=(float)(bug.hdg-lastpos.getBearing());
-						if (hdgdelta<-180) hdgdelta+=360;
-						if (hdgdelta>180) hdgdelta-=360;
-						double ang=(180.0/Math.PI)*Math.atan2(sizex/2,(3*sizey)/4);
-						hdgdelta/=ang;
-						arrowpaint.setColor(Color.WHITE);
-						Vector bugvec=new Vector(right/2+(right/2)*hdgdelta,y);
-						if (hdgdelta>1)
-						{
-							bugvec=new Vector(right,y);
-						}
-						else if (hdgdelta<-1)
-						{
-							bugvec=new Vector(0,y);
-						}
-						
-						canvas.save();
-						arrowpaint.setStrokeWidth(0.7f*x_dpmm);
-						arrowpaint.setColor(Color.BLACK);
-						float ww=4.5f;
-						float wy=2.0f;
-						canvas.rotate(bug.bank,(float)bugvec.x,(float)bugvec.y+wy*y_dpmm);
-						canvas.drawLine((float)bugvec.x-ww*x_dpmm, (float)bugvec.y+wy*y_dpmm, (float)bugvec.x+ww*x_dpmm, (float)bugvec.y+wy*x_dpmm, arrowpaint);
-						arrowpaint.setColor(Color.WHITE);
-						arrowpaint.setStrokeWidth(0.4f*x_dpmm);
-						canvas.drawLine((float)bugvec.x-ww*x_dpmm, (float)bugvec.y+wy*y_dpmm, (float)bugvec.x+ww*x_dpmm, (float)bugvec.y+wy*x_dpmm, arrowpaint);
-						arrowpaint.setColor(Color.BLACK);
-						canvas.restore();
-						
-						arrowpaint.setStrokeWidth(0.7f*x_dpmm);
-						canvas.drawLine((float)0.5f*right, (float)bugvec.y, 0.5f*right, (float)bugvec.y+2.5f*x_dpmm, arrowpaint);
-						arrowpaint.setColor(Color.WHITE);
-						arrowpaint.setStrokeWidth(0.4f*x_dpmm);
-						canvas.drawLine((float)0.5f*right, (float)bugvec.y, 0.5f*right, (float)bugvec.y+2.5f*x_dpmm, arrowpaint);
-						
-						int rot=0;
-						if (hdgdelta>1)
-						{
-							bugvec=new Vector(right,y+1.50f*x_dpmm);
-							rot=90;
-						}
-						else if (hdgdelta<-1)
-						{
-							bugvec=new Vector(0,y+1.5f*x_dpmm);
-							rot=270;
-						}
-						else
-						{
-							bugvec=new Vector(right/2+(right/2)*hdgdelta,y);
-						}
-						
-						if (rot!=0)
-							canvas.rotate(rot,(float)bugvec.x,(float)bugvec.y);
-						
-						Path path = new Path();
-						path.moveTo((int) bugvec.x - 1.4f*x_dpmm, (int) bugvec.y + 3.2f*x_dpmm);
-						path.lineTo((int) bugvec.x + 1.4f*x_dpmm, (int) bugvec.y + 3.2f*x_dpmm);
-						path.lineTo((int) bugvec.x, (int) bugvec.y);
-						path.close();
-						
-						arrowpaint.setStyle(Style.FILL);
-						arrowpaint.setColor(Color.WHITE);
-						canvas.drawPath(path, arrowpaint);
-						arrowpaint.setColor(Color.BLACK);
-						arrowpaint.setStrokeWidth(0.25f*x_dpmm);
-						arrowpaint.setStyle(Style.STROKE);
-						canvas.drawPath(path, arrowpaint);
-												
-						canvas.restore();
-
-						arrowpaint.setColor(Color.WHITE);
-						canvas.drawLine((float)0.5f*right, (float)bugvec.y, 0.5f*right, (float)bugvec.y+2.5f*x_dpmm, arrowpaint);
-
-						arrowpaint.setStyle(Style.FILL);
-						
-						
-					}
-				}
-			}catch(Throwable e)
-			{
-				e.printStackTrace();
-			}
-			
-		}
-		
-
-		int airspace_button_space_left = left;
-		int airspace_button_space_right = right;
-		if (!isDragging || gui.getChartMode())
-		{
-			float h = smalltextpaint.getTextSize();
-			float topbutton_y = y + h;
-
-			String text = "View";
-			final Rect tr1 = drawButton(canvas, right, topbutton_y, text, -1,
-					0, right, false);
-			airspace_button_space_right = tr1.left - 4;
-			clickables.add(new GuiSituation.Clickable() {
-				@Override
-				public Rect getRect() {
-					return tr1;
-				}
-
-				@Override
-				public void onClick() {
-					gui.toggle_map();
-				}
-			});
-			
-			if (chosen_ad_maps!=null && now-chosen_ad_map_when<4500)
-			{
-				float cury=topbutton_y+y_dpmm*5.0f;
-				linepaint.setStrokeWidth(0.5f*x_dpmm);
-				linepaint.setColor(Color.WHITE);
-				bigtextpaint.setTextSize(2.5f*y_dpmm);
-				int start=Math.max(chosen_ad_map_i-10,0);
-				//boolean sec2=now-chosen_ad_map_when>2000;
-				for(int ii=start;ii<start+Math.min(chosen_ad_maps.length,8);++ii)
-				{
-					int i=ii%chosen_ad_maps.length;
-					
-					String chosen_ad_map=chosen_ad_maps[i];
-					//Log.i("fplan.chosen","Drawimg chosen ad map:"+chosen_ad_map);
-					//smalltextpaint.setTextSize(bigtextsize);
-					Rect rect=new Rect();
-					bigtextpaint.getTextBounds(chosen_ad_map, 0, chosen_ad_map.length(), rect);
-					//float 
-					//rect.offset(((right-left)-rect.width())/2, (int) ((cury-rect.top)-rect.height()));
-					Rect bgrect=new Rect(rect);
-					if (i==chosen_ad_map_i)
-					{
-						bigtextpaint.setColor(Color.WHITE);
-					}
-					else
-					{
-						bigtextpaint.setColor(Color.rgb(200,200,200));
-					}
-					bgrect.offset(0, (int) ((cury)-rect.top));
-					bgrect.left=left;
-					bgrect.right=right;
-					canvas.drawRect(bgrect, blackgroundpaint);
-					canvas.drawText(chosen_ad_map, bgrect.left+2.6f*x_dpmm-rect.left, bgrect.top-rect.top, bigtextpaint);
-					if (i==chosen_ad_map_i)
-					{
-						float mid=cury+rect.height()*0.4f;
-						canvas.drawLine(bgrect.left, mid, bgrect.left+x_dpmm*2.3f, mid, linepaint);
-						canvas.drawLine(bgrect.left+x_dpmm*1, mid-1*x_dpmm, bgrect.left+x_dpmm*2.3f, mid, linepaint);
-						canvas.drawLine(bgrect.left+x_dpmm*1, mid+1*x_dpmm, bgrect.left+x_dpmm*2.3f, mid, linepaint);
-					}
-					cury+=rect.height();
-				}
-				bigtextpaint.setTextSize(bigtextsize);
-				
-			}			 			
-		}
-		if (isDragging && !gui.getChartMode()) {
-			float h = smalltextpaint.getTextSize();
-			float topbutton_y = y + h;
-
-			String text = "Center";
-			final Rect tr1 = drawButton(canvas, right, topbutton_y, text, -1,
-					0, right, false);
-			airspace_button_space_right = tr1.left - 4;
-			clickables.add(new GuiSituation.Clickable() {
-				@Override
-				public Rect getRect() {
-					return tr1;
-				}
-
-				@Override
-				public void onClick() {
-					gui.doCenterDragging();
-				}
-			});
-			int edge = tr1.left;
-
-			if (gui != null && (gui.getnorthup() == false || gui.getChartMode())) {
-				if (gui.getChartMode())
-					text = "Set Chart Up";
+				if (passed != null)
+					whenstr = "Passed " + formatter.format(passed) + "Z";
 				else
-					text = "Set North Up";
-				final Rect tr2 = drawButton(canvas, 0, topbutton_y, text, 1, 0,
-						edge, false);
-				if (tr2 != null) {
-					airspace_button_space_left = tr2.right + 4;
-					clickables.add(new GuiSituation.Clickable() {
-						@Override
-						public Rect getRect() {
-							return tr2;
-						}
-
-						@Override
-						public void onClick() {
-							if (gui.getChartMode() && adloader!=null)
-								gui.onChartUp(adloader);
-							else
-								gui.onNorthUp();
-						}
-					});
-				}
-			}
-
-		} else {
-			if (download_status != null && !download_status.equals("")) {
-				float y2 = (y + bigtextpaint.getTextSize() * 1.1f);
-
-				String text = "Load:" + download_status;
-				final Rect tr1 = drawButton(canvas, 0, y2, text, 1, 0,
-						Integer.MAX_VALUE, false);
-				clickables.add(new GuiSituation.Clickable() {
-					@Override
-					public Rect getRect() {
-						return tr1;
-					}
-
-					@Override
-					public void onClick() {
-						Log.i("fplan", "Cancel download");
-						gui.cancelMapDownload();
-					}
-				});
-
+					whenstr = "--:--";
+				whentempl="Passed 22:22Z.";
 			}
 		}
-		// Log.i("fplan","prox warning coords "
-		// +airspace_button_space_left+".."+airspace_button_space_right);
-		if (prox_warning != null
-				&& airspace_button_space_right > airspace_button_space_left) {
-			final Rect tr1 = drawAirspaceAhead(canvas, (y * 3) / 2,
-					prox_warning, airspace_button_space_left,
-					airspace_button_space_right);
+
+		/*
+		 * #error: Move position into base class of WarningEvent #Then move
+		 * calculation of distance also to baseclass. #don't store time and
+		 * distance, just store position. #Let moving map calculate time,
+		 * based on distance (or even based on position?)
+		 */
+		boolean extrainfo_available = we.getHasExtraInfo();
+
+		String[] details;
+		if (extrainfo)
+			details = we.getExtraDetails();
+		else
+			details = we.getDetails();
+
+		final Place[] extended_available = we.getHasExtendedInfo();
+
+		int actuallines = details.length;
+		// Log.i("fplan", "details.length 1 : " + details.length);
+		if (extrainfolineoffset >= actuallines)
+			extrainfolineoffset = actuallines - 1;
+		if (extrainfolineoffset < 0)
+			extrainfolineoffset = 0;
+
+		actuallines = actuallines - extrainfolineoffset;
+		if (actuallines > maxlines)
+			actuallines = maxlines;
+		if (actuallines < 0)
+			actuallines = 0;
+		int page = 1 + extrainfolineoffset / maxlines;
+		int totpage = 1 + details.length / maxlines;
+		actuallines += 1;
+		int y1 = (int) (y - tsy * (actuallines - 1)) - 2;
+
+		float topy1 = y - tsy * actuallines - 4;
+
+		final Rect tr3 = drawButton(canvas, right - 5, topy1 - tsy * 1.4f,
+				"Close", -1, left, right, false);
+		if (extended_available.length > 0) {
+			final Rect tr4 = drawButton(canvas, left + 5, topy1 - tsy
+					* 1.4f, "More", 1, left, right, false);
+
 			clickables.add(new GuiSituation.Clickable() {
 				@Override
 				public Rect getRect() {
-					return tr1;
+					return tr4;
 				}
 
 				@Override
 				public void onClick() {
-					gui.showAirspaces();
+					gui.onShowExtended(extended_available);
+				}
+			});
+		}
+		clickables.add(new GuiSituation.Clickable() {
+			@Override
+			public Rect getRect() {
+				return tr3;
+			}
+
+			@Override
+			public void onClick() {
+				gui.onCloseInfoPanel();
+			}
+		});
+		
+		bigtextpaint.setTextSize(bigtextsize);
+		
+
+		RectF r = new RectF(0, topy1, right, bottom);
+		canvas.drawLine(0, topy1, right, topy1, thinlinepaint);
+		canvas.drawRect(r, backgroundpaint);
+		String dir=DescribePosition.roughdirshort((float)((we.getHeading()+180.0)%360.0));
+		if (dist >= 0)
+		{
+			addTextIfFits(canvas, "you:","",
+					r, "you:","",  y1, smalltextpaint,bigtextpaint);
+			addTextIfFits(canvas, "1222.2","NM",
+					r, String.format("%.1f", dist), "NM", y1, bigtextpaint,smalltextpaint,false,true);
+			addTextIfFits(canvas, "NWW ", "",
+					r, String.format(dir+" ", dist), "", y1, bigtextpaint, smalltextpaint);
+		}
+
+
+		//addTextIfFits(canvas, "(SWW)", "", r, "("+dir+")", "", y1, bigtextpaint, smalltextpaint);
+		
+		// canvas.drawText(String.format("%.1fnm",we.getDistance()),
+		// 2,y1,bigtextpaint);
+		addTextIfFits(canvas, whentempl, "", r, whenstr, "", y1, bigtextpaint, smalltextpaint);
+		
+		// canvas.drawText(String.format("T:%s",whenstr),
+		// 70,y1,bigtextpaint);
+		
+		addTextIfFits(canvas, null, null, r, we.getPointTitle(), "", y1, bigtextpaint, smalltextpaint);
+		// canvas.drawText(we.getTitle(), 140,y1,bigtextpaint);
+		for (int i = 0; i < actuallines - 1; ++i) {
+			/*
+			 * Log.i("fplan", "Actuallines:" + actuallines + " offset: " +
+			 * extrainfolineoffset + " details length:" + details.length);
+			 */
+			if (extrainfolineoffset + i < details.length)
+				canvas.drawText(details[extrainfolineoffset + i], 2, y1
+						+ tsy + i * tsy, bigtextpaint);
+		}
+		if (we.hasLeft()) {
+			canvas.drawLine((int) (0 + 2.8f * x_dpmm),
+					(int) (bottom - 0.7f * y_dpmm),
+					(int) (0 + 2.0f * x_dpmm),
+					(int) (bottom - 1.5f * y_dpmm), thinlinepaint);
+			canvas.drawLine((int) (0 + 2.0f * x_dpmm),
+					(int) (bottom - 1.5f * y_dpmm),
+					(int) (0 + 2.8f * x_dpmm),
+					(int) (bottom - 2.3f * y_dpmm), thinlinepaint);
+
+			canvas.drawRect((int) (0.2f * x_dpmm),
+					(int) (bottom - 2.8f * y_dpmm), (int) (4.8f * x_dpmm),
+					(int) (bottom - 0.2f * y_dpmm), thinlinepaint);
+		}
+		final Rect leftrect = new Rect(left, (int) topy1,
+				(right - left) / 4, bottom);
+		clickables.add(new GuiSituation.Clickable() {
+			@Override
+			public Rect getRect() {
+				return leftrect;
+			}
+
+			@Override
+			public void onClick() {
+				gui.onInfoPanelBrowse(-1);
+			}
+		});
+		float off = right - (5.0f * x_dpmm);
+		if (we.hasRight()) {
+			canvas.drawLine((int) (0 + 2.0f * x_dpmm + off),
+					(int) (bottom - 0.7f * y_dpmm),
+					(int) (0 + 2.8f * x_dpmm + off),
+					(int) (bottom - 1.5f * y_dpmm), thinlinepaint);
+			canvas.drawLine((int) (0 + 2.8f * x_dpmm + off),
+					(int) (bottom - 1.5f * y_dpmm),
+					(int) (0 + 2.0f * x_dpmm + off),
+					(int) (bottom - 2.3f * y_dpmm), thinlinepaint);
+			canvas.drawRect((int) (0.2f * x_dpmm + off),
+					(int) (bottom - 2.8f * y_dpmm),
+					(int) (4.8f * x_dpmm + off),
+					(int) (bottom - 0.2f * y_dpmm), thinlinepaint);
+		}
+		final Rect rightrect = new Rect(right - (right - left) / 4,
+				(int) topy1, right, bottom);
+		clickables.add(new GuiSituation.Clickable() {
+			@Override
+			public Rect getRect() {
+				return rightrect;
+			}
+
+			@Override
+			public void onClick() {
+				gui.onInfoPanelBrowse(+1);
+			}
+		});
+
+		{
+			canvas.drawRect((int) (5.2f * x_dpmm),
+					(int) (bottom - 2.8f * y_dpmm),
+					(int) (-0.2f * x_dpmm + off),
+					(int) (bottom - 0.2f * y_dpmm), thinlinepaint);
+			if (extrainfo_available) {
+				String t;
+				if (extrainfo) {
+					if (totpage > 1)
+						t = String.format("Freq. %d of %d", page, totpage);
+					else
+						t = "Toggle Freq. Info (on)";
+				} else {
+					t = "Toggle Freq. Info (off)";
+				}
+				Rect tbounds = new Rect();
+				textpaint.getTextBounds(t, 0, t.length(), tbounds);
+				canvas.drawText(t, (right - left) * 0.5f - tbounds.width()
+						/ 2, (int) (bottom - 1.0 * y_dpmm), textpaint);
+			}
+			int w = (right - left) / 4;
+			final Rect midrect = new Rect(left + w, (int) topy1, right - w,
+					bottom);
+			clickables.add(new GuiSituation.Clickable() {
+				@Override
+				public Rect getRect() {
+					return midrect;
+				}
+
+				@Override
+				public void onClick() {
+					gui.cycleextrainfo();
 				}
 			});
 
 		}
+		// canvas.drawText(String.format("%03.0f°",lastpos.getBearing()),
+		// 50, y, bigtextpaint);
+		// canvas.drawText(String.format("%.0fkt",lastpos.getSpeed()*3.6/1.852),150,y,textpaint);
+	}
 
-		long aft = SystemClock.elapsedRealtime();
+	private void drawBug(TripState tripstate, Canvas canvas, Location lastpos,
+			int sizex, int sizey, float y) {
+		try
+		{
+			if (tripstate!=null) 
+			{
+				BugInfo bug=tripstate.getBug();
+				if (bug!=null)
+				{
+					canvas.save();
+					float hdgdelta=(float)(bug.hdg-lastpos.getBearing());
+					if (hdgdelta<-180) hdgdelta+=360;
+					if (hdgdelta>180) hdgdelta-=360;
+					double ang=(180.0/Math.PI)*Math.atan2(sizex/2,(3*sizey)/4);
+					hdgdelta/=ang;
+					arrowpaint.setColor(Color.WHITE);
+					Vector bugvec=new Vector(right/2+(right/2)*hdgdelta,y);
+					if (hdgdelta>1)
+					{
+						bugvec=new Vector(right,y);
+					}
+					else if (hdgdelta<-1)
+					{
+						bugvec=new Vector(0,y);
+					}
+					
+					canvas.save();
+					arrowpaint.setStrokeWidth(0.7f*x_dpmm);
+					arrowpaint.setColor(Color.BLACK);
+					float ww=4.5f;
+					float wy=2.0f;
+					canvas.rotate(bug.bank,(float)bugvec.x,(float)bugvec.y+wy*y_dpmm);
+					canvas.drawLine((float)bugvec.x-ww*x_dpmm, (float)bugvec.y+wy*y_dpmm, (float)bugvec.x+ww*x_dpmm, (float)bugvec.y+wy*x_dpmm, arrowpaint);
+					arrowpaint.setColor(Color.WHITE);
+					arrowpaint.setStrokeWidth(0.4f*x_dpmm);
+					canvas.drawLine((float)bugvec.x-ww*x_dpmm, (float)bugvec.y+wy*y_dpmm, (float)bugvec.x+ww*x_dpmm, (float)bugvec.y+wy*x_dpmm, arrowpaint);
+					arrowpaint.setColor(Color.BLACK);
+					canvas.restore();
+					
+					arrowpaint.setStrokeWidth(0.7f*x_dpmm);
+					canvas.drawLine((float)0.5f*right, (float)bugvec.y, 0.5f*right, (float)bugvec.y+2.5f*x_dpmm, arrowpaint);
+					arrowpaint.setColor(Color.WHITE);
+					arrowpaint.setStrokeWidth(0.4f*x_dpmm);
+					canvas.drawLine((float)0.5f*right, (float)bugvec.y, 0.5f*right, (float)bugvec.y+2.5f*x_dpmm, arrowpaint);
+					
+					int rot=0;
+					if (hdgdelta>1)
+					{
+						bugvec=new Vector(right,y+1.50f*x_dpmm);
+						rot=90;
+					}
+					else if (hdgdelta<-1)
+					{
+						bugvec=new Vector(0,y+1.5f*x_dpmm);
+						rot=270;
+					}
+					else
+					{
+						bugvec=new Vector(right/2+(right/2)*hdgdelta,y);
+					}
+					
+					if (rot!=0)
+						canvas.rotate(rot,(float)bugvec.x,(float)bugvec.y);
+					
+					Path path = new Path();
+					path.moveTo((int) bugvec.x - 1.4f*x_dpmm, (int) bugvec.y + 3.2f*x_dpmm);
+					path.lineTo((int) bugvec.x + 1.4f*x_dpmm, (int) bugvec.y + 3.2f*x_dpmm);
+					path.lineTo((int) bugvec.x, (int) bugvec.y);
+					path.close();
+					
+					arrowpaint.setStyle(Style.FILL);
+					arrowpaint.setColor(Color.WHITE);
+					canvas.drawPath(path, arrowpaint);
+					arrowpaint.setColor(Color.BLACK);
+					arrowpaint.setStrokeWidth(0.25f*x_dpmm);
+					arrowpaint.setStyle(Style.STROKE);
+					canvas.drawPath(path, arrowpaint);
+											
+					canvas.restore();
 
-		if (cached.size() > 120) {
-			int was = cached.size();
-			for (Entry<CacheKey, Bitmap> e : cached.entrySet()) {
-				if (!used.containsKey(e.getKey())) {
-					e.getValue().recycle();
+					arrowpaint.setColor(Color.WHITE);
+					canvas.drawLine((float)0.5f*right, (float)bugvec.y, 0.5f*right, (float)bugvec.y+2.5f*x_dpmm, arrowpaint);
+
+					arrowpaint.setStyle(Style.FILL);
+					
+					
 				}
 			}
-			cached = used;
-			// Log.i("fplan.fps","Clear cache with "+was+" items new size: "+cached.size());
+		}catch(Throwable e)
+		{
+			e.printStackTrace();
 		}
-		used = new HashMap<MapDrawer.CacheKey, Bitmap>();
-		// Log.i("fplan.fps","Time to draw: "+(aft-bef)+"ms");
 	}
 
 	private void drawBigText(Canvas canvas, String t, float tx, float ty,Paint paint) {
