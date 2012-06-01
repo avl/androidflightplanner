@@ -37,7 +37,11 @@ public class SimplerActivity extends Activity implements PositionSubscriberIf {
 		pos=new LatLon(last);
 		hdg=last.getBearing();
 		gs=last.getSpeed()*3.6/1.852;
-		
+		if (GlobalLookup.lookup==null)
+		{			
+			finish();
+			return;
+		}
 		simplerView=new SimplerView(this,GlobalLookup.lookup,pos,(float)hdg,(float)gs,new SimplerView.ViewOwner()
 		{
 			public void touched()
@@ -55,10 +59,11 @@ public class SimplerActivity extends Activity implements PositionSubscriberIf {
 	@Override
 	public void onDestroy()
 	{
-		if (update_cb!=null)
+		if (update_cb!=null && handler!=null)
 			handler.removeCallbacks(update_cb);
 		GlobalPosition.unRegisterSubscriber(this);
-		simplerView.stop();
+		if (simplerView!=null)
+			simplerView.stop();	
 		super.onDestroy();
 	}
     @Override

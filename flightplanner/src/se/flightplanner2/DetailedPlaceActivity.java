@@ -252,7 +252,7 @@ public class DetailedPlaceActivity extends Activity{
 				planned_field.setText("--");
 		}
 		
-		if (delay!=null && (eta2time!=null || waspassed!=null))
+		if (delay!=null && (eta2time!=null || waspassed!=null) && planned!=null)
 		{			
 			Date comptime;
 			if (eta2time!=null)

@@ -187,9 +187,9 @@ public class TripState implements InformationPanel {
 		public float bank;
 	}
 	public BugInfo getBug() {
+		if (tripdata==null) return null;
 		if (target_wp<0 || target_wp>=tripdata.waypoints.size()) return null;
-		
-				
+						
 		
 		float curbughdg = (float)getBugHdgImpl(lastpos);
 		
@@ -1117,6 +1117,7 @@ public class TripState implements InformationPanel {
 				}
 				@Override
 				public Float getPlannedGs() {
+					if (tripdata==null) return null;
 					int i=current_waypoint_idx;
 					if (i==-1) i=target_wp;
 					if (tripdata==null || i>=tripdata.waypoints.size())
@@ -1150,6 +1151,7 @@ public class TripState implements InformationPanel {
 				}
 				@Override
 				public String getPlannedAlt() {
+					if (tripdata==null) return "?";
 					int i=current_waypoint_idx;
 					if (i==-1) 
 					{
