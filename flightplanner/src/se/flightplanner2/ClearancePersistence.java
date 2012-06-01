@@ -68,6 +68,8 @@ public class ClearancePersistence {
 	@SuppressWarnings("unchecked")
 	void update(Location loc,AirspaceLookupIf lookup)
 	{
+		if (loc==null || lookup==null)
+			return;
 		final float gs=(float)(loc.getSpeed()*3.6/1.852);
 		if (gs<2)
 		{

@@ -1186,10 +1186,15 @@ public class TripState implements InformationPanel {
 			updatemypos(last_location);		
 	}
 	public String get_registration() {
-		return tripdata.aircraft;
+		if (tripdata!=null && tripdata.aircraft!=null)
+			return tripdata.aircraft;
+		else
+			return "?";
 	}
 	public String get_atsradioname() {
-		return tripdata.atsradiotype;
+		if (tripdata!=null && tripdata.atsradiotype!=null)
+			return tripdata.atsradiotype;
+		return "?";
 	}
 	
 		

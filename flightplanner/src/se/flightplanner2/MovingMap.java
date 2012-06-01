@@ -529,6 +529,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	}
 	@Override
 	public void toggle_map() {
+		if (lookup==null) return;
 		cur_toggle_map+=1;
 		ArrayList<VariantInfo> avail=new ArrayList<VariantInfo>();
 		ArrayList<SigPoint> sps=new ArrayList<SigPoint>();
