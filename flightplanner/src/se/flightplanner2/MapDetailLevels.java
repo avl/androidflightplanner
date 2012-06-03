@@ -13,7 +13,7 @@ public class MapDetailLevels {
 	}
 
 	public static boolean getHaveElevFromDetail(int detail) {
-		if (detail>=2 || Config.debugMode())
+		if (detail>=2)
 			return true;
 		return false;
 	}

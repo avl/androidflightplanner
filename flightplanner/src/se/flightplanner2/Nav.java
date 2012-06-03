@@ -189,7 +189,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 			final String password = data
 					.getStringExtra("se.flightplanner2.password");
 			final int mapdetail = data.getIntExtra(
-					"se.flightplanner2.mapdetail", 0);
+					"se.flightplanner2.mapdetail", 2);
 			final boolean northup = data.getBooleanExtra(
 					"se.flightplanner2.northup", false);
 			final boolean vibrate = data.getBooleanExtra(
@@ -227,7 +227,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 
 			String then = data.getStringExtra("se.flightplanner2.thenopen");
 			map.update_detail(
-					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 0),
+					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 2),
 					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("northup", false));
 			if (then != null && then.equals("loadterrain")) {
 				sync();
@@ -571,7 +571,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 				.getString("user", "user"));
 		intent.putExtra("se.flightplanner2.password",
 				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getString("password", "password"));
-		int mapd = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 0);
+		int mapd = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 2);
 		intent.putExtra("se.flightplanner2.mapdetail", mapd);
 		intent.putExtra("se.flightplanner2.northup",
 				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("northup", false));
@@ -738,12 +738,12 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		GlobalTripState.tripstate=tripstate;
         
         map=new MovingMap(this,metrics,fplog,this,tripstate);
-        map.update_airspace(airspace,lookup,getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 0),
+        map.update_airspace(airspace,lookup,getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 2),
         		getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("northup", false));
         map.update_tripdata(tripdata,tripstate);
 		
 		map.thisSetContentView(this);
-		map.gps_update(null,false);
+		map.gps_update(null,false,0);
 
 		
     	this.registerReceiver(new BroadcastReceiver(){  
@@ -829,8 +829,13 @@ public class Nav extends Activity implements PositionSubscriberIf,
 				"vibrate", false)) ? vibrator : null, this);
 		clearper.update(location, lookup);
 		map.proxwarner_update(warner.getWarning());
+		int amp=0;
+		if (cvr.recording)
+		{
+			amp=cvr.getMaxAmp();
+		}
 		map.gps_update(location,
-				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("terrwarn", false));
+				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("terrwarn", false),amp);
 		last_location = location;
 		// RookieHelper.showmsg(this,
 		// ""+location.getLatitude()+","+location.getLongitude());
@@ -897,7 +902,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		if (airspace != null) {
 			proxdet.update_lookup(lookup);
 			map.update_airspace(airspace, lookup, getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE)
-					.getInt("mapdetail", 0), getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE)
+					.getInt("mapdetail", 2), getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE)
 					.getBoolean("northup", false));
 		}
 		map.enableTerrainMap(true);
@@ -1035,7 +1040,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 				"user");
 		final String pass = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getString("password",
 				"password");
-		final int detail = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 0);
+		final int detail = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 2);
 		AppState.terraindownloader = new BackgroundMapDownloader(
 				Nav.this, user, pass, detail);
 		Log.i("fplan", "Previous airspace: " + airspace);

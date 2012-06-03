@@ -19,7 +19,7 @@ public interface MainMapIf {
 
 	public abstract void update_tripdata(TripData tripdata,TripState tripstate);
 
-	public abstract void gps_update(Location object, boolean show_terrain_warning);
+	public abstract void gps_update(Location object, boolean show_terrain_warning, int cvr_amp);
 
 	public abstract void invalidate();
 

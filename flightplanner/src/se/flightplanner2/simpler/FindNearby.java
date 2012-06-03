@@ -74,6 +74,7 @@ public class FindNearby {
 		
 		for(AirspaceArea a:allareas)			
 		{
+			if (a.a==0) continue; //invisible airspaces require no clearance and are not interesting in airspace view
 		    SectorResult res=a.poly.sector(aheadpie,dist_merc);
 		    if (res==null) continue; //polygon has no points
 		    if (res.inside)

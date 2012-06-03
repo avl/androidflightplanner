@@ -298,7 +298,7 @@ public class MapDrawer {
 			InformationPanel panel, View view, String[] prox_warning,
 			int gps_sat_cnt, int gps_sat_fix_cnt, ElevBitmapCache elevbmc,
 			boolean terrwarn,int battery,boolean charging,final AdChartLoader adloader, 
-			String[] chosen_ad_maps, int chosen_ad_map_i,long chosen_ad_map_when) {
+			String[] chosen_ad_maps, int chosen_ad_map_i,long chosen_ad_map_when, int last_cvr_amp) {
 
 		
 		long bef = SystemClock.elapsedRealtime();
@@ -660,6 +660,24 @@ public class MapDrawer {
 			addTextIfFits(canvas, "GPS:","200%", 
 					r, "GPS:",String.format("%d%%",gps_sat_fix_cnt/2), y, smalltextpaint, bigtextpaint,true, false);
 			bigtextpaint.setColor(Color.WHITE);
+		}
+		
+		if (last_cvr_amp!=0)
+		{
+			Log.i("fplan.cvr","Last amp: "+last_cvr_amp);
+			float dist=((float)last_cvr_amp)/32768f;
+			if (dist>1f) dist=1;
+			if (dist<0.1f) dist=0.1f;
+			float cvrh1=r.bottom;
+			float cvrh2=r.bottom-r.bottom*dist;
+			if (dist<0.12f)
+				linepaint.setColor(Color.BLUE);
+			else if (dist<0.9)
+				linepaint.setColor(Color.GREEN);
+			else
+				linepaint.setColor(Color.RED);			
+			canvas.drawLine(right, cvrh1, right, cvrh2, linepaint);
+			linepaint.setColor(Color.WHITE);
 		}
 		
 		// /canvas.drawText(String.format("Z%d",zoomlevel), 0,y,bigtextpaint);

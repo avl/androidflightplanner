@@ -193,7 +193,8 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 					prox_warning,
 					gps_sat_cnt,gps_sat_fix_cnt,
 					elevbmc,terrwarn,batt,charging,adloader,
-					chosen_ad_maps,chosen_ad_map_i,chosen_ad_map_when
+					chosen_ad_maps,chosen_ad_map_i,chosen_ad_map_when,
+					last_cvr_amp
 					);
 			
 			if (mapcache!=null)
@@ -231,10 +232,11 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		//canvas.drawText("TRIP", 10, this.getBottom(), textpaint);
 		//canvas.drawText("TRIP", 10, 100, textpaint);
 	}
-	
-	public void gps_update(Location loc,boolean terrwarn)
+	private int last_cvr_amp;
+	public void gps_update(Location loc,boolean terrwarn,int cvr_amp)
 	{
 		this.terrwarn=terrwarn;
+		this.last_cvr_amp=cvr_amp;
 		if (loc==null) return;
 		
 		//lastpos=bearingspeed.calcBearingSpeed(loc);

@@ -55,7 +55,7 @@ public class HelpActivity extends Activity {
 				"decide how much space on your phone " +
 				"you wish to give swflightplanner. The best user experience will be had if you choose at least " +
 				"\"Very High\" detail level, consuming a few gigabyte. If you choose a lower level, not all functionality " +
-				"will be available. For instance, terrain avoidance and airport maps require at least Very High.</p>" +
+				"will be available. For instance, terrain avoidance, elevation data and airport maps require at least Very High.</p>" +
 				"<p>You can also choose a few other configuration options. I recommend enabling the airspace warning, " +
 				"and automatic weather sync. If you frequently fly in mountains, the terrain warnings could be useful.</p>"+
 				"<p>Finally, select Menu->Sync to download everything to your phone. Subsequent syncs only download information which has changed.</p>"+ 

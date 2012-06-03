@@ -19,9 +19,21 @@ public class CVR {
 	{
 		if (mRecorder!=null)
 		{
+			try{
+				
+				mRecorder.stop();		
+			}
+			catch(Throwable e)
+			{				
+			}
+			try{
+				
+				mRecorder.release();
+			}
+			catch(Throwable e)
+			{				
+			}
 			Log.i("fplan.cvr","Stop recording");
-			mRecorder.stop();		
-			mRecorder.release();
 			mRecorder=null;
 		}
 	}
@@ -62,5 +74,14 @@ public class CVR {
 			
 		}				
 		
+	}
+	public int getMaxAmp() {
+		if (!recording) return 0;
+		try{
+			return mRecorder.getMaxAmplitude();
+		}catch(Throwable e)
+		{
+			return 1;
+		}
 	}
 }
