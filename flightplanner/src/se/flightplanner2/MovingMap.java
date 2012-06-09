@@ -435,6 +435,12 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	{
 		if (bitmaps!=null)
 			bitmaps.releaseMemory();
+		stop();
+	}
+	public void stop()
+	{
+		if (drawer!=null) 
+			drawer.stop();		
 	}
 
 	@Override
@@ -521,6 +527,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		adloader=new AdChartLoader(chart,this);
 		gui.chartMode(true,adloader.getChartCenter(),adloader.getChartUpBearing(),
 				adloader.best_zoomlevel(getRight()-getLeft()),false);
+		if (!gui.isCentered()) drawer.find_me(gui,lastpos,getRight()-getLeft(),getBottom()-getTop());
 		doInvalidate();
 	}
 
@@ -573,6 +580,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 				cur_toggle_map=-1;
 			}
 			gui.chartMode(false,null,0,0,elevonly);
+			if (!gui.isCentered()) drawer.find_me(gui,lastpos,getRight()-getLeft(),getBottom()-getTop());
 		}
 		else
 		{
@@ -582,6 +590,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			adloader=new AdChartLoader(avail.get(cur_toggle_map).chartname,this);
 			gui.chartMode(true,adloader.getChartCenter(),adloader.getChartUpBearing(),
 					adloader.best_zoomlevel(getRight()-getLeft()),false);
+			if (!gui.isCentered()) drawer.find_me(gui,lastpos,getRight()-getLeft(),getBottom()-getTop());
 		}
 		
 		doInvalidate();

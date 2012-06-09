@@ -20,6 +20,7 @@ import android.graphics.drawable.shapes.ArcShape;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Html;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -147,6 +148,10 @@ public class ViewAdInfo extends Activity {
 			{
 		    	if (sp.extra.icao!=null)
 		    		sb.append("<p>("+sp.extra.icao+")</p>");
+		    	if (sp.extra.remark!=null && sp.extra.remark.length()>0)
+		    	{		    		
+		    		sb.append("<h2>Remarks</h2><p> "+TextUtils.htmlEncode(sp.extra.remark)+"</p>");
+		    	}
 		    	if (sp.extra.metar!=null)
 		    	{
 		    		sb.append("<h2>METAR:</h2><p> "+sp.extra.metar+"</p>");

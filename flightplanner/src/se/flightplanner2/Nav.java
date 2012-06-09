@@ -660,7 +660,16 @@ public class Nav extends Activity implements PositionSubscriberIf,
 	 * //text.setText("Default!"); return dialog; } else { assert false; return
 	 * null; } }
 	 */
-	CVR cvr;
+	private BroadcastReceiver batteryReceiver=new BroadcastReceiver(){  
+	    @Override  
+	    public void onReceive(Context arg0, Intent intent) {  
+	      int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
+	      int plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
+	      map.set_battery_level(level,plugged!=0);
+	        
+	    }  
+	  };
+	private CVR cvr;
 	@Override
     public void onCreate(Bundle savedInstanceState) {
     	super.onCreate(savedInstanceState);
@@ -746,15 +755,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		map.gps_update(null,false,0);
 
 		
-    	this.registerReceiver(new BroadcastReceiver(){  
-    	    @Override  
-    	    public void onReceive(Context arg0, Intent intent) {  
-    	      int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
-    	      int plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
-    	      map.set_battery_level(level,plugged!=0);
-    	        
-    	    }  
-    	  },new IntentFilter(Intent.ACTION_BATTERY_CHANGED));  
+    	this.registerReceiver(batteryReceiver,new IntentFilter(Intent.ACTION_BATTERY_CHANGED));  
 		
 		
 		proxdet=new AirspaceProximityDetector(lookup,5);
@@ -860,6 +861,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 
 	@Override
 	public void onDestroy() {
+		map.stop();
 		cvr.stop();
 
     	AppState.gui=null;
@@ -873,6 +875,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		if (locman!=null && gpsstatuslistener != null)
 			locman.removeGpsStatusListener(gpsstatuslistener);
 		
+		if (batteryReceiver!=null)
+			this.unregisterReceiver(batteryReceiver);
 		GlobalLookup.lookup = null;
 		super.onDestroy();
 	}

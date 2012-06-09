@@ -35,6 +35,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.Shader.TileMode;
 import android.graphics.Typeface;
 import android.graphics.Paint.Style;
@@ -270,6 +271,39 @@ public class MapDrawer {
 			redraw_view.invalidate();
 		}
 	};
+	
+	static public class Circle
+	{
+		float x,y,radius;
+		float dx,dy,dradius;
+		int steps_left;
+		int steps_done;
+	}
+	Circle circle;
+	Runnable animate_circle = new Runnable() {
+		@Override
+		public void run() {
+			
+			if (circle==null)
+				return;
+			circle.x+=circle.dx;
+			circle.y+=circle.dy;
+			circle.radius-=circle.dradius;
+			circle.steps_left-=1;
+			redraw_view.invalidate();
+			Log.i("fplan.circle","Pos: "+circle.x+","+circle.y+"  radius: "+circle.radius);
+			int eff_steps_left=Math.min(circle.steps_left,40-circle.steps_done);
+			if (eff_steps_left>=0)
+			{
+				if (eff_steps_left==0)
+					handler.postDelayed(this,1000);
+				else
+					handler.postDelayed(this,100);
+			}
+			else
+				circle=null;
+		}
+	};
 
 	boolean onlyWithin(long ms, boolean dragging) {
 		if (!dragging)
@@ -280,6 +314,15 @@ public class MapDrawer {
 		handler.removeCallbacks(schedule_redraw);
 		handler.postDelayed(schedule_redraw, 300);
 		return false;
+	}
+	public void stop()
+	{
+		if (schedule_redraw!=null)
+			handler.removeCallbacks(schedule_redraw);
+		if (animate_circle!=null)
+			handler.removeCallbacks(animate_circle);
+		circle=null;
+		
 	}
 
 	private int left;
@@ -301,14 +344,15 @@ public class MapDrawer {
 			String[] chosen_ad_maps, int chosen_ad_map_i,long chosen_ad_map_when, int last_cvr_amp) {
 
 		
+		
 		long bef = SystemClock.elapsedRealtime();
 		long now=bef;
 
 		redraw_start = bef;
 		redraw_view = view;
 		int elev_ft = (int) (lastpos.getAltitude() / 0.3048f);
-		if (Config.debugMode())
-			;//elev_ft = 7000 - (int) ((long) ((SystemClock.elapsedRealtime() * 0.001f * 75f)) % 7000);
+		//if (Config.debugMode())
+		//	;//elev_ft = 7000 - (int) ((long) ((SystemClock.elapsedRealtime() * 0.001f * 75f)) % 7000);
 		
 		int amsl=Integer.MAX_VALUE;								
 		GetElevation gelev=GlobalGetElev.get_elev;
@@ -365,6 +409,7 @@ public class MapDrawer {
 		Merc screen_center = tf.screen2merc(new Vector(sizex / 2, sizey / 2));
 		Merc screen_center13 = Project.merc2merc(screen_center, zoomlevel, 13);
 
+		float fivenm = (float) Project.approx_scale(mypos.y, zoomlevel, 5);
 		double tennm13 = Project.approx_scale(screen_center13.y, 13, 10);
 		
 
@@ -430,14 +475,13 @@ public class MapDrawer {
 		if (gui != null)
 			northup = gui.getnorthup();
 		if (!isDragging && !northup) {
-			arrowpaint.setColor(Color.BLACK);
+			arrowpaint.setColor(Color.argb(0x80,0,0,0));
 			Path path = new Path();
-			path.moveTo((int) arrow.x - 1.5f*x_dpmm, (int) arrow.y + 0.3f*x_dpmm);
-			path.lineTo((int) arrow.x + 1.5f*x_dpmm, (int) arrow.y + 0.3f*x_dpmm);
+			path.moveTo((int) arrow.x - 2.5f*x_dpmm, (int) arrow.y + 0.3f*x_dpmm);
+			path.lineTo((int) arrow.x + 2.5f*x_dpmm, (int) arrow.y + 0.3f*x_dpmm);
 			path.lineTo((int) arrow.x, (int) arrow.y - 2.25f*x_dpmm);
 			path.close();
 			canvas.drawPath(path, arrowpaint);
-			int fivenm = (int) Project.approx_scale(mypos.y, zoomlevel, 5);
 			int fivemin = 0;
 
 			if (lastpos.hasSpeed()) {
@@ -449,21 +493,32 @@ public class MapDrawer {
 					(int) arrow.x + 6, (int) arrow.y - fivenm + 4, arrowpaint);
 			canvas.drawRect((int) arrow.x - 10, (int) arrow.y - fivemin,
 					(int) arrow.x, (int) arrow.y - fivemin + 4, arrowpaint);
-			canvas.drawRect((int) arrow.x - 2, (int) 0, (int) arrow.x + 2,
+			canvas.drawRect((int) arrow.x - 0.5f*x_dpmm, (int) 0, (int) arrow.x + 0.5f*x_dpmm,
 					(int) arrow.y, arrowpaint);
-			arrowpaint.setColor(Color.rgb(230,230,255));
+			
+			
+			float gradientpixels = getGradientPixels(fivenm);
+			arrowpaint.setColor(Color.WHITE);
+			arrowpaint.setShader(new LinearGradient(
+					(float)arrow.x, (float)arrow.y, 
+					(float)(arrow.x+1f*x_dpmm), (float)(arrow.y), 
+					Color.rgb(0xff,0x00,0x00),Color.rgb(0xff,0xff,0xd0),  Shader.TileMode.MIRROR));
+	
 			path = new Path();
-			path.moveTo((int) arrow.x - 1.0f*x_dpmm, (int) arrow.y);
-			path.lineTo((int) arrow.x + 1.0f*x_dpmm, (int) arrow.y);
-			path.lineTo((int) arrow.x, (int) arrow.y - 1.5f*x_dpmm);
+			path.moveTo((int) arrow.x - 2f*x_dpmm, (int) arrow.y);
+			path.lineTo((int) arrow.x + 2f*x_dpmm, (int) arrow.y);
+			path.lineTo((int) arrow.x, (int) arrow.y - 2f*x_dpmm);
 			path.close();
 			canvas.drawPath(path, arrowpaint);
+			arrowpaint.setShader(new LinearGradient((float)arrow.x, (float)arrow.y, (float)arrow.x, (float)(arrow.y-gradientpixels), 
+					Color.rgb(0xff,0x00,0x00),Color.rgb(0xff,0xff,0xd0),  Shader.TileMode.REPEAT));			
 			canvas.drawRect((int) arrow.x, (int) arrow.y - fivenm + 1,
 					(int) arrow.x + 5, (int) arrow.y - fivenm + 3, arrowpaint);
 			canvas.drawRect((int) arrow.x - 9, (int) arrow.y - fivemin + 1,
 					(int) arrow.x, (int) arrow.y - fivemin + 3, arrowpaint);
-			canvas.drawRect((int) arrow.x - 1, (int) 0, (int) arrow.x + 1,
+			canvas.drawRect((int) arrow.x - 0.25f*x_dpmm, (int) 0, (int) arrow.x + 0.25f*x_dpmm,
 					(int) arrow.y, arrowpaint);
+			arrowpaint.setShader(null);
 			arrowpaint.setColor(Color.WHITE);
 		}
 
@@ -475,7 +530,7 @@ public class MapDrawer {
 				Merc dest;
 				if (lastpos != null && lastpos.hasBearing()) {
 					float hdg = lastpos.getBearing();
-					Vector d = new Vector(0, -150);
+					Vector d = new Vector(0, -(bottom-top));
 					Vector d2 = d.rot(hdg / (180.0f / Math.PI));
 					dest = new Merc(pos.x + d2.x, pos.y + d2.y);
 				} else {
@@ -487,37 +542,56 @@ public class MapDrawer {
 				Vector left = forward.rot90l();
 				Vector right = forward.rot90r();
 				arrowpaint.setColor(Color.BLACK);
-				arrowpaint.setStrokeWidth(4);
+				arrowpaint.setStrokeWidth(0.8f*x_dpmm);
 				Path path = new Path();
-				path.moveTo((int) (screenpos.x + 10 * left.x - 2 * forward.x),
-						(int) (screenpos.y + 10 * left.y - 2 * forward.y));
-				path.lineTo((int) (screenpos.x + 10 * right.x - 2 * forward.x),
-						(int) (screenpos.y + 10 * right.y - 2 * forward.y));
-				path.lineTo((int) (screenpos.x + 15 * forward.x),
-						(int) (screenpos.y + 15 * forward.y));
+				path.moveTo((int) (screenpos.x + 2.5f*x_dpmm * left.x - 0.5f*x_dpmm * forward.x),
+						(int) (screenpos.y + 2.5f*x_dpmm * left.y - 0.5f*x_dpmm * forward.y));
+				path.lineTo((int) (screenpos.x + 2.5f*x_dpmm * right.x - 0.5f*x_dpmm * forward.x),
+						(int) (screenpos.y + 2.5f*x_dpmm * right.y - 0.5f*x_dpmm * forward.y));
+				path.lineTo((int) (screenpos.x + 2.5f*x_dpmm * forward.x),
+						(int) (screenpos.y + 2.5f*x_dpmm * forward.y));
 				path.close();
 				canvas.drawPath(path, arrowpaint);
 
 				canvas.drawLine((float) screenpos.x, (float) screenpos.y,
 						(float) screenpos2.x, (float) screenpos2.y, arrowpaint);
-				arrowpaint.setColor(Color.rgb(230,230,255));
-				arrowpaint.setStrokeWidth(2);
+				float gradientpixels = getGradientPixels(fivenm);
+				arrowpaint.setShader(new LinearGradient(
+						(float)screenpos.x, (float)screenpos.y, 
+						(float)(screenpos.x+1f*x_dpmm*forward.y), (float)(screenpos.y-1f*x_dpmm*forward.x), 
+						Color.rgb(0xff,0x00,0x00),Color.rgb(0xff,0xff,0xd0), Shader.TileMode.MIRROR));
+				
 				path = new Path();
-				path.moveTo((int) (screenpos.x + 7 * left.x),
-						(int) (screenpos.y + 7 * left.y));
-				path.lineTo((int) (screenpos.x + 7 * right.x),
-						(int) (screenpos.y + 7 * right.y));
-				path.lineTo((int) (screenpos.x + 12 * forward.x),
-						(int) (screenpos.y + 12 * forward.y));
+				path.moveTo((int) (screenpos.x + 2f*x_dpmm * left.x),
+						(int) (screenpos.y + 2f*x_dpmm * left.y));
+				path.lineTo((int) (screenpos.x + 2f*x_dpmm * right.x),
+						(int) (screenpos.y + 2f*x_dpmm * right.y));
+				path.lineTo((int) (screenpos.x + 2f*x_dpmm * forward.x),
+						(int) (screenpos.y + 2f*x_dpmm * forward.y));
 				path.close();
 				canvas.drawPath(path, arrowpaint);
+				arrowpaint.setShader(new LinearGradient(
+						(float)screenpos.x, (float)screenpos.y, 
+						(float)(screenpos.x+gradientpixels*forward.x), (float)(screenpos.y+gradientpixels*forward.y), 
+						Color.rgb(0xff,0x00,0x00),Color.rgb(0xff,0xff,0xd0), Shader.TileMode.REPEAT));
 
+				arrowpaint.setStrokeWidth(0.4f*x_dpmm);
 				canvas.drawLine((float) screenpos.x, (float) screenpos.y,
 						(float) screenpos2.x, (float) screenpos2.y, arrowpaint);
+				arrowpaint.setShader(null);
 				arrowpaint.setColor(Color.WHITE);
+				arrowpaint.setStrokeWidth(2);
 
 			}
 
+		}
+		if (circle!=null)
+		{
+			linepaint.setStrokeWidth(Math.max(circle.radius/20,x_dpmm));
+			linepaint.setColor(Color.RED);
+			linepaint.setStyle(Style.STROKE);
+			Vector sp = tf.merc2screen(new Merc(circle.x,circle.y));			
+			canvas.drawCircle((float)sp.x,(float)sp.y,circle.radius,linepaint);
 		}
 
 		InformationPanel we = panel;
@@ -865,6 +939,19 @@ public class MapDrawer {
 		}
 		used = new HashMap<MapDrawer.CacheKey, Bitmap>();
 		// Log.i("fplan.fps","Time to draw: "+(aft-bef)+"ms");
+	}
+
+	private float getGradientPixels(float fivenm) {
+		float gradientpixels=2*fivenm;
+		if (gradientpixels>0.15f*(bottom-top))
+		{
+			gradientpixels=fivenm/5.0f;
+			if (gradientpixels>0.15f*(bottom-top))
+			{
+				gradientpixels=(fivenm/(5.0f*18.52f)); //100m
+			}
+		}
+		return gradientpixels;
 	}
 
 	private void drawBitmapMap(Canvas canvas, GetMapBitmap bitmaps,
@@ -1903,6 +1990,31 @@ public class MapDrawer {
 		return String.format("%dh%02dm", hour,minute);
 	}
 
+	public void find_me(GuiSituation gui,Location lastpos,float width,float height) {
+		handler.removeCallbacks(animate_circle);
+		TransformIf tf = gui.getTransform();
+		int zoomlevel=gui.getZoomlevel();
+		Merc pos = Project.latlon2merc(new LatLon(
+				lastpos.getLatitude(), lastpos.getLongitude()),
+				zoomlevel);
+		circle=new Circle();
+		
+		circle.radius=width/2.2f;
+		Merc p=tf.screen2merc(new Vector(width/2f,height/2f));
+		circle.x=(float)p.x;
+		circle.y=(float)p.y;
+		circle.dx=(float)pos.x-circle.x;
+		circle.dy=(float)pos.y-circle.y;
+		int steps_needed=(int)(Math.sqrt(circle.dx*circle.dx+circle.dy*circle.dy)/(width/10.0f)+1);
+		if (steps_needed<10)
+			steps_needed=10;
+		circle.dx/=steps_needed;
+		circle.dy/=steps_needed;
+		circle.steps_left=steps_needed;
+		circle.steps_done=0;
+		circle.dradius=(circle.radius-width/10)/steps_needed;
+		handler.postDelayed(animate_circle, 400);				
+	}
 	
 
 }

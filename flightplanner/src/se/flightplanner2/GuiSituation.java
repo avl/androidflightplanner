@@ -463,6 +463,10 @@ public class GuiSituation
 			v.y+=ysize/4; //not dragging
 		return v;		
 	}
+	public boolean isCentered() {
+		return drag_center13==null;
+	}
+
 
 	public int getZoomlevel() {
 		return zoomlevel;
@@ -576,6 +580,7 @@ public class GuiSituation
 	public boolean getElevOnly() {
 		return elevonly;
 	}
+
 
 	
 }

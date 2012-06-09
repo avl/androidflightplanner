@@ -100,7 +100,7 @@ public class Airspace implements Serializable{
 		Log.i("fplan","Reading corrpass: "+corrpass);
 		if (corrpass!=1)
 			throw new RuntimeException("Wrong password");
-		if (version<1 || version>8)
+		if (version<1 || version>9)
 			throw new RuntimeException("Couldn't load airspace data, bad version");
 		if (version>=5)
 		{
@@ -403,8 +403,8 @@ public class Airspace implements Serializable{
 		int numspaces=spaces.size();
 		os.writeInt(0x8A31CDA);
 		
-		int version=8;
-		os.writeInt(version); //version 8
+		int version=9;
+		os.writeInt(version); //version 	
 		os.writeByte(1); //correct password
 		os.writeUTF(aipgen);
 		os.writeByte(1); //from scratch
@@ -478,7 +478,7 @@ public class Airspace implements Serializable{
 		else
 		{
 			ArrayList<NameValuePair> nvps=new ArrayList<NameValuePair>();
-			nvps.add(new BasicNameValuePair("version","8"));
+			nvps.add(new BasicNameValuePair("version","9"));
 			nvps.add(new BasicNameValuePair("user",user));
 			nvps.add(new BasicNameValuePair("password",pass));
 			nvps.add(new BasicNameValuePair("sectors","1"));

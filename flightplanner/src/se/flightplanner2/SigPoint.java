@@ -46,6 +46,7 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 	}
 	static public class Runway implements Serializable
 	{
+		public String surface;
 		public End[] ends;
 	}
 	static public class ExtraData implements Serializable
@@ -55,6 +56,7 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 		public String icao;
 		public String taf;
 		public Runway[] runways;
+		public String remark;
 	}
 	public ExtraData extra;
 	
@@ -135,9 +137,29 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 						os.writeUTF(end.name);
 						end.pos.serialize(os);
 					}
+					if (runway.surface!=null && runway.surface.length()>0)
+					{
+						os.writeByte(1);
+						os.writeUTF(runway.surface);
+					}
+					else
+					{
+						os.writeByte(0);
+					}
 				}
 			}
+			if (extra.remark!=null && extra.remark.length()>0)
+			{
+				os.writeByte(1);
+				os.writeUTF(extra.remark);
+			}
+			else
+			{
+				os.writeByte(0);
+			}
+				
 		}
+
 
 		
 		
@@ -186,6 +208,7 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 		String metar=null;
 		String taf=null;
 		String icao=null;
+		String remark=null;
 		String[] notams=null;
 		Runway[] runways=null;
 		if (version>=5)
@@ -217,11 +240,23 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 					}
 					runway.ends=ends;
 					runways[j]=runway;
+					if (version>=9)
+					{
+						if (is.readByte()!=0)
+							runway.surface=is.readUTF().intern();
+					}
+					
 				}
+				
+			}
+			if (version>=9)
+			{
+				if (is.readByte()!=0)
+					remark=is.readUTF();
 			}
 			
 		}
-		if (metar!=null || taf!=null || icao!=null || (notams!=null && notams.length>0) || runways!=null)
+		if (metar!=null || taf!=null || icao!=null || (notams!=null && notams.length>0) || runways!=null || (remark!=null && !remark.equals("")))
 		{				
 			p.extra=new ExtraData();
 			p.extra.metar=metar;
@@ -229,6 +264,7 @@ public class SigPoint implements Serializable,Comparable<SigPoint>
 			p.extra.icao=icao;
 			p.extra.notams=notams;
 			p.extra.runways=runways;
+			p.extra.remark=remark;
 		}
 		
 		p.alt=is.readFloat();		

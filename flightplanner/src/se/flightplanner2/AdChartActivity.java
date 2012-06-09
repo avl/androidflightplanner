@@ -1,6 +1,8 @@
 package se.flightplanner2;
 
 
+
+
 import se.flightplanner2.GlobalPosition.PositionIf;
 import se.flightplanner2.GlobalPosition.PositionSubscriberIf;
 import android.app.Activity;

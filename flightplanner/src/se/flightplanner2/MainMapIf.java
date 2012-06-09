@@ -39,5 +39,7 @@ public interface MainMapIf {
 
 	public abstract void selectChart(String chart);
 
+	public abstract void stop();
+
 
 }

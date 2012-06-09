@@ -415,39 +415,40 @@ public class TripState implements InformationPanel {
 				double cutoff=Project.approx_scale(m1.gety(),13,0.5);
 				BoundingBox bb=new BoundingBox(m1,m2);
 				bb=bb.expand(50);			
-				for(SigPoint sp:lookup.allSigPoints.findall(bb))
-				{
-					Vector sppos=sp.pos.toVector();
-					Vector clo=line.closest(sppos);
-					LatLon clolatlon=Project.mercvec2latlon(clo,13);
-					float dist=(float)clo.minus(sppos).length();
-					if (dist<=cutoff)
+				if (lookup!=null && lookup.allSigPoints!=null)
+					for(SigPoint sp:lookup.allSigPoints.findall(bb))
 					{
-						float along_a=(float)Project.exacter_distance(w1.latlon, clolatlon);
-						float along_b=(float)Project.exacter_distance(w2.latlon, clolatlon);
-						float along=along_a/(along_a+along_b);
-						EnrouteSigPoints ensp=new EnrouteSigPoints();
-						ensp.nesp=new NextSigPoints();
-						ensp.ratio=along;
-						ensp.sp=sp;
-						ensp.latlon=sp.latlon;
-						ensp.target_wp=i;
-						ensp.name=sp.name;
-						ensp.landing=false;
-						enroute.add(ensp);
+						Vector sppos=sp.pos.toVector();
+						Vector clo=line.closest(sppos);
+						LatLon clolatlon=Project.mercvec2latlon(clo,13);
+						float dist=(float)clo.minus(sppos).length();
+						if (dist<=cutoff)
+						{
+							float along_a=(float)Project.exacter_distance(w1.latlon, clolatlon);
+							float along_b=(float)Project.exacter_distance(w2.latlon, clolatlon);
+							float along=along_a/(along_a+along_b);
+							EnrouteSigPoints ensp=new EnrouteSigPoints();
+							ensp.nesp=new NextSigPoints();
+							ensp.ratio=along;
+							ensp.sp=sp;
+							ensp.latlon=sp.latlon;
+							ensp.target_wp=i;
+							ensp.name=sp.name;
+							ensp.landing=false;
+							enroute.add(ensp);
+						}
 					}
-				}
-				if (w2.lastsub!=0)
-				{
-					EnrouteSigPoints ensp2=new EnrouteSigPoints();
-					ensp2.nesp=new NextSigPoints();
-					ensp2.ratio=1;
-					ensp2.target_wp=i;
-					ensp2.name=w2.name;			
-					ensp2.latlon=w2.latlon;
-					ensp2.landing=w2.land_at_end;
-					enroute.add(ensp2);
-				}
+					if (w2.lastsub!=0)
+					{
+						EnrouteSigPoints ensp2=new EnrouteSigPoints();
+						ensp2.nesp=new NextSigPoints();
+						ensp2.ratio=1;
+						ensp2.target_wp=i;
+						ensp2.name=w2.name;			
+						ensp2.latlon=w2.latlon;
+						ensp2.landing=w2.land_at_end;
+						enroute.add(ensp2);
+					}
 			}
 		}
 		
