@@ -469,9 +469,16 @@ public class MapDrawer {
 							Vector p1 = tf.merc2screen(m1);
 							Vector p2 = tf.merc2screen(m2);
 							// linepaint.setStrokeWidth(10);
-							linepaint.setColor(Color.BLACK);
+							if (runway.surface!=null && runway.surface.equals("grass"))
+								linepaint.setColor(Color.GREEN);
+							else
+								if (runway.surface!=null && runway.surface.equals("gravel"))
+									linepaint.setColor(Color.rgb(140, 100, 20));
+								else
+									linepaint.setColor(Color.BLACK);
 							canvas.drawLine((float) p1.x, (float) p1.y,
 									(float) p2.x, (float) p2.y, linepaint);
+							linepaint.setColor(Color.BLACK);
 							
 						}
 					}
