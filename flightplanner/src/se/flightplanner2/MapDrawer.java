@@ -49,6 +49,7 @@ public class MapDrawer {
 
 	private Paint neutralpaint;
 	private Paint bigtextpaint;
+	private Paint mediumtextpaint;
 	private Paint smalltextpaint;
 	private Paint hugetextpaint;
 	private Paint ahtextpaint;
@@ -91,6 +92,7 @@ public class MapDrawer {
 	HashMap<CacheKey, Bitmap> cached = new HashMap<MapDrawer.CacheKey, Bitmap>();
 	HashMap<CacheKey, Bitmap> used = new HashMap<MapDrawer.CacheKey, Bitmap>();
 	private float bigtextsize;
+	private float mediumtextsize;
 
 	public MapDrawer(float px_dpmm, float py_dpmm, float screen_size_x,
 			float screen_size_y) {
@@ -111,6 +113,7 @@ public class MapDrawer {
 		float textsize = y_dpmm * 2.4f;
 		float smalltextsize = y_dpmm * 2.2f;
 		bigtextsize = y_dpmm * 3.4f; // 6.5 mm text size
+		mediumtextsize = y_dpmm * 2.9f; // 6.5 mm text size
 		float hugetextsize = y_dpmm * 3.4f; // 6.5 mm text size
 
 		textpaint = new Paint();
@@ -125,6 +128,13 @@ public class MapDrawer {
 		bigtextpaint.setColor(foreground);
 		bigtextpaint.setTextSize(bigtextsize);
 		bigtextpaint.setTypeface(Typeface.create(Typeface.SANS_SERIF,
+				Typeface.NORMAL));
+
+		mediumtextpaint = new Paint();
+		mediumtextpaint.setAntiAlias(true);
+		mediumtextpaint.setColor(Color.WHITE);
+		mediumtextpaint.setTextSize(mediumtextsize);
+		mediumtextpaint.setTypeface(Typeface.create(Typeface.SANS_SERIF,
 				Typeface.NORMAL));
 
 		smalltextpaint = new Paint();
@@ -291,7 +301,7 @@ public class MapDrawer {
 			circle.radius-=circle.dradius;
 			circle.steps_left-=1;
 			redraw_view.invalidate();
-			Log.i("fplan.circle","Pos: "+circle.x+","+circle.y+"  radius: "+circle.radius);
+			//Log.i("fplan.circle","Pos: "+circle.x+","+circle.y+"  radius: "+circle.radius);
 			int eff_steps_left=Math.min(circle.steps_left,40-circle.steps_done);
 			if (eff_steps_left>=0)
 			{
@@ -429,11 +439,12 @@ public class MapDrawer {
 		{
 			drawAdMap(canvas, adloader, tf, zoomlevel, screen_center);
 		}
-
+		float y = Math.max(hugetextpaint.getTextSize() * 0.85f,bigtextpaint.getTextSize()*1.85f);
 		if (bitmaps != null) {
+			Rect cliprect=new Rect(left,(int) y,right,bottom);
 			drawBitmapMap(canvas, bitmaps, elevbmc, terrwarn, adloader, tf,
 					zoomlevel, sizex, sizey, isUserPresentlyMovingMap,
-					screen_center,elevonly);
+					screen_center,elevonly,cliprect);
 		}
 
 		elevbmc.delete_all_unused();
@@ -600,9 +611,9 @@ public class MapDrawer {
 					zoomlevel, clickables, we);
 
 		} else {
-			float y = bottom - (bigtextpaint.getTextSize() * 1.5f + 2);
+			float y2 = bottom - (bigtextpaint.getTextSize() * 1.5f + 2);
 
-			final Rect tr3 = drawButton(canvas, right, y, "Wpts", -1, left,
+			final Rect tr3 = drawButton(canvas, right, y2, "Wpts", -1, left,
 					right, false);
 			if (tr3 != null) {
 				clickables.add(new GuiSituation.Clickable() {
@@ -618,17 +629,17 @@ public class MapDrawer {
 				});
 				int rightedge = tr3.left - 5;
 				if (zoom_in_text == null) {
-					Rect tr1 = drawButton(canvas, left, y, "Zoom +", 1, left,
+					Rect tr1 = drawButton(canvas, left, y2, "Zoom +", 1, left,
 							rightedge, true);
 
 					int edge = (tr1 != null) ? tr1.right + 5 : right;
-					Rect tr2 = drawButton(canvas, edge, y, "Zoom -", 1, edge,
+					Rect tr2 = drawButton(canvas, edge, y2, "Zoom -", 1, edge,
 							rightedge, true);
 					if (tr2 == null) {
-						tr1 = drawButton(canvas, left, y, "+", 1, left,
+						tr1 = drawButton(canvas, left, y2, "+", 1, left,
 								rightedge, true);
 						edge = tr1.right + 5;
-						tr2 = drawButton(canvas, edge, y, "-", 1, edge,
+						tr2 = drawButton(canvas, edge, y2, "-", 1, edge,
 								rightedge, true);
 						if (tr2 != null) {
 							zoom_buttons = true;
@@ -647,7 +658,7 @@ public class MapDrawer {
 
 				}
 				if (zoom_buttons) {
-					final Rect tr1 = drawButton(canvas, left, y, zoom_in_text,
+					final Rect tr1 = drawButton(canvas, left, y2, zoom_in_text,
 							1, left, rightedge, false);
 					clickables.add(new GuiSituation.Clickable() {
 						@Override
@@ -662,7 +673,7 @@ public class MapDrawer {
 					});
 					int edge = tr1.right + 5;
 
-					final Rect tr2 = drawButton(canvas, edge, y, zoom_out_text,
+					final Rect tr2 = drawButton(canvas, edge, y2, zoom_out_text,
 							1, edge, rightedge, false);
 					clickables.add(new GuiSituation.Clickable() {
 						@Override
@@ -677,10 +688,11 @@ public class MapDrawer {
 					});
 				}
 			}
+         //end of y2 scope
 		}
-
+          
 		linepaint.setColor(Color.RED);
-		float y = Math.max(hugetextpaint.getTextSize() * 0.85f,bigtextpaint.getTextSize()*1.85f);
+		
 		float yledge =bigtextpaint.getTextSize() * 0.85f;
 		bigtextpaint.setColor(Color.WHITE);
 		RectF r = new RectF(0, 0, right, y + 0.7f*y_dpmm);
@@ -887,7 +899,7 @@ public class MapDrawer {
 				float y2 = (y + bigtextpaint.getTextSize() * 1.1f);
 
 				String text = "Load:" + download_status;
-				final Rect tr1 = drawButton(canvas, 0, y2, text, 1, 0,
+				final Rect tr1 = drawButton(canvas, 0, y, text, 1, 0,
 						Integer.MAX_VALUE, false);
 				clickables.add(new GuiSituation.Clickable() {
 					@Override
@@ -958,7 +970,7 @@ public class MapDrawer {
 			ElevBitmapCache elevbmc, boolean terrwarn,
 			final AdChartLoader adloader, TransformIf tf, int zoomlevel,
 			int sizex, int sizey, boolean isUserPresentlyMovingMap,
-			Merc screen_center,boolean elevonly) {
+			Merc screen_center,boolean elevonly,Rect cliprect) {
 		iMerc centertile = new iMerc((int) screen_center.x & (~255),
 				(int) screen_center.y & (~255));
 		// int diagonal = (int) Math.sqrt((sizex / 2) * (sizey / 2))+1;
@@ -1001,17 +1013,20 @@ public class MapDrawer {
 
 				iMerc cur = new iMerc(topleft.getX() + 256 * i,
 						topleft.getY() + 256 * j);
-				if (cur.getX() < 0 || cur.getY() < 0)
+				if (cur.getX() < 0 || cur.getY() < 0) //outside worldmap, west of 180W or north of ~86N.
 					continue;
 				Vector v = tf.merc2screen(new Merc(cur.getX(), cur.getY()));
-				if (!tileOnScreen((float) v.x, (float) v.y, tf))
-					continue;
+				//if (!tileOnScreen((float) v.x, (float) v.y, tf))
+				//	continue;
 				BitmapRes b = null;
 				// Log.i("fplan","Bitmap for "+cur);
 				canvas.save();
+				canvas.clipRect(cliprect);
 				canvas.rotate(-hdg, (float) v.x, (float) v.y);
 				RectF trg = new RectF((float) v.x, (float) v.y,
 						(float) v.x + 256, (float) v.y + 256);
+				if (canvas.quickReject(trg, EdgeType.BW))
+					continue;
 				if (adloader==null && !elevonly)
 				{
 					b = bitmaps.getBitmap(cur, zoomlevel);
@@ -1419,10 +1434,10 @@ public class MapDrawer {
 				whentempl="Skipped.";
 			} else {
 				if (passed != null)
-					whenstr = "Passed " + formatter.format(passed) + "Z";
+					whenstr = "(" + formatter.format(passed) + "Z)";
 				else
 					whenstr = "--:--";
-				whentempl="Passed 22:22Z.";
+				whentempl="(22:22Z)";
 			}
 		}
 
@@ -1513,12 +1528,11 @@ public class MapDrawer {
 		
 		// canvas.drawText(String.format("%.1fnm",we.getDistance()),
 		// 2,y1,bigtextpaint);
-		addTextIfFits(canvas, whentempl, "", r, whenstr, "", y1, bigtextpaint, smalltextpaint);
+		addTextIfFits(canvas, whentempl, "", r, whenstr, "", y1, mediumtextpaint, mediumtextpaint);
 		
 		// canvas.drawText(String.format("T:%s",whenstr),
-		// 70,y1,bigtextpaint);
-		
-		addTextIfFits(canvas, null, null, r, we.getPointTitle(), "", y1, bigtextpaint, smalltextpaint);
+		// 70,y1,bigtextpaint);		
+		addTextIfFits(canvas, null, null, r, we.getPointTitle(), "", y1, mediumtextpaint, mediumtextpaint);
 		// canvas.drawText(we.getTitle(), 140,y1,bigtextpaint);
 		for (int i = 0; i < actuallines - 1; ++i) {
 			/*
