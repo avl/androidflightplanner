@@ -19,9 +19,14 @@ public class BearingSpeedCalc {
 			//, "alt": 30, "lon":
 			
 			
-			loc.setLatitude(59.653347);
-			loc.setLongitude(17.911091);
-			loc.setBearing(45);
+			//Arlanda:
+			//loc.setLatitude(59.653347);
+			//loc.setLongitude(17.911091);
+			//loc.setBearing(45);
+			//Norway somewhere
+			loc.setLatitude(61.417632);
+			loc.setLongitude(8.481445);
+			loc.setBearing(270);
 			loc.setSpeed(50);
 		}
 		Location mylocation=loc;
