@@ -475,9 +475,16 @@ public class MapDrawer {
 							Vector p1 = tf.merc2screen(m1);
 							Vector p2 = tf.merc2screen(m2);
 							// linepaint.setStrokeWidth(10);
-							linepaint.setColor(Color.BLACK);
+							if (runway.surface!=null && runway.surface.equals("grass"))
+								linepaint.setColor(Color.GREEN);
+							else
+								if (runway.surface!=null && runway.surface.equals("gravel"))
+									linepaint.setColor(Color.rgb(140, 100, 20));
+								else
+									linepaint.setColor(Color.BLACK);
 							canvas.drawLine((float) p1.x, (float) p1.y,
 									(float) p2.x, (float) p2.y, linepaint);
+							linepaint.setColor(Color.BLACK);
 							
 						}
 					}
@@ -519,7 +526,7 @@ public class MapDrawer {
 			arrowpaint.setShader(new LinearGradient(
 					(float)arrow.x, (float)arrow.y, 
 					(float)(arrow.x+1f*x_dpmm), (float)(arrow.y), 
-					Color.rgb(0xff,0x00,0x00),Color.rgb(0xff,0xff,0xd0),  Shader.TileMode.MIRROR));
+					Color.BLACK,Color.WHITE,  Shader.TileMode.MIRROR));
 	
 			path = new Path();
 			path.moveTo((int) arrow.x - 2f*x_dpmm, (int) arrow.y);
@@ -528,7 +535,7 @@ public class MapDrawer {
 			path.close();
 			canvas.drawPath(path, arrowpaint);
 			arrowpaint.setShader(new LinearGradient((float)arrow.x, (float)arrow.y, (float)arrow.x, (float)(arrow.y-gradientpixels), 
-					Color.rgb(0xff,0x00,0x00),Color.rgb(0xff,0xff,0xd0),  Shader.TileMode.REPEAT));			
+					new int[]{Color.BLACK,Color.WHITE},new float[]{0,0.1f},  Shader.TileMode.REPEAT));			
 			canvas.drawRect((int) arrow.x, (int) arrow.y - fivenm + 1,
 					(int) arrow.x + 5, (int) arrow.y - fivenm + 3, arrowpaint);
 			canvas.drawRect((int) arrow.x - 9, (int) arrow.y - fivemin + 1,
@@ -576,7 +583,7 @@ public class MapDrawer {
 				arrowpaint.setShader(new LinearGradient(
 						(float)screenpos.x, (float)screenpos.y, 
 						(float)(screenpos.x+1f*x_dpmm*forward.y), (float)(screenpos.y-1f*x_dpmm*forward.x), 
-						Color.rgb(0xff,0x00,0x00),Color.rgb(0xff,0xff,0xd0), Shader.TileMode.MIRROR));
+						Color.BLACK,Color.WHITE, Shader.TileMode.MIRROR));
 				
 				path = new Path();
 				path.moveTo((int) (screenpos.x + 2f*x_dpmm * left.x),
@@ -590,7 +597,7 @@ public class MapDrawer {
 				arrowpaint.setShader(new LinearGradient(
 						(float)screenpos.x, (float)screenpos.y, 
 						(float)(screenpos.x+gradientpixels*forward.x), (float)(screenpos.y+gradientpixels*forward.y), 
-						Color.rgb(0xff,0x00,0x00),Color.rgb(0xff,0xff,0xd0), Shader.TileMode.REPEAT));
+						new int[]{Color.BLACK,Color.WHITE},new float[]{0,0.1f},  Shader.TileMode.REPEAT));
 
 				arrowpaint.setStrokeWidth(0.4f*x_dpmm);
 				canvas.drawLine((float) screenpos.x, (float) screenpos.y,
@@ -1008,10 +1015,10 @@ public class MapDrawer {
 
 	private float getGradientPixels(float fivenm) {
 		float gradientpixels=2*fivenm;
-		if (gradientpixels>0.15f*(bottom-top))
+		if (gradientpixels>0.3f*(bottom-top))
 		{
 			gradientpixels=fivenm/5.0f;
-			if (gradientpixels>0.15f*(bottom-top))
+			if (gradientpixels>0.3f*(bottom-top))
 			{
 				gradientpixels=(fivenm/(5.0f*18.52f)); //100m
 			}
