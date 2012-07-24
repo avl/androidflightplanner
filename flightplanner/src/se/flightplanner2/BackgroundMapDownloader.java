@@ -170,16 +170,33 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			
 			if (MapDetailLevels.getHaveAdChart(mapdetail))
 			{
-				try {
-					waitAvailable();
-					downloadAdCharts(res);
-				} catch (InterruptedException e2) {			
-					res.error="Cancelled";
-					return res;
-				} catch (Exception e) {
-					e.printStackTrace();
-					res.error=e.getMessage();
-					return res;
+				int i=0;
+				for(;;)
+				{
+					++i;
+					#error Verify that the fix here with a retry on error works as intended.
+					try {
+						waitAvailable();
+						downloadAdCharts(res);
+						break;
+					} catch (InterruptedException e2) {			
+						res.error="Cancelled";
+						return res;
+					} catch (FatalBackgroundException e2) {			
+						res.error=e2.getMessage();
+						return res;
+					} catch (Exception e) {
+						if (i>=5)
+						{
+							res.error=e.getMessage();
+							return res;							
+						}
+						else
+						{
+							e.printStackTrace();
+							continue;
+						}
+					}
 				}
 			}
 			
@@ -351,14 +368,14 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			InputStream inp = DataDownloader.postRaw("/api/getadchart", user,pass, nvps,false);
 			DataInputStream inp2=new DataInputStream(inp);
 			if (inp2.readInt()!=0xaabb1234)
-				throw new FatalBackgroundException("Bad magic:");
+				throw new BackgroundException("Bad magic:");
 			int status=inp2.readInt();
 			if (status==3)
 				continue; //Skip this chart, we don't have a projection for it. This may happen from time to time.
 			if (status==1)
 				throw new FatalBackgroundException("Bad password");
 			if (status!=0)
-				throw new FatalBackgroundException("Failed getting chart:"+status);	
+				throw new BackgroundException("Failed getting chart:"+status);	
 
 			int version=inp2.readInt();
 			int numlevels=inp2.readInt();
