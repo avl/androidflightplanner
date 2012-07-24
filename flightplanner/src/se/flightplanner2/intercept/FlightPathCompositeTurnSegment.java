@@ -13,16 +13,11 @@ public class FlightPathCompositeTurnSegment implements FlightPathSegment {
 	
 	
 	private boolean donothing;
-	public FlightPathCompositeTurnSegment(float hdgdelta,float speed)
+	public FlightPathCompositeTurnSegment(float hdgdelta,float speed,float initial_roll)
 	{
-		if (Math.abs(hdgdelta)<0.5)
-		{
-			donothing=true;
-		}
-		else
 		{
 			TurnPlanner tp=new TurnPlanner();
-			Res res=tp.calc(speed, hdgdelta);		
+			Res res=tp.getStrategy1(hdgdelta, initial_roll, speed);		
 			roll_in=new FlightPathRollSegment(res.rolldeg);
 			turn=new FlightPathTurnSegment(res.keep_turn);
 			roll_out=new FlightPathRollSegment(0);
@@ -35,7 +30,18 @@ public class FlightPathCompositeTurnSegment implements FlightPathSegment {
 	{
 		if (donothing)
 			return new StateVector(prev);
-		return roll_out.execute(turn.execute(roll_in.execute(prev)));
+		StateVector sv1=prev;
+		
+		//Todo: Analytical FlightPathRoll
+		//Also: If input bank is bigger than nominal, begin by just aiming for nominal bank, same direction.
+		//System.out.println("Before: "+sv1.hdg);
+		StateVector sv2=roll_in.execute(prev);
+		//System.out.println("Step 1: "+sv2.hdg+ " delta: "+(sv2.hdg-sv1.hdg));
+		StateVector sv3=turn.execute(sv2);
+		//System.out.println("Step 2: "+sv3.hdg+ " delta: "+(sv3.hdg-sv2.hdg));
+		StateVector sv4=roll_out.execute(sv3);
+		//System.out.println("Step 3: "+sv4.hdg+ " delta: "+(sv4.hdg-sv3.hdg));
+		return sv4;
 	}
 	
 }

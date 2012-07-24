@@ -2,6 +2,7 @@ package se.flightplanner2.intercept;
 
 public class Helpers {
 	static final float nominal_bank=20;
+	static final float bank_rate=5;
 	static float get_turn_rate_deg(float speed_kt,float bank_deg)
 	{
 		float turnrate=(float)(562.645*Math.tan(bank_deg/(180.0/Math.PI))/(speed_kt*1.852/3.6));

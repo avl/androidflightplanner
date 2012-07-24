@@ -1,5 +1,7 @@
 package se.flightplanner2.intercept;
 
+import se.flightplanner2.intercept.Intercept.Result;
+import se.flightplanner2.intercept.SecantSolver.Function;
 import se.flightplanner2.intercept.TurnPlanner.Res;
 import se.flightplanner2.vector.Vector;
 import junit.framework.TestCase;
@@ -12,6 +14,30 @@ public class TestIntercept extends TestCase {
 		float radius_m=radius_nm*1852;
 		float radius_feet=radius_m/0.3048f;
 		assertEquals(2440,radius_feet,15);
+		
+	}
+	public void testSecantSolver()
+	{
+		{		
+		SecantSolver s=new SecantSolver(new Function()
+			{
+				@Override
+				public float calc(float x) {				
+					return x-5;
+				}
+			});
+			assertEquals(5.0f,s.solve(-10, 10),0.01f);
+		}
+		{		
+		SecantSolver s=new SecantSolver(new Function()
+			{
+				@Override
+				public float calc(float x) {				
+					return (x-3)*(x-3);
+				}
+			});
+			assertEquals(3.0f,s.solve(-10, 10),0.01f);
+		}
 		
 	}
 	public void testIntercept1() throws Exception
@@ -75,9 +101,79 @@ public class TestIntercept extends TestCase {
 	public void testPlanTurn()
 	{
 		TurnPlanner tp=new TurnPlanner();
+		assertEquals(-20,tp.getStrategy1(-90, 20, 100).rolldeg,1e-3);
+		assertEquals(20,tp.getStrategy1(90, 20, 100).rolldeg,1e-3);
+		assertEquals((90.0-7.795718445656886f*2)/Helpers.get_turn_rate_deg(100, 20),tp.getStrategy1(90, 0, 100).keep_turn,1e-3);
+		assertEquals((90.0-7.795718445656886f*2)/Helpers.get_turn_rate_deg(100, 20),tp.getStrategy1(-90, 0, 100).keep_turn,1e-3);
+
+		assertEquals((90.0-7.795718445656886f)/Helpers.get_turn_rate_deg(100, 20),tp.getStrategy1(90, 20, 100).keep_turn,1e-3);
+		assertEquals((90.0-7.795718445656886f)/Helpers.get_turn_rate_deg(100, 20),tp.getStrategy1(-90, -20, 100).keep_turn,1e-3);
 		
-		Res res=tp.calc(100, 90);
+		assertEquals((90.0-7.795718445656886f)/Helpers.get_turn_rate_deg(100, 20),tp.getStrategy1(90, -20, 100).keep_turn,1e-3);
+		assertEquals((90.0-7.795718445656886f)/Helpers.get_turn_rate_deg(100, 20),tp.getStrategy1(-90, 20, 100).keep_turn,1e-3);
+		
+		assertEquals(-14.2158,tp.getStrategy1(0, 20, 100).rolldeg,1e-3);
+		assertEquals(-20,tp.getStrategy1(-7.795718445656886f, 20, 100).rolldeg,1e-3);
+		//assertEquals(null,tp.getStrategy1(7.795718445656886f*2, 0, 100));
+		
+		assertEquals(20,tp.getStrategy1(7.795718445656886f*2, 0, 100).rolldeg,1e-3);
+		assertEquals(20,tp.getStrategy1(7.795718445656886f, 20, 100).rolldeg,1e-3);
+		assertEquals(-20,tp.getStrategy1(-7.795718445656886f, -20, 100).rolldeg,1e-3);
+		//assertEquals(24.36,tp.getStrategy1(7.795718445656886f*2, 20, 100).rolldeg,1e-1);
+		//assertEquals(null,tp.getStrategy1(0, 20, 100));
+
+
+		
+		
+	}
+		
+	/*
+	public void testPlanTurn()
+	{
+		TurnPlanner tp=new TurnPlanner();
+		
+		Res res=tp.calc(100, 90,0);
 		System.out.println("Res: "+res);
+	}
+	public void testPlanTurn2()
+	{
+		TurnPlanner tp=new TurnPlanner();
+		
+		Res res=tp.calc(100, 20f,0);
+		
+		FlightPathCompositeTurnSegment comp=new FlightPathCompositeTurnSegment(20,100,0);
+		StateVector sv=new StateVector();
+		sv.speed=100;
+		sv.hdg=-20;
+		System.out.println("Res: "+res);
+		System.out.println("Effect: "+comp.execute(sv));
+	}
+	public void testPlanTurn3()
+	{
+		TurnPlanner tp=new TurnPlanner();
+		
+		Res res=tp.calc(100, 45,60);
+		
+		FlightPathCompositeTurnSegment comp=new FlightPathCompositeTurnSegment(20,100,0);
+		StateVector sv=new StateVector();
+		sv.speed=100;
+		sv.hdg=-20;
+		System.out.println("Res: "+res);
+		System.out.println("Effect: "+comp.execute(sv));
+	}
+	public void testPlanTurn4()
+	{
+		TurnPlanner tp=new TurnPlanner();
+		
+		Res res=tp.calc(100, 8,15);
+		
+		FlightPathCompositeTurnSegment comp=new FlightPathCompositeTurnSegment(12,100,15);
+		this doesn't work at all.
+		StateVector sv=new StateVector();
+		sv.speed=100;
+		sv.hdg=0;
+		System.out.println("Res: "+res);
+		System.out.println("Effect: "+comp.execute(sv));
 	}
 	public void testIntercept4()
 	{
@@ -86,12 +182,16 @@ public class TestIntercept extends TestCase {
 		StateVector res=fpt.execute(sv);
 		assertEquals(-100,res.pos.y,0.1);
 	}
+	*/
 	public void testCompleteIntercept()
 	{
-		StateVector sv=new StateVector(new Vector(100,0),180,100,0,0);
+		StateVector sv=new StateVector(
+				new Vector(0,0),0.0f,100,-20,0);
 		Intercept ic=new Intercept();
-		ic.verySlow(sv);
+		Result r=ic.fast(sv);
+		System.out.println("Result final: "+r);
 				
 		
 	}
+	
 }

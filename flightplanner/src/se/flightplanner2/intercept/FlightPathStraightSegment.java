@@ -10,7 +10,7 @@ public class FlightPathStraightSegment implements FlightPathSegment  {
 	public StateVector execute(StateVector state)
 	{
 		if (state.roll!=0)
-			throw new RuntimeException("Straight segment can't be used in roll");
+			throw new RuntimeException("Straight segment can't be used in roll: "+state.roll);
 		StateVector res=new StateVector(state);
 		res.integrate_postime(dt);
 		return res;
