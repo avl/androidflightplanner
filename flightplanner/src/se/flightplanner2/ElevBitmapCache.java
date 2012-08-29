@@ -336,9 +336,9 @@ public class ElevBitmapCache implements GetElevation {
 		}
 		Range[] ranges=new Range[]{
 				new Range(-7000,  255,192,192),
-				new Range(0,  255,0,0),
-				new Range(500,     255,255,0),
-				new Range(1000, 0,255,0),
+				new Range(250,  255,0,0),
+				new Range(750,     255,255,0),
+				new Range(1250, 0,255,0),
 				new Range(4000, 0,0,255),
 				new Range(7000, 0,0,0),
 		};

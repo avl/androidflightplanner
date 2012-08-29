@@ -1025,7 +1025,7 @@ public class MapDrawer {
 			lower=0;
 		}
 		float range=upper-lower;
-		float arrowy=height*(1.0f-(own_alt_feet-lower)/range);
+		float arrowy=height*(1.0f-(Math.max(own_alt_feet-500,0)-lower)/range);
 		
 		blackgroundpaint.setColor(Color.GREEN);
 		blackgroundpaint2.setColor(Color.BLUE);
