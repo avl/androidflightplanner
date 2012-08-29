@@ -20,13 +20,13 @@ public class BearingSpeedCalc {
 			
 			
 			//Arlanda:
-			//loc.setLatitude(59.653347);
-			//loc.setLongitude(17.911091);
-			//loc.setBearing(45);
-			//Åre:
-			loc.setLatitude(63.4306);
-			loc.setLongitude(13.093);
+			loc.setLatitude(59.653347);
+			loc.setLongitude(17.911091);
 			loc.setBearing(45);
+			//Åre:
+			//loc.setLatitude(63.4306);
+			//loc.setLongitude(13.093);
+			//loc.setBearing(45);
 
 			//Norway somewhere
 			//loc.setAltitude(1500);

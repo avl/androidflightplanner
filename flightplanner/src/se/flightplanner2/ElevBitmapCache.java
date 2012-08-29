@@ -470,7 +470,7 @@ public class ElevBitmapCache implements GetElevation {
 		Short cval=pt_elev_cache.get(m);
 		
 		if (cval!=null) {
-			Log.i("fplan.mmupd","Elev Cache hit, cache size: "+pt_elev_cache.size()+" coord: "+m+" pos: "+pos);
+			//Log.i("fplan.mmupd","Elev Cache hit, cache size: "+pt_elev_cache.size()+" coord: "+m+" pos: "+pos);
 			return cval;
 		}
 		iMerc orig=new iMerc(m);
@@ -490,7 +490,7 @@ public class ElevBitmapCache implements GetElevation {
 			pt_elev_cache.clear();
 		pt_elev_cache.put(orig,cval);
 		long aft=SystemClock.elapsedRealtime();
-		Log.i("fplan.mmupd","Time to get elev ft: "+(aft-bef)+"ms, cache size: "+pt_elev_cache.size());
+		//Log.i("fplan.mmupd","Time to get elev ft: "+(aft-bef)+"ms, cache size: "+pt_elev_cache.size());
 		return val;		
 	}	
 	private short get_elev_ft_uncached(iMerc m,int zoom) {
@@ -524,7 +524,7 @@ public class ElevBitmapCache implements GetElevation {
 	public void setMode(Mode mode_) {
 		if (this.mode!=mode_)
 			purge_all();
-		Log.i("fplan.elev","Mode:"+mode_);
+		//Log.i("fplan.elev","Mode:"+mode_);
 		this.mode=mode_;		
 	}
 	

@@ -1049,7 +1049,8 @@ public class MapDrawer {
 			}
 			x+=xdelta;
 		}
-		float asize=(float)(1.5*x_dpmm);
+		float asize=(float)(1.5*x_dpmm);		
+		linepaint.setStrokeWidth(0.85f * x_dpmm);
 		canvas.drawLine(asize,arrowy,0,arrowy-asize/2,linepaint);
 		canvas.drawLine(asize,arrowy,0,arrowy+asize/2,linepaint);
 		blackgroundpaint.setColor(Color.BLACK);
