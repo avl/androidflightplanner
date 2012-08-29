@@ -43,6 +43,7 @@ public class SetupInfo extends Activity {
         boolean startcheckedterrwarn=getIntent().getExtras().getBoolean("se.flightplanner2.terrwarn",false);
         boolean startcheckedautosync=getIntent().getExtras().getBoolean("se.flightplanner2.autosync",false);
         boolean startcheckedcvr=getIntent().getExtras().getBoolean("se.flightplanner2.cvr",false);
+        boolean startcheckedsideview=getIntent().getExtras().getBoolean("se.flightplanner2.sideview",false);
         final SetupInfo outer_this=this;
         final CheckBox northup=(CheckBox)findViewById(R.id.northup_default);
     	northup.setChecked(startchecked);
@@ -58,6 +59,9 @@ public class SetupInfo extends Activity {
 
     	final CheckBox cvr=(CheckBox)findViewById(R.id.cvr_default);
     	cvr.setChecked(startcheckedcvr);
+
+    	final CheckBox sideview=(CheckBox)findViewById(R.id.sideview_default);
+    	sideview.setChecked(startcheckedsideview);
         
         button.setOnClickListener(new OnClickListener() {
         	void onOk()
@@ -73,6 +77,7 @@ public class SetupInfo extends Activity {
             	ret.putExtra("se.flightplanner2.terrwarn",terrwarn.isChecked());
             	ret.putExtra("se.flightplanner2.autosync",autosync.isChecked());
             	ret.putExtra("se.flightplanner2.cvr",cvr.isChecked());
+            	ret.putExtra("se.flightplanner2.sideview",sideview.isChecked());
             	
             	ret.putExtra("se.flightplanner2.thenopen", getIntent().getExtras().getString("se.flightplanner2.thenopen"));
             	setup.setResult(RESULT_OK,ret);

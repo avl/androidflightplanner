@@ -45,7 +45,7 @@ public class Blob {
 		public int x;
 		public int y;
 	};
-	TileNumber get_tile_number(iMerc m)
+	private TileNumber get_tile_number(iMerc m)
 	{
 		if (m.x>x2) return null;
 		if (m.y>y2) return null;
@@ -124,7 +124,7 @@ public class Blob {
 	    }
 	    return imagesize;
 	}
-    byte[] get_tile(iMerc coords,int expected_maxsize) throws IOException
+	private byte[] get_tile_impl(iMerc coords,int expected_maxsize) throws IOException
     {    	
     	int imagesize=seekright(coords);
     	if (imagesize<0)
@@ -136,7 +136,11 @@ public class Blob {
         raf.readFully(ret);
         return ret;
     }
-	Bitmap get_bitmap(iMerc coords) throws IOException
+	synchronized public byte[] get_tile(iMerc coords,int expected_maxsize) throws IOException
+	{
+		return get_tile_impl(coords,expected_maxsize);
+	}
+	synchronized public Bitmap get_bitmap(iMerc coords) throws IOException
 	{
 		/*
     	int imagesize=seekright(coords);
@@ -153,18 +157,18 @@ public class Blob {
 		} catch (Throwable e) {
 			e.printStackTrace();
 		} 		
-		byte[] data=get_tile(coords,200000);
+		byte[] data=get_tile_impl(coords,200000);
 		if (data==null)
 			return null;
 		Bitmap bm=BitmapFactory.decodeByteArray(data,0,data.length);		
 		//Log.i("fplan","Bitmap:"+bm);
 		return bm;
 	}
-    void close() throws IOException
+	synchronized public void close() throws IOException
     {
     	raf.close();
     }
-	public byte[] get_data_at(iMerc coords, int offset, int size) throws IOException{
+	synchronized public byte[] get_data_at(iMerc coords, int offset, int size) throws IOException{
 		
     	int imagesize=seekright(coords,offset);
     	if (imagesize<size)

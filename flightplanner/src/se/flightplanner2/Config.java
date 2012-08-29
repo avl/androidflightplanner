@@ -17,10 +17,10 @@ public class Config {
 	/**
 	 * Use accelerometers to drive fake gps signals.
 	 */
-	public static boolean gpsdrive=false;
+	public static boolean gpsdrive=true;
 
 	public static boolean debugMode() {
-		return false;
+		return true;
 	}
 
 	static String get_addr()
@@ -37,8 +37,8 @@ public class Config {
 			//addr="http://192.168.1.101:5000";
 			//String addr="http://79.99.0.86:5000";
 			//addr="http://192.168.1.160:5000";
-			//addr="http://192.168.43.251:5000";
-			addr="http://www.swflightplanner.se";
+			addr="http://192.168.43.251:5000";
+			//addr="http://www.swflightplanner.se";
 			
 		}
 		else

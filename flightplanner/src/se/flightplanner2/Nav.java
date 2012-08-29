@@ -200,6 +200,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 					"se.flightplanner2.autosync", false);
 			final boolean cvr= data.getBooleanExtra(
 					"se.flightplanner2.cvr", false);
+			final boolean sideview= data.getBooleanExtra(
+					"se.flightplanner2.sideview", false);
 			// RookieHelper.showmsg(this,"mapdetail now:"+mapdetail);
 			SharedPreferences prefs = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE);
 			SharedPreferences.Editor pedit = prefs.edit();
@@ -211,6 +213,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 			pedit.putBoolean("terrwarn", terrwarn);
 			pedit.putBoolean("autosync", autosync);
 			pedit.putBoolean("cvr", cvr);
+			pedit.putBoolean("sideview", sideview);
 			pedit.commit();
 			if (airspace!=null && autosync)
 			{
@@ -228,7 +231,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 			String then = data.getStringExtra("se.flightplanner2.thenopen");
 			map.update_detail(
 					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 2),
-					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("northup", false));
+					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("northup", false),
+					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("sideview", false));
 			if (then != null && then.equals("loadterrain")) {
 				sync();
 				return;
@@ -583,6 +587,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("autosync", false));
 		intent.putExtra("se.flightplanner2.cvr",
 				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("cvr", false));
+		intent.putExtra("se.flightplanner2.sideview",
+				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("sideview", false));
 		// RookieHelper.showmsg(this,"Got mapd"+mapd);
 		intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
 		return intent;
@@ -748,7 +754,9 @@ public class Nav extends Activity implements PositionSubscriberIf,
         
         map=new MovingMap(this,metrics,fplog,this,tripstate);
         map.update_airspace(airspace,lookup,getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 2),
-        		getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("northup", false));
+        		getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("northup", false),
+        		getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("sideview", false)
+        		);
         map.update_tripdata(tripdata,tripstate);
 		
 		map.thisSetContentView(this);
@@ -905,9 +913,10 @@ public class Nav extends Activity implements PositionSubscriberIf,
 
 		if (airspace != null) {
 			proxdet.update_lookup(lookup);
-			map.update_airspace(airspace, lookup, getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE)
-					.getInt("mapdetail", 2), getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE)
-					.getBoolean("northup", false));
+			map.update_airspace(airspace, lookup, getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 2), 
+					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("northup", false),
+					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("sideview", false)					
+					);
 		}
 		map.enableTerrainMap(true);
 		

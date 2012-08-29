@@ -651,8 +651,8 @@ public class Airspace implements Serializable{
 	}
 	static public class VariantInfo
 	{
-		String chartname;
-		String variant;
+		public String chartname;
+		public String variant;
 		public VariantInfo(String chartname,String variant)
 		{
 			this.chartname=chartname;
@@ -661,8 +661,8 @@ public class Airspace implements Serializable{
 	}
 	static public class ChartInfo
 	{
-		private String icao;
-		private HashMap<String,VariantInfo> variants=new HashMap<String,VariantInfo>();
+		public String icao;
+		public HashMap<String,VariantInfo> variants=new HashMap<String,VariantInfo>();
 		public ChartInfo(String icao,String chartname,String variant)
 		{
 			this.icao=icao;			
@@ -677,6 +677,11 @@ public class Airspace implements Serializable{
 		}
 	}
 	HashMap<String,ChartInfo> charts=new HashMap<String, ChartInfo>();
+	
+	public Collection<ChartInfo> getCharts()
+	{
+		return charts.values();
+	}
 	
 	ChartInfo getChart(String icao)
 	{

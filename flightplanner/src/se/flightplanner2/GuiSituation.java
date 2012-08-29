@@ -32,6 +32,14 @@ public class GuiSituation
 	private InformationPanel currentInfo;
 	private boolean defnorthup;
 	private boolean chartmode=false;
+	private float sideviewycoord;
+	private float sideview_distance; //nm
+	
+	void setSideviewInset(float ycoord,float sideview_distance)
+	{
+		sideviewycoord=ycoord;
+		this.sideview_distance=sideview_distance;
+	}
 	
 	boolean getChartMode()
 	{
@@ -230,6 +238,23 @@ public class GuiSituation
 			clickables.get(best_idx).onClick();
 			return;
 		}
+		if (sideviewycoord>0 && y>ysize-sideviewycoord)
+		{
+			float dist=x*sideview_distance/xsize;
+
+			Vector merc=Project.latlon2mercvec(new LatLon(lastpos), 13);
+			float merc13dist=(float)Project.approx_scale(merc.y, 13, dist);
+			Vector delta13=Project.heading2vector(lastpos.getBearing()).mul(merc13dist);
+			LatLon clicklatlon=Project.mercvec2latlon(merc.plus(delta13),13);
+			
+			double marker_size_pixels=x_dpmm*7;
+			double marker_size_merc13=Math.pow(2, 13-zoomlevel)*marker_size_pixels;
+			
+			showInfo(clicklatlon,(long)(marker_size_merc13));
+			movingMap.doInvalidate();			
+			
+		}
+		else
 		{
 			TransformIf tf = getTransform();
 			Merc m=tf.screen2merc(new Vector(x,y));

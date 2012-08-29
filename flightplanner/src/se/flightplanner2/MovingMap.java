@@ -194,7 +194,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 					gps_sat_cnt,gps_sat_fix_cnt,
 					elevbmc,terrwarn,batt,charging,adloader,
 					chosen_ad_maps,chosen_ad_map_i,chosen_ad_map_when,
-					last_cvr_amp
+					last_cvr_amp,sideview
 					);
 			
 			if (mapcache!=null)
@@ -276,11 +276,12 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		if (gui!=null) gui.changeZoom(zd);		
 	}
 	
-	public void update_airspace(Airspace pairspace, AirspaceLookup plookup,int newdetaillevel,boolean northup) {
+	public void update_airspace(Airspace pairspace, AirspaceLookup plookup,int newdetaillevel,boolean northup,boolean sideview) {
 		defnorthup=northup;
 		
 		lookup=plookup;
 		detaillevel=newdetaillevel;
+		this.sideview=sideview;
 		if (gui!=null)
 		{
 			gui.updateLookup(lookup);
@@ -442,13 +443,14 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		if (drawer!=null) 
 			drawer.stop();		
 	}
-
+	private boolean sideview;
 	@Override
-	public void update_detail(int det,boolean northup) {
+	public void update_detail(int det,boolean northup,boolean sideview) {
 		detaillevel=det;
 		this.defnorthup=northup;
 		if (gui!=null)
-			gui.setnorthup(defnorthup);		
+			gui.setnorthup(defnorthup);
+		this.sideview=sideview;
 		doInvalidate();
 	}
 	@Override

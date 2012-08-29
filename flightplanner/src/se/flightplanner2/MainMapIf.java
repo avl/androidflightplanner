@@ -10,12 +10,12 @@ public interface MainMapIf {
 
 	public abstract void onSideKey(int i);
 
-	public abstract void update_detail(int int1, boolean northup);
+	public abstract void update_detail(int int1, boolean northup,boolean sideview);
 
 	public abstract void enableTerrainMap(boolean b);
 
 	public abstract void update_airspace(Airspace airspace,
-			AirspaceLookup lookup, int int1, boolean northup);
+			AirspaceLookup lookup, int int1, boolean northup,boolean sideview);
 
 	public abstract void update_tripdata(TripData tripdata,TripState tripstate);
 

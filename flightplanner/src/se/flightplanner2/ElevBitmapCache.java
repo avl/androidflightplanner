@@ -72,13 +72,14 @@ public class ElevBitmapCache implements GetElevation {
 	}
 	
 	
-	private class CachedItem
+	static private class CachedItem
 	{
 		iMerc pos;
 		int elev;
 		Bitmap bm;	//set to null if error
 		int zoomlevel;
 		boolean used;
+		Mode mode;
 		@Override
  		public String toString()
 		{
@@ -176,6 +177,8 @@ public class ElevBitmapCache implements GetElevation {
 	}
 	public void purge_all()
 	{
+		if (cur_bg!=null)
+			cur_bg.cancel(false);
 		if (stopping) return;
 		for(CachedItem ci:items.values())
 		{
@@ -225,11 +228,13 @@ public class ElevBitmapCache implements GetElevation {
 		Blob blob;
 		int curelev;
 		int zoomlevel;
-		public BackgroundLoader(Blob blob,int curelev,int zoomlevel)
+		Mode mode;
+		public BackgroundLoader(Blob blob,int curelev,int zoomlevel,Mode mode)
 		{
 			this.curelev=curelev;
 			this.blob=blob;
 			this.zoomlevel=zoomlevel;
+			this.mode=mode;
 		}
 		@Override
 		protected CachedItem doInBackground(iMerc... params) {
@@ -297,6 +302,7 @@ public class ElevBitmapCache implements GetElevation {
 				ret.pos=params[0];
 				ret.used=true;
 				ret.zoomlevel=zoomlevel;
+				ret.mode=mode;
 				//Log.i("fplan.terr","Created a bitmap for: "+ret.pos);				
 				return ret;
 				
@@ -329,10 +335,11 @@ public class ElevBitmapCache implements GetElevation {
 			return Color.argb(0,0,0,0);
 		}
 		Range[] ranges=new Range[]{
-				new Range(-7000,  255,0,0),
-				new Range(-2000,  255,255,0),
-				new Range(0,     0,255,0),
-				new Range(2000, 0,0,255),
+				new Range(-7000,  255,192,192),
+				new Range(0,  255,0,0),
+				new Range(500,     255,255,0),
+				new Range(1000, 0,255,0),
+				new Range(4000, 0,0,255),
 				new Range(7000, 0,0,0),
 		};
 		
@@ -360,16 +367,17 @@ public class ElevBitmapCache implements GetElevation {
 		@Override
 		protected void onPostExecute(CachedItem result)
 		{
-			if (result!=null && result.zoomlevel==ElevBitmapCache.this.zoomlevel)
+			if (result!=null && result.zoomlevel==ElevBitmapCache.this.zoomlevel &&
+					result.mode==ElevBitmapCache.this.mode)
 			{
 				//Log.i("fplan.terr","Injecting: "+result);				
-				items.put(result.pos, result);
-				backlog.remove(result.pos);
+				ElevBitmapCache.this.items.put(result.pos, result);
+				ElevBitmapCache.this.backlog.remove(result.pos);
 				if (result.bm!=null)
-					client.updated(backlog.size()==0);
+					ElevBitmapCache.this.client.updated(ElevBitmapCache.this.backlog.size()==0);
 			}
-			cur_bg=null;
-			schedule_background_tasks();
+			ElevBitmapCache.this.cur_bg=null;
+			ElevBitmapCache.this.schedule_background_tasks();
 		}
 	}	
 	private boolean stopping=false;
@@ -377,7 +385,8 @@ public class ElevBitmapCache implements GetElevation {
 	{
 		//Log.i("fplan.terr","Stopping");				
 		stopping=true;
-		cur_bg.cancel(false);
+		if (cur_bg!=null)
+			cur_bg.cancel(false);
 		cur_bg=null;
 		
 	}
@@ -411,7 +420,7 @@ public class ElevBitmapCache implements GetElevation {
 				if (zoomlevel>=0 && zoomlevel<blobs.length && blobs[zoomlevel]!=null)
 				{
 					//Log.i("fplan.terr","Starting new loader for "+cur);												
-					cur_bg=new BackgroundLoader(blobs[zoomlevel],cur_elev,zoomlevel);
+					cur_bg=new BackgroundLoader(blobs[zoomlevel],cur_elev,zoomlevel,mode);
 					cur_bg.execute(cur);
 				}
 				else
@@ -477,11 +486,11 @@ public class ElevBitmapCache implements GetElevation {
 			}
 		short val=maxval;
 		cval=val;
-		if (pt_elev_cache.size()>50)
+		if (pt_elev_cache.size()>250)
 			pt_elev_cache.clear();
 		pt_elev_cache.put(orig,cval);
 		long aft=SystemClock.elapsedRealtime();
-		Log.i("fplan.mmupd","Time to get elev ft: "+(aft-bef)+"ms");
+		Log.i("fplan.mmupd","Time to get elev ft: "+(aft-bef)+"ms, cache size: "+pt_elev_cache.size());
 		return val;		
 	}	
 	private short get_elev_ft_uncached(iMerc m,int zoom) {

@@ -60,6 +60,8 @@ public class MapDrawer {
 	private Paint arrowpaint;
 	private Paint backgroundpaint;
 	private Paint blackgroundpaint;
+	private Paint blackgroundpaint2;
+	private Paint blackgroundpaint3;
 	private Paint textpaint;
 	private float x_dpmm, y_dpmm;
 	private SimpleDateFormat formatter = new SimpleDateFormat("HHmmss");
@@ -191,6 +193,12 @@ public class MapDrawer {
 		blackgroundpaint = new Paint();
 		blackgroundpaint.setStyle(Style.FILL);
 		blackgroundpaint.setColor(Color.BLACK);
+		blackgroundpaint2 = new Paint();
+		blackgroundpaint2.setStyle(Style.FILL);
+		blackgroundpaint2.setColor(Color.BLACK);
+		blackgroundpaint3 = new Paint();
+		blackgroundpaint3.setStyle(Style.FILL);
+		blackgroundpaint3.setColor(Color.BLACK);
 
 		arrowpaint = new Paint();
 		arrowpaint.setAntiAlias(false);
@@ -351,7 +359,8 @@ public class MapDrawer {
 			InformationPanel panel, View view, String[] prox_warning,
 			int gps_sat_cnt, int gps_sat_fix_cnt, ElevBitmapCache elevbmc,
 			boolean terrwarn,int battery,boolean charging,final AdChartLoader adloader, 
-			String[] chosen_ad_maps, int chosen_ad_map_i,long chosen_ad_map_when, int last_cvr_amp) {
+			String[] chosen_ad_maps, int chosen_ad_map_i,long chosen_ad_map_when, int last_cvr_amp,
+			boolean sideview) {
 
 		
 		
@@ -373,7 +382,9 @@ public class MapDrawer {
 
 		double gs_kt = lastpos.getSpeed() * 3.6 / 1.852;
 		if (gs_kt < 10)
+		{
 			terrwarn = false;
+		}
 		boolean havefix = lastpos.getTime() > 3600 * 24 * 10 * 1000
 				&& SystemClock.uptimeMillis() - last_real_position < 15000;
 
@@ -399,7 +410,12 @@ public class MapDrawer {
 		right = screen_extent.right;
 		top = screen_extent.top;
 		
-		int lowerinset=100;
+		int lowerinset;
+		if (sideview)
+			lowerinset=100;
+		else
+			lowerinset=0;
+		
 		
 		bottom = screen_extent.bottom-lowerinset;
 		int sizex = screen_extent.width();
@@ -619,34 +635,42 @@ public class MapDrawer {
 		}
 		
 		canvas.restore();
-		
+		if (sideview)
 		{
+			
 			canvas.save();
 			canvas.translate(0, bottom);
 			canvas.clipRect(left,0,right,lowerinset);
 			Merc m1=tf.screen2merc(gui.getArrow());
 			Merc m2=tf.screen2merc(new Vector((right-left)*0.5,top));
-			float howfar=(float)Project.exacter_distance(Project.merc2latlon(m1, zoomlevel),Project.merc2latlon(m2, zoomlevel)); 
-			drawInset(canvas,lastpos,right-left,lowerinset,howfar);
+			float howfar=(float)Project.exacter_distance(Project.merc2latlon(m1, zoomlevel),Project.merc2latlon(m2, zoomlevel));
+			gui.setSideviewInset(lowerinset,howfar);
+			drawInset(canvas,lastpos,right-left,lowerinset,howfar,isUserPresentlyMovingMap,elev_ft,zoomlevel);
 			canvas.restore();
 		}
-		
+		else
+		{
+			gui.setSideviewInset(0,0);			
+		}
 		top = screen_extent.top;
-		bottom = screen_extent.bottom;
+		bottom = screen_extent.bottom-lowerinset;
 		sizey = bottom-top;
 		
 
 		InformationPanel we = panel;
 		if (we != null) {
+			canvas.save();
+			canvas.clipRect(left,top,right,bottom);			
 			drawInfoPanel(canvas, gui, tf, extrainfo, extrainfolineoffset,
 					zoomlevel, clickables, we);
+			canvas.restore();
 
 		} else {
 			float y = bottom - (bigtextpaint.getTextSize() * 1.5f + 2);
 
 			final Rect tr3 = drawButton(canvas, right, y, "Wpts", -1, left,
 					right, false);
-			if (tr3 != null) {
+			if (tr3 != null) {				
 				clickables.add(new GuiSituation.Clickable() {
 					@Override
 					public Rect getRect() {
@@ -982,33 +1006,52 @@ public class MapDrawer {
 		// Log.i("fplan.fps","Time to draw: "+(aft-bef)+"ms");
 	}
 	ElevationProfile prof=new ElevationProfile();
-	private void drawInset(Canvas canvas, Location lastpos,float width,float height,float howfar) {
-		Merc merc=Project.latlon2merc(new LatLon(lastpos), 13);
+	private void drawInset(Canvas canvas, Location lastpos,float width,float height,float howfar,boolean userMovingMap,int own_alt_feet,int zoomlevel) {
+		
 		int steps=60;
-		float chunknm=(float)Project.approx_scale(merc, 13, howfar/steps);
-		Vector delta=Project.heading2vector(lastpos.getBearing()).mul(chunknm);
-		 
-		Vector cur=merc.toVector();
-		iMerc[] locs=new iMerc[steps];
-		for(int i=0;i<steps;++i)
-		{
-			locs[i]=new iMerc(cur.x,cur.y);
-			cur.x+=delta.x;
-			cur.y+=delta.y;
-		}
-		int[] elevs=prof.getProfile(locs);
+
+		long bef2=SystemClock.elapsedRealtime();
+		
+		int[] elevs=prof.getProfile(lastpos, howfar, steps,userMovingMap ? 5000 : 2500,zoomlevel);
+		Log.i("fplan.elevinset","getproftime: "+(SystemClock.elapsedRealtime()-bef2)+" ms");
 		float xdelta=width/steps;
 		float x=0;
+		linepaint.setColor(Color.WHITE);
+		float lower=own_alt_feet-2000;
+		float upper=own_alt_feet+2000;
+		if (lower<0)
+		{
+			upper-=lower;
+			lower=0;
+		}
+		float range=upper-lower;
+		float arrowy=height*(1.0f-(own_alt_feet-lower)/range);
+		
+		blackgroundpaint.setColor(Color.GREEN);
+		blackgroundpaint2.setColor(Color.BLUE);
+		blackgroundpaint3.setColor(Color.RED);
+		int warn_alt_feet=own_alt_feet-1000;
 		for(int elev:elevs)
 		{
-			float y=height*(1.0f-elev/9500.0f);
-			blackgroundpaint.setColor(Color.GREEN);
-			canvas.drawRect(x,y,x+xdelta,height, blackgroundpaint);
-			blackgroundpaint.setColor(Color.BLUE);
-			Log.i("fplan.prof","Drawing profile: "+x+","+y+" - "+(x+xdelta)+","+y);
-			canvas.drawRect(x,0,x+xdelta,y, blackgroundpaint);
+			if (elev<warn_alt_feet)
+			{			
+				float y=height*(1.0f-(elev-lower)/range);
+				canvas.drawRect(x,y,x+xdelta,height, blackgroundpaint); //ground
+				canvas.drawRect(x,0,x+xdelta,y, blackgroundpaint2); //sky
+			}
+			else
+			{
+				float y1=height*(1.0f-(warn_alt_feet-lower)/range);
+				float y2=height*(1.0f-(elev-lower)/range);
+				canvas.drawRect(x,y1,x+xdelta,height, blackgroundpaint); //ground
+				canvas.drawRect(x,y2,x+xdelta,y1, blackgroundpaint3); //warning ground
+				canvas.drawRect(x,0,x+xdelta,y2, blackgroundpaint2); //sky				
+			}
 			x+=xdelta;
 		}
+		float asize=(float)(1.5*x_dpmm);
+		canvas.drawLine(asize,arrowy,0,arrowy-asize/2,linepaint);
+		canvas.drawLine(asize,arrowy,0,arrowy+asize/2,linepaint);
 		blackgroundpaint.setColor(Color.BLACK);
 		
 	}

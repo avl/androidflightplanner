@@ -412,6 +412,7 @@ public class Project {
 	 * between the two given coordinates, as the eagle flies.
 	 * This is more exact than trying to use the approx_scale functions above,
 	 * but still just a pretty bad approximation (spherical earth!).
+	 * The returned distance is expressed in nautical miles.
 	 */
 	public static double exacter_distance(LatLon latLon1, LatLon latLon2) {
 

@@ -20,14 +20,15 @@ public class BearingSpeedCalc {
 			
 			
 			//Arlanda:
-			//loc.setLatitude(59.653347);
-			//loc.setLongitude(17.911091);
-			//loc.setBearing(45);
+			loc.setLatitude(59.653347);
+			loc.setLongitude(17.911091);
+			loc.setBearing(45);
 			//Norway somewhere
-			loc.setLatitude(61.417632);
-			loc.setLongitude(8.481445);
-			loc.setBearing(270);
-			loc.setSpeed(50);
+			//loc.setAltitude(1500);
+			//loc.setLatitude(61.417632);
+			//loc.setLongitude(8.481445);
+			//loc.setBearing(270);
+			//loc.setSpeed(50);
 		}
 		Location mylocation=loc;
 		//Log.i("fplan.bs","myloc has speed:"+mylocation.hasSpeed()+" lastpos: "+lastpos);
