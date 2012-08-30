@@ -337,11 +337,21 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				{
 					File chartcksumpath= new File(extpath,
 							Config.path+var.chartname+".cksum");
-					DataInputStream ds=new DataInputStream(
-							new FileInputStream(chartcksumpath));
-					String actual_cksum=ds.readUTF();
-					Log.i("fplan.ncd","Already have map "+var.chartname+" with cksum "+actual_cksum+" - informing server.");
-					nvps.add(new BasicNameValuePair("chartname_"+var.chartname,actual_cksum));					
+					if (chartcksumpath.exists())
+					{
+						try
+						{
+							DataInputStream ds=new DataInputStream(
+									new FileInputStream(chartcksumpath));
+							String actual_cksum=ds.readUTF();
+							Log.i("fplan.ncd","Already have map "+var.chartname+" with cksum "+actual_cksum+" - informing server.");
+							nvps.add(new BasicNameValuePair("chartname_"+var.chartname,actual_cksum));												
+						}
+						catch(Throwable e)
+						{
+							Log.i("fplan.ncd","Couldn't load .cksum-file: "+var.chartname);
+						}
+					}
 				}				
 			}
 			
