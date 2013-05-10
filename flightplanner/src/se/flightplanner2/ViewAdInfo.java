@@ -32,6 +32,11 @@ public class ViewAdInfo extends Activity {
 	SigPoint sp;
 	LatLon latlon;
 	String name="Unknown";
+	String storage;
+	public ViewAdInfo(String storage)
+	{
+		this.storage=storage;
+	}
 	
 	private void loadChart(String chartname)
 	{
@@ -66,7 +71,7 @@ public class ViewAdInfo extends Activity {
 		//Intent intent = new Intent();
 		try
 		{
-			Intent intent = new Intent("android.intent.action.VIEW", Uri.parse("file:/"+aiptext.get_datapath().getAbsolutePath()));
+			Intent intent = new Intent("android.intent.action.VIEW", Uri.parse("file:/"+aiptext.get_datapath(storage).getAbsolutePath()));
 			//Uri uri = Uri.parse("content://se.flightplanner2/"+aiptext.get_datapath().getAbsolutePath());//Uri.parse("file://"+aiptext.get_datapath().getAbsolutePath());
 			//intent.setData(uri);
 			intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
@@ -77,7 +82,7 @@ public class ViewAdInfo extends Activity {
 		{
 			Intent intent = new Intent(ViewAdInfo.this, HtmlViewer.class);
 			intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
-			intent.putExtra("se.flightplanner2.htmlpath", aiptext.get_datapath().getAbsolutePath()); 
+			intent.putExtra("se.flightplanner2.htmlpath", aiptext.get_datapath(storage).getAbsolutePath()); 
 			startActivity(intent);			
 		}
 		

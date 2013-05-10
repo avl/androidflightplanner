@@ -253,7 +253,7 @@ public class AirspaceLookup implements AirspaceLookupIf {
 	public boolean haveproj(String chartname) {
 		Boolean b=haveprojcache.get(chartname);
 		if (b!=null) return b;
-		b=AdChartLoader.haveproj(chartname);
+		b=AdChartLoader.haveproj(chartname,airspace!=null ? airspace.storage : "");
 		haveprojcache.put(chartname, b);
 		return b;
 	}

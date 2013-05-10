@@ -31,7 +31,13 @@ import android.widget.TextView;
 
 public class ViewRecordings extends Activity implements HandleUpload {
 	
-	final File extpath = Environment.getExternalStorageDirectory();
+	private String storage;
+	public ViewRecordings(String storage)
+	{
+		this.storage=storage;
+		extpath = Storage.getStorage(storage);
+	}
+	File extpath;
 	final File tripdirpath = new File(extpath,
 			Config.path+"triplog/");
 	FlightPathUploader ful;
@@ -102,7 +108,7 @@ public class ViewRecordings extends Activity implements HandleUpload {
 				String item=tofilename(adapter.getItem(pos));
 				chosenfile[0]=item;
 				try {
-					Chunk chunk=Chunk.loadFromDisk(item, true);					
+					Chunk chunk=Chunk.loadFromDisk(item, true, storage);					
 					update(R.id.startdate, chunk.getStartDate());
 					update(R.id.starttime, chunk.getStartTime());
 					update(R.id.endtime, chunk.getEndTime());
@@ -185,7 +191,7 @@ public class ViewRecordings extends Activity implements HandleUpload {
 						}
 						else
 						{
-							ful=new FlightPathUploader(user,pass,outerthis);						
+							ful=new FlightPathUploader(user,pass,outerthis,storage);						
 							ful.execute(chosenfile[0]);
 						}
 					}

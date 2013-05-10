@@ -27,12 +27,14 @@ public class FlightPathLogger {
 
 	ArrayList<Chunk> chunks;
 	boolean active;
+	private String storage;
 	static final int[] mega_sin_table=new int[]{
 			0, 17452, 34899, 52335, 69756, 87155, 104528, 121869, 139173, 156434, 173648, 190808, 207911, 224951, 241921, 258819, 275637, 292371, 309016, 325568, 342020, 358367, 374606, 390731, 406736, 422618, 438371, 453990, 469471, 484809, 499999, 515038, 529919, 544639, 559192, 573576, 587785, 601815, 615661, 629320, 642787, 656059, 669130, 681998, 694658, 707106, 719339, 731353, 743144, 754709, 766044, 777145, 788010, 798635, 809016, 819152, 829037, 838670, 848048, 857167, 866025, 874619, 882947, 891006, 898794, 906307, 913545, 920504, 927183, 933580, 939692, 945518, 951056, 956304, 961261, 965925, 970295, 974370, 978147, 981627, 984807, 987688, 990268, 992546, 994521, 996194, 997564, 998629, 999390, 999847, 1000000, 999847, 999390, 998629, 997564, 996194, 994521, 992546, 990268, 987688, 984807, 981627, 978147, 974370, 970295, 965925, 961261, 956304, 951056, 945518, 939692, 933580, 927183, 920504, 913545, 906307, 898794, 891006, 882947, 874619, 866025, 857167, 848048, 838670, 829037, 819152, 809016, 798635, 788010, 777145, 766044, 754709, 743144, 731353, 719339, 707106, 694658, 681998, 669130, 656059, 642787, 629320, 615661, 601815, 587785, 573576, 559192, 544639, 529919, 515038, 499999, 484809, 469471, 453990, 438371, 422618, 406736, 390731, 374606, 358367, 342020, 325568, 309016, 292371, 275637, 258819, 241921, 224951, 207911, 190808, 173648, 156434, 139173, 121869, 104528, 87155, 69756, 52335, 34899, 17452, 0, -17452, -34899, -52335, -69756, -87155, -104528, -121869, -139173, -156434, -173648, -190808, -207911, -224951, -241921, -258819, -275637, -292371, -309016, -325568, -342020, -358367, -374606, -390731, -406736, -422618, -438371, -453990, -469471, -484809, -499999, -515038, -529919, -544639, -559192, -573576, -587785, -601815, -615661, -629320, -642787, -656059, -669130, -681998, -694658, -707106, -719339, -731353, -743144, -754709, -766044, -777145, -788010, -798635, -809016, -819152, -829037, -838670, -848048, -857167, -866025, -874619, -882947, -891006, -898794, -906307, -913545, -920504, -927183, -933580, -939692, -945518, -951056, -956304, -961261, -965925, -970295, -974370, -978147, -981627, -984807, -987688, -990268, -992546, -994521, -996194, -997564, -998629, -999390, -999847, -1000000, -999847, -999390, -998629, -997564, -996194, -994521, -992546, -990268, -987688, -984807, -981627, -978147, -974370, -970295, -965925, -961261, -956304, -951056, -945518, -939692, -933580, -927183, -920504, -913545, -906307, -898794, -891006, -882947, -874619, -866025, -857167, -848048, -838670, -829037, -819152, -809016, -798635, -788010, -777145, -766044, -754709, -743144, -731353, -719339, -707106, -694658, -681998, -669130, -656059, -642787, -629320, -615661, -601815, -587785, -573576, -559192, -544639, -529919, -515038, -500000, -484809, -469471, -453990, -438371, -422618, -406736, -390731, -374606, -358367, -342020, -325568, -309016, -292371, -275637, -258819, -241921, -224951, -207911, -190808, -173648, -156434, -139173, -121869, -104528, -87155, -69756, -52335, -34899, -17452, 0			
 	};
-	public FlightPathLogger()
+	public FlightPathLogger(String storage)
 	{
 		chunks=new ArrayList<FlightPathLogger.Chunk>();
+		this.storage=storage;
 		active=false;
 	}
 	
@@ -208,7 +210,7 @@ public class FlightPathLogger {
 		private long distance_millinm;
 		private boolean finished;
 		private int version;
-		
+		private String storage;
 		private int diag_maxspeedhint;
 
 		
@@ -231,8 +233,9 @@ public class FlightPathLogger {
 			this.distance_millinm=0;
 			this.version=3;
 		}
-		private Chunk() {
+		private Chunk(String storage) {
 			//Just use for loadFromDisk
+			this.storage=storage;
 		}
 		final static private SimpleDateFormat dateformat = new SimpleDateFormat("yyyyMMddkkmmss");
 		final static private SimpleDateFormat dateonlyformat = new SimpleDateFormat("yyyy-MM-dd");
@@ -284,18 +287,18 @@ public class FlightPathLogger {
 				return;
 			Date d=new Date(startstamp);
 			String filename=dateformat.format(d);
-			File extpath = Environment.getExternalStorageDirectory();
+			File extpath = Storage.getStorage(storage);
 			File tripdirpath = new File(extpath,
 					Config.path+"triplog/");
 			Log.i("fplan.fplog","Writing"+filename);
 			serialize(filename, tripdirpath);				
 			
 		}
-		static public Chunk loadFromDisk(String filename,boolean headeronly) throws IOException {
-			File extpath = Environment.getExternalStorageDirectory();
+		static public Chunk loadFromDisk(String filename,boolean headeronly,String storage) throws IOException {
+			File extpath = Storage.getStorage(storage);
 			File tripdirpath = new File(extpath,
 					Config.path+"triplog/");
-			Chunk c=new Chunk();
+			Chunk c=new Chunk(storage);
 			c.deserialize(filename, tripdirpath, headeronly);
 			return c;
 		}

@@ -78,11 +78,12 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	}
 	private AdChartLoader adloader=null;
 	public MovingMap(Context context,DisplayMetrics metrics, FlightPathLogger fplog,MovingMapOwner owner,
-			TripState ptripstate)
+			TripState ptripstate,String storage)
 	{
 		super(context);
 		this.owner=owner;
 		this.fplog=fplog;
+		this.storage=storage;
 		
 		dismiss_timeout=new Timeout();
 		BearingSpeedCalc bearingspeed=new BearingSpeedCalc();
@@ -233,6 +234,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		//canvas.drawText("TRIP", 10, 100, textpaint);
 	}
 	private int last_cvr_amp;
+	private String storage;
 	public void gps_update(Location loc,boolean terrwarn,int cvr_amp)
 	{
 		this.terrwarn=terrwarn;
@@ -299,6 +301,11 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 					MovingMap.this.doInvalidate();
 				else
 					MovingMap.this.invalidate_within(750);				
+			}
+
+			@Override
+			public File getStorage() {
+				return Storage.getStorage(storage);
 			}
 		});
 		GlobalGetElev.get_elev=elevbmc;
@@ -374,7 +381,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 				for(int i=0;i<=13;++i)
 				{
 					
-					File extpath = Environment.getExternalStorageDirectory();
+					File extpath = Storage.getStorage(storage);
 					File path = new File(extpath,
 							Config.path+"level" + i);
 					if (!path.exists())
@@ -526,7 +533,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	@Override
 	public void selectChart(String chart) {
 		releaseMemory();
-		adloader=new AdChartLoader(chart,this);
+		adloader=new AdChartLoader(chart,this,storage);
 		gui.chartMode(true,adloader.getChartCenter(),adloader.getChartUpBearing(),
 				adloader.best_zoomlevel(getRight()-getLeft()),false);
 		if (!gui.isCentered()) drawer.find_me(gui,lastpos,getRight()-getLeft(),getBottom()-getTop());
@@ -589,7 +596,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 			releaseMemory();
 			chosen_ad_map_i=cur_toggle_map;
 			chosen_ad_map_when=SystemClock.elapsedRealtime();
-			adloader=new AdChartLoader(avail.get(cur_toggle_map).chartname,this);
+			adloader=new AdChartLoader(avail.get(cur_toggle_map).chartname,this,storage);
 			gui.chartMode(true,adloader.getChartCenter(),adloader.getChartUpBearing(),
 					adloader.best_zoomlevel(getRight()-getLeft()),false);
 			if (!gui.isCentered()) drawer.find_me(gui,lastpos,getRight()-getLeft(),getBottom()-getTop());

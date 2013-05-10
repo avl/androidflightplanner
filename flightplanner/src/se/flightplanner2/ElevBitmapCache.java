@@ -29,6 +29,8 @@ public class ElevBitmapCache implements GetElevation {
 	public static interface ClientIf
 	{
 		public void updated(boolean fully_updated); //Called when background loading of a requested tile has finished.
+
+		public File getStorage();
 	}
 	static public enum Mode
 	{
@@ -45,7 +47,7 @@ public class ElevBitmapCache implements GetElevation {
 	public ElevBitmapCache(ClientIf client)
 	{
 		this.client=client;
-		File extpath = Environment.getExternalStorageDirectory();
+		File extpath = client.getStorage();
 		blobs=new Blob[Config.max_zoomlevel+1];
 		for(int i=0;i<blobs.length;++i)
 		{

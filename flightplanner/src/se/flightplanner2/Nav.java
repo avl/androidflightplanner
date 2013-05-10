@@ -89,6 +89,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 	final static int MENU_DESCPOS = 9;
 	final static int MENU_SIMPLER = 10;
 	final static int MENU_PHRASES = 11;
+	final static int MENU_MORE = 12;
+	final static int MENU_BACK = 13;
 	private LocationManager locman;
 	
 	private FlightPathLogger fplog;
@@ -159,11 +161,15 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		menu.add(0, MENU_VIEW_CHARTS, 0, "Airports");
 		menu.add(0, MENU_SYNC, 0, "Sync");
 
-		menu.add(0, MENU_HELP, 0, "Help");
+		menu.add(0, MENU_MORE, 0, "More");
+		
+		/*
+		 * asdf
 		menu.add(0, MENU_LOGIN, 0, "Select Trip");
 		menu.add(0, MENU_SETTINGS, 0, "Settings");
 		menu.add(0, MENU_VIEW_RECORDINGS, 0, "Recorded Trips");
 		menu.add(0, MENU_FINISH, 0, "Exit");
+		*/
 		return true;
 	}
 
@@ -188,6 +194,9 @@ public class Nav extends Activity implements PositionSubscriberIf,
 			final String user = data.getStringExtra("se.flightplanner2.login");
 			final String password = data
 					.getStringExtra("se.flightplanner2.password");
+			String storage = data
+					.getStringExtra("se.flightplanner2.storage");
+			String prevstorage=getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getString("storage", "");
 			final int mapdetail = data.getIntExtra(
 					"se.flightplanner2.mapdetail", 2);
 			final boolean northup = data.getBooleanExtra(
@@ -207,6 +216,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 			SharedPreferences.Editor pedit = prefs.edit();
 			pedit.putString("user", user);
 			pedit.putString("password", password);
+			pedit.putString("storage", storage);
 			pedit.putInt("mapdetail", mapdetail);
 			pedit.putBoolean("northup", northup);
 			pedit.putBoolean("vibrate", vibrate);
@@ -233,6 +243,25 @@ public class Nav extends Activity implements PositionSubscriberIf,
 					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 2),
 					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("northup", false),
 					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("sideview", false));
+			if (prevstorage==null)
+				prevstorage="";
+			if (storage==null)
+				storage="";
+			if (!storage.equals(prevstorage))
+			{
+				AlertDialog.Builder builder = new AlertDialog.Builder(this);
+				builder.setMessage("You have modified the map storage path. The applications must be restarted. The application will now close, please start it again after it closes!")
+				.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+				    public void onClick(DialogInterface dialog, int id) {
+				    	Nav.this.finish();
+						Nav.this.cvr.stop();
+						Nav.this.overridePendingTransition(0, 0);
+				    }
+				});
+				AlertDialog diag=builder.create();
+				diag.show();
+				return;
+			}
 			if (then != null && then.equals("loadterrain")) {
 				sync();
 				return;
@@ -257,7 +286,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 	private void loadTrip() {
 		if (true) {
 			
-			Date last_load_terrain=BackgroundMapDownloader.get_last_sync();
+			Date last_load_terrain=BackgroundMapDownloader.get_last_sync(getStoragePath());
 			if (isNetworkAvailable()
 					&& (new Date().getTime() - last_load_terrain.getTime() > 60 * 15 * 1000 || last_load_terrain.getTime() == 0)) {
 				AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -299,6 +328,11 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		 * else { do_load_trips=true; loadTerrain(); }
 		 */
 	}
+
+	private String getStoragePath() {
+		return getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getString("storage", "");		
+	}
+
 
 	private void selectTrip() {
 		do_load_trips = false;
@@ -345,9 +379,9 @@ public class Nav extends Activity implements PositionSubscriberIf,
 				int satcnt = 0;
 				int satfixcnt = 0;
 				for (GpsSatellite sat : st.getSatellites()) {
-					Log.i("fplan.gps",
+					/*Log.i("fplan.gps",
 							"Sat: " + sat.getSnr() + " fix: " + sat.usedInFix()
-									+ " ");
+									+ " ");*/
 					if (sat.usedInFix())
 						satfixcnt += sat.getSnr();
 					satcnt += 1;
@@ -358,9 +392,10 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		}
 	};
 
-
-	public boolean onOptionsItemSelected(MenuItem item) {
-		switch (item.getItemId()) {
+	public void handleMoreMEnu(int item)
+	{
+		switch(item)
+		{
 		case MENU_FINISH:
 			finish();
 			cvr.stop();
@@ -370,10 +405,6 @@ public class Nav extends Activity implements PositionSubscriberIf,
 			Intent intent = getSettingsIntent();
 			intent.putExtra("se.flightplanner2.thenopen", "nothing");
 			startActivityForResult(intent, SETUP_INFO);
-			break;
-		}
-		case MENU_VIEW_CHARTS: {
-			viewAdChart();
 			break;
 		}
 		case MENU_VIEW_RECORDINGS: {
@@ -403,8 +434,47 @@ public class Nav extends Activity implements PositionSubscriberIf,
 
 			}
 
-			// showDialog(SETTINGS_DIALOG);
-			return true;
+			break;
+		}
+		
+		}
+	}
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+		case MENU_VIEW_CHARTS: {
+			viewAdChart();
+			break;
+		}
+		case MENU_MORE: {
+			final Nav nav = this;
+			AlertDialog.Builder builder = new AlertDialog.Builder(this);
+			builder.setTitle("Choose Option");
+			final int[] choices=new int[]{
+					MENU_HELP,
+					MENU_LOGIN,
+					MENU_SETTINGS,
+					MENU_VIEW_RECORDINGS,
+					MENU_FINISH,
+					MENU_BACK
+			};
+			final String[] items=new String[]{
+					"Help",
+					"Select Trip",
+					"Settings",
+					"Recorded Trips",
+					"Exit",
+					"Back"
+			};
+			builder.setItems(items, new DialogInterface.OnClickListener() {
+				public void onClick(DialogInterface dialog, int item) {
+					if (item>=0 && item<choices.length)
+						nav.handleMoreMEnu(choices[item]);
+				}
+			});
+			AlertDialog diag = builder.create();
+			diag.show();
+			break;
+			
 		}
 		case MENU_SYNC:
 			try {
@@ -433,6 +503,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 			Intent intent = new Intent(this, PhrasesActivity.class);
 			intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
 			startActivity(intent);
+			break;
 		}
 
 		}
@@ -575,6 +646,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 				.getString("user", "user"));
 		intent.putExtra("se.flightplanner2.password",
 				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getString("password", "password"));
+		intent.putExtra("se.flightplanner2.storage",
+				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getString("storage", ""));
 		int mapd = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 2);
 		intent.putExtra("se.flightplanner2.mapdetail", mapd);
 		intent.putExtra("se.flightplanner2.northup",
@@ -607,7 +680,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 	private void sync() {
 
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		Date last = BackgroundMapDownloader.get_last_sync();
+		Date last = BackgroundMapDownloader.get_last_sync(getStoragePath());
 		long now = new Date().getTime();
 		String minago;
 		if (last == null)
@@ -695,7 +768,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
     	tripstate=new TripState(null);
 		GlobalTripState.tripstate=tripstate;
     	//setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-    	fplog=new FlightPathLogger();
+    	fplog=new FlightPathLogger(Storage.getStoragePath(this));
     	
     	last_location=bearingspeed.calcBearingSpeed(null);
 
@@ -752,7 +825,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
         tripstate=new TripState(tripdata);
 		GlobalTripState.tripstate=tripstate;
         
-        map=new MovingMap(this,metrics,fplog,this,tripstate);
+        map=new MovingMap(this,metrics,fplog,this,tripstate,Storage.getStoragePath(this));
         map.update_airspace(airspace,lookup,getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 2),
         		getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("northup", false),
         		getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("sideview", false)
@@ -767,12 +840,12 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		
 		
 		proxdet=new AirspaceProximityDetector(lookup,5);
-		clearper=new ClearancePersistence();
+		clearper=new ClearancePersistence(Storage.getStoragePath(this));
 		GlobalClearancePersistence.clearper=clearper;
 		vibrator= (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 		warner=new AirspaceWarner(proxdet);
 		if (airspace!=null && airspace.spaces!=null)
-			clearper.load(airspace.spaces);
+			clearper.load(airspace.spaces,Storage.getStoragePath(this));
 		
 		if (Config.debugMode() && Config.gpsdrive)
 		{
@@ -808,7 +881,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 					},
 	        		 sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
 		}
-		cvr=new CVR();
+		cvr=new CVR(Storage.getStoragePath(this));
 		if (getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("cvr", false))			
 			cvr.start();
 		
@@ -1053,9 +1126,11 @@ public class Nav extends Activity implements PositionSubscriberIf,
 				"user");
 		final String pass = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getString("password",
 				"password");
+		final String storage = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getString("storage",
+				"");
 		final int detail = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 2);
 		AppState.terraindownloader = new BackgroundMapDownloader(
-				Nav.this, user, pass, detail);
+				Nav.this, user, pass, detail, storage);
 		Log.i("fplan", "Previous airspace: " + airspace);
 		map.enableTerrainMap(false);
 		AppState.terraindownloader.execute(airspace);

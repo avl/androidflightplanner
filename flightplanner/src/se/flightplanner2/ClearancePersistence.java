@@ -18,14 +18,18 @@ import android.util.Log;
 
 public class ClearancePersistence {
 	private BackgroundSaver loader;
-	
-	public void load(ArrayList<AirspaceArea> areas)
+	private String storage;
+	public ClearancePersistence(String storage)
 	{
-		
+		this.storage=storage;
+	}
+	public void load(ArrayList<AirspaceArea> areas,String storage)
+	{
+		this.storage=storage;
 		try
 		{
 		
-			File extpath = Environment.getExternalStorageDirectory();
+			File extpath = Storage.getStorage(storage);
 			File srcpath = new File(extpath,
 					Config.path+"clearance.dat");
 			FileInputStream fs=new FileInputStream(srcpath);
@@ -111,7 +115,7 @@ public class ClearancePersistence {
 			{
 				if (params.length==0) return null;
 				ArrayList<AirspaceArea> last=params[params.length-1];
-				File extpath = Environment.getExternalStorageDirectory();
+				File extpath = Storage.getStorage(storage);
 				File tmppath = new File(extpath,
 						Config.path+"clearance.dat.tmp");
 				File dstpath = new File(extpath,

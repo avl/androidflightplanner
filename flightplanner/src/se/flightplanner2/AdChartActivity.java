@@ -60,7 +60,7 @@ public class AdChartActivity extends Activity implements PositionSubscriberIf {
     	Log.i("fplan.chart","After calling getSerializable");
     	try
     	{
-    		view=new AdChartView(this,chartname);
+    		view=new AdChartView(this,chartname,Storage.getStoragePath(this));
     		if (view.failed_to_get_width())
     		{
     			Log.i("fplan.chart","Failed get chart width");

@@ -100,7 +100,7 @@ public class BearingSpeedCalc {
 					else
 						mylocation.setBearing(0.0f);
 				}
-				Log.i("fplan.bs","bearing:"+mylocation.getBearing());
+				//Log.i("fplan.bs","bearing:"+mylocation.getBearing());
 			}
 				
 		}

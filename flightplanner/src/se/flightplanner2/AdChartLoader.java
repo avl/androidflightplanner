@@ -86,9 +86,9 @@ public class AdChartLoader implements UpdatableUI{
 			startLoad();			
 		}
 	}
-	public static boolean haveproj(String chartname)
+	public static boolean haveproj(String chartname,String storage)
 	{
-		File extpath = Environment.getExternalStorageDirectory();
+		File extpath = Storage.getStorage(storage);
 		
 		File chartprojpath = new File(extpath,
 				Config.path+chartname+".proj");
@@ -120,7 +120,7 @@ public class AdChartLoader implements UpdatableUI{
 				
 		return false;
 	}
-	public AdChartLoader(String chartname,AdChartOwner owner) {
+	public AdChartLoader(String chartname,AdChartOwner owner,String storage) {
 		this.owner=owner;
 		loader=null;
 		mapcache=new MapCache();
@@ -128,7 +128,7 @@ public class AdChartLoader implements UpdatableUI{
 		blobs=new ArrayList<Blob>();
 		maxzoomdata=4;
 		bitmaps=new GetMapBitmap(mapcache);
-		File extpath = Environment.getExternalStorageDirectory();
+		File extpath = Storage.getStorage(storage);
 		
 		File chartprojpath = new File(extpath,
 				Config.path+chartname+".proj");

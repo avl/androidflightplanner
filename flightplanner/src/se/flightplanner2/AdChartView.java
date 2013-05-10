@@ -233,7 +233,7 @@ public class AdChartView extends View implements UpdatableUI {
 	}
 	int maxzoomdata;
 	int maxzoomgui;
-	public AdChartView(Context context,String chartname) throws IOException {
+	public AdChartView(Context context,String chartname,String storage) throws IOException {
 		super(context);
 		loader=null;
 		mapcache=new MapCache();
@@ -242,7 +242,7 @@ public class AdChartView extends View implements UpdatableUI {
 		maxzoomdata=4;
 		maxzoomgui=6;
 		bitmaps=new GetMapBitmap(mapcache);
-		File extpath = Environment.getExternalStorageDirectory();
+		File extpath = Storage.getStorage(storage);
 		curLostSignalRunnable=null;
 		lostSignalTimer=new Handler();
 		calc=new BearingSpeedCalc();

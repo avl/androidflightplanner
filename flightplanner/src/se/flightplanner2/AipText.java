@@ -19,9 +19,9 @@ public class AipText {
 	public Date date;
 	public boolean got_data;
 	
-	public File get_datapath()
+	public File get_datapath(String storage)
 	{
-		File extpath = Environment.getExternalStorageDirectory();
+		File extpath = Storage.getStorage(storage);
 		if (icao.length()>100) throw new RuntimeException("Totally unexpected value of icao.");
 		File aiptextpath = new File(extpath,
 				Config.path+icao+"/");
@@ -31,6 +31,11 @@ public class AipText {
 		return path;
 	}
 	
+	private static String storage;
+	public static void setCurStorage(String pstorage) //<- Ugly hack!!
+	{
+		storage=pstorage;
+	}
 	public static AipText deserialize(DataInputStream is,int version) throws IOException {
 		AipText p=new AipText();
 		p.icao=is.readUTF();
@@ -47,7 +52,7 @@ public class AipText {
 		{ //Blob is contained
 			int bloblen=is.readInt();
 			//Log.i("fplan","Reading "+bloblen+" byte blob.");
-			File extpath = Environment.getExternalStorageDirectory();
+			File extpath = Storage.getStorage(storage);
 			File aiptextpath = new File(extpath,
 					Config.path+p.icao+"/");
 			aiptextpath.mkdirs();
@@ -83,7 +88,7 @@ public class AipText {
 		}
 		else
 		{
-			File fp=p.get_datapath();
+			File fp=p.get_datapath(storage);
 			if (fp.exists())
 				p.got_data=true;
 		}

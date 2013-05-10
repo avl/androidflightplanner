@@ -37,6 +37,8 @@ public class SetupInfo extends Activity {
         edtxt.setText(getIntent().getExtras().getString("se.flightplanner2.user"));
         final EditText edpwd = (EditText) findViewById(R.id.editpass);
         edpwd.setText(getIntent().getExtras().getString("se.flightplanner2.password"));
+        final EditText storage = (EditText) findViewById(R.id.editstorage);
+        storage.setText(getIntent().getExtras().getString("se.flightplanner2.storage"));
         detail=getIntent().getExtras().getInt("se.flightplanner2.mapdetail",0)+1;
         boolean startchecked=getIntent().getExtras().getBoolean("se.flightplanner2.northup",false);
         boolean startcheckedvibrate=getIntent().getExtras().getBoolean("se.flightplanner2.vibrate",false);
@@ -66,18 +68,20 @@ public class SetupInfo extends Activity {
         button.setOnClickListener(new OnClickListener() {
         	void onOk()
         	{
+        		
             	Intent ret=new Intent(Intent.ACTION_DEFAULT);
     			ret.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
     			String username2=edtxt.getText().toString();    			
             	ret.putExtra("se.flightplanner2.login",username2);
             	ret.putExtra("se.flightplanner2.password",edpwd.getText().toString());
+            	ret.putExtra("se.flightplanner2.storage",storage.getText().toString());
             	ret.putExtra("se.flightplanner2.mapdetail",outer_this.detail-1);
             	ret.putExtra("se.flightplanner2.northup",northup.isChecked());
             	ret.putExtra("se.flightplanner2.vibrate",vibrate.isChecked());
             	ret.putExtra("se.flightplanner2.terrwarn",terrwarn.isChecked());
             	ret.putExtra("se.flightplanner2.autosync",autosync.isChecked());
             	ret.putExtra("se.flightplanner2.cvr",cvr.isChecked());
-            	ret.putExtra("se.flightplanner2.sideview",sideview.isChecked());
+            	ret.putExtra("se.flightplanner2.sideview",sideview.isChecked()); 
             	
             	ret.putExtra("se.flightplanner2.thenopen", getIntent().getExtras().getString("se.flightplanner2.thenopen"));
             	setup.setResult(RESULT_OK,ret);

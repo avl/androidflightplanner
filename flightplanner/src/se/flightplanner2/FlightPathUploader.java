@@ -19,11 +19,13 @@ public class FlightPathUploader extends AsyncTask<String, Void, String> {
 
 	String user,pass;
 	HandleUpload cb;
-	public FlightPathUploader(String user,String pass,HandleUpload cb)
+	private String storage;
+	public FlightPathUploader(String user,String pass,HandleUpload cb,String storage)
 	{
 		this.cb=cb;
 		this.user=user;
 		this.pass=pass;
+		this.storage=storage;
 	}
 	static public interface HandleUpload
 	{
@@ -40,7 +42,7 @@ public class FlightPathUploader extends AsyncTask<String, Void, String> {
 	protected String doInBackground(String... args)  {
 		for(String filename:args)
 		{
-			File extpath = Environment.getExternalStorageDirectory();
+			File extpath = Storage.getStorage(storage);
 			File tripdirpath = new File(extpath,
 					Config.path+"triplog/");
 			File path= new File(tripdirpath,filename);

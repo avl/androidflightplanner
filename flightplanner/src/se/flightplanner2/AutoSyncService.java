@@ -56,7 +56,7 @@ public class AutoSyncService extends Service implements BackgroundMapDownloadOwn
 		}
 		long nowsec = new Date().getTime() / 1000l;
 		
-		long lastsyncsec=BackgroundMapDownloader.get_last_sync().getTime()/1000;
+		long lastsyncsec=BackgroundMapDownloader.get_last_sync(getStorage(appctx)).getTime()/1000;
 		
 		for (TripData trip : space.trips) {
 			for (int i = 0; i < trip.waypoints.size(); ++i) {
@@ -119,6 +119,12 @@ public class AutoSyncService extends Service implements BackgroundMapDownloadOwn
 
 		alarmManager.set(AlarmManager.RTC, next * 1000l, pendingIntent);
 	}
+
+
+
+	private static String getStorage(Context appctx) {
+		return appctx.getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getString("storage", "");
+	}
 	
 	
 
@@ -133,7 +139,7 @@ public class AutoSyncService extends Service implements BackgroundMapDownloadOwn
 			String user=shp.getString("user", "");
 			String pass=shp.getString("password", "");
 			int mapdetail = shp.getInt("mapdetail", 0);
-			AppState.terraindownloader=new BackgroundMapDownloader(this, user, pass, mapdetail);
+			AppState.terraindownloader=new BackgroundMapDownloader(this, user, pass, mapdetail, Storage.getStoragePath(this));
 			Airspace airspace=null;
 			try{
 				airspace=Airspace.deserialize_from_file(this,"airspace.bin");

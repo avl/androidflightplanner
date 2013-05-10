@@ -86,9 +86,9 @@ public class Airspace implements Serializable{
 	}
 
 	@SuppressWarnings("unchecked")
-	public static Airspace deserialize(DataInputStream is,Airspace previous,AirspaceProgress prog) throws IOException {
+	public static Airspace deserialize(DataInputStream is,Airspace previous,AirspaceProgress prog, String storage2) throws IOException {
 		Airspace a=new Airspace();
-		
+		a.storage=storage2;
 		
 		if (previous!=null)
 			Log.i("fplan","Previous: "+previous.spaces.size());
@@ -130,6 +130,7 @@ public class Airspace implements Serializable{
 		a.points=read_sub(SigPoint.class,is,prog,15,30,version,"points",
 				previous!=null ? (ArrayList<SigPoint>)previous.points.clone() : null);
 
+		AipText.setCurStorage(storage2);
 		a.aiptexts=read_sub(AipText.class,is,prog,30,80,version,"aiptext",
 				previous!=null ? (ArrayList<AipText>)previous.aiptexts.clone() : null);
 		
@@ -461,11 +462,11 @@ public class Airspace implements Serializable{
 		spaces=pspaces;
 	}
 	
-	public static Airspace download(Airspace previous,AirspaceProgress prog,String user,String pass,boolean aip) throws Exception
+	public static Airspace download(Airspace previous,AirspaceProgress prog,String user,String pass,boolean aip,String storage) throws Exception
 	{
-		return download(null,previous,prog,user,pass,aip);
+		return download(null,previous,prog,user,pass,aip,storage);
 	}
-	public static Airspace download(InputStream fakeDataForTest,Airspace previous,AirspaceProgress prog,String user,String pass,boolean aip) throws Exception
+	public static Airspace download(InputStream fakeDataForTest,Airspace previous,AirspaceProgress prog,String user,String pass,boolean aip,String storage) throws Exception
 	{
 		
 		System.out.println("Start download operation");
@@ -492,7 +493,7 @@ public class Airspace implements Serializable{
 			InflaterInputStream dinp=new InflaterInputStream(rawinp);
 			inp=dinp;
 		}
-		Airspace airspace=deserialize(new DataInputStream(inp),previous,prog);
+		Airspace airspace=deserialize(new DataInputStream(inp),previous,prog,storage);
 		inp.close();
 		System.out.println("Finish download operation");
 		
@@ -582,9 +583,9 @@ public class Airspace implements Serializable{
 	}
 
 	private static final long serialVersionUID = 4162260268270562095L;
-	void serialize_to_file(String filename) throws Exception
+	void serialize_to_file(String filename,String storage) throws Exception
 	{
-		File extpath = Environment.getExternalStorageDirectory();
+		File extpath = Storage.getStorage(storage);
 		File dirpath = new File(extpath,
 				Config.path);
 		if (!dirpath.exists())
@@ -608,10 +609,11 @@ public class Airspace implements Serializable{
 			ofstream.close();
 		}		
 	}
-	
+	public String storage;
 	static Airspace deserialize_from_file(Context context,String filename) throws Exception
 	{
-		File extpath = Environment.getExternalStorageDirectory();
+		String storage=context.getSharedPreferences("se.flightplanner2.prefs",Context.MODE_PRIVATE).getString("storage", "");		
+		File extpath = Storage.getStorage(storage);
 		File path = new File(extpath,
 				Config.path+filename);
 		InputStream ofstream=new BufferedInputStream(
@@ -623,7 +625,7 @@ public class Airspace implements Serializable{
 		{
 			
 			DataInputStream os=new DataInputStream(ofstream);
-			data=Airspace.deserialize(os,null,null);//(Airspace)os.readObject();
+			data=Airspace.deserialize(os,null,null,storage);//(Airspace)os.readObject();
 			os.close();		
 		}
 		finally
@@ -641,6 +643,7 @@ public class Airspace implements Serializable{
 			e.printStackTrace();
 			Log.i("fplan","Failed loading chart list");
 		}
+		
 		return data;
 	}
 	public ArrayList<AirspaceArea> getSpaces() {
@@ -806,14 +809,6 @@ public class Airspace implements Serializable{
 	}
 	
 	
-	private static File getLastLoadFile() {
-		File extpath = Environment.getExternalStorageDirectory();
-		File dirpath = new File(extpath,
-				Config.path);
-		if (!dirpath.exists())
-			dirpath.mkdirs();
-		File path = new File(dirpath,"lastload.ms");
-		return path;
-	}
+
 	
 }

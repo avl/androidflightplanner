@@ -14,7 +14,11 @@ public class CVR {
 
 	public boolean recording;
 	private MediaRecorder mRecorder;
-	
+	private String storage;
+	public CVR(String storage)
+	{
+		this.storage=storage;
+	}
 	public void stop()
 	{
 		if (mRecorder!=null)
@@ -49,7 +53,7 @@ public class CVR {
 			SimpleDateFormat formatter = new SimpleDateFormat("yyyy_MM_d_HHmm");
 			formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
 			Date now=new Date();
-			File extpath = Environment.getExternalStorageDirectory();
+			File extpath = Storage.getStorage(storage);
 			File cvrpath= new File(extpath,"CVR");
 			cvrpath.mkdirs();;
 			String filename="CVR_"+formatter.format(now)+".3gp";

@@ -127,6 +127,7 @@ public class PhrasesActivity extends Activity {
 		
 		sb.append("<p>" + getctl() + " " + getreg() + " " + getpos(true)
 				+ "</p>");
+		
 		sb.append("<p>" + getctl() + " " + getreg()
 				+ " REQUEST CHANGE TO [freq]</p>");
 		sb.append("<p>" + getctl() + " " + getreg()

@@ -37,12 +37,14 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 	String user;
 	String pass;
 	int mapdetail;
-	public BackgroundMapDownloader(BackgroundMapDownloadOwner owner,String user,String pass, int mapdetail)
+	private String storage;
+	public BackgroundMapDownloader(BackgroundMapDownloadOwner owner,String user,String pass, int mapdetail, String storage)
 	{
 		this.owner=owner;
 		this.user=user;
 		this.pass=pass;
 		this.mapdetail=mapdetail;
+		this.storage=storage;
 	}
 	
 	@SuppressWarnings("serial")
@@ -121,8 +123,8 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				public void report(int percent) {
 					publishProgress("Airspace "+percent+"%");					
 				}
-    		},user,DataDownloader.hashpass(pass),MapDetailLevels.haveAip(mapdetail));
-    		ad.airspace.serialize_to_file("airspace.bin");
+    		},user,DataDownloader.hashpass(pass),MapDetailLevels.haveAip(mapdetail),storage);
+    		ad.airspace.serialize_to_file("airspace.bin",storage);
 			
 			Log.i("fplan","Building BSP-trees");
 			ad.lookup=new AirspaceLookup(ad.airspace);
@@ -140,12 +142,15 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 	}
 	private long checkspace(long atleast) throws FatalBackgroundException
 	{
-		StatFs stat = new StatFs(Environment.getExternalStorageDirectory().getPath());
+		StatFs stat = new StatFs(getStorage().getPath());
 		long bytesAvailable = (long)stat.getBlockSize() *(long)stat.getBlockCount();
 		//long megs=bytesAvailable/(1000000);
 		if (bytesAvailable<atleast)
 			throw new FatalBackgroundException("Error: Disk full.");
 		return bytesAvailable;
+	}
+	private File getStorage() {
+		return Storage.getStorage(storage);
 	}
 	@Override
 	protected DownloadedAirspaceData doInBackground(Airspace... asp) {
@@ -210,7 +215,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			
 			
 			try {
-				File extpath = Environment.getExternalStorageDirectory();
+				File extpath = getStorage();
 				File syncpath = new File(extpath,
 						Config.path+"lastsync.dat");
 				FileOutputStream foup=new FileOutputStream(syncpath);
@@ -235,10 +240,10 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 		}
 		
 	}
-	static public Date get_last_sync()
+	static public Date get_last_sync(String storagePath)
 	{
 		try {
-			File extpath = Environment.getExternalStorageDirectory();
+			File extpath = Storage.getStorage(storagePath);
 			File syncpath = new File(extpath,
 					Config.path+"lastsync.dat");
 			FileInputStream foup=new FileInputStream(syncpath);
@@ -289,7 +294,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 	private void downloadAdCharts(DownloadedAirspaceData res) throws Exception {
 		
 		
-		File extpath = Environment.getExternalStorageDirectory();
+		File extpath = getStorage();
 		File metapath = new File(extpath,
 				Config.path+"chartmeta.dat");
 		File newstyle = new File(extpath,
@@ -512,7 +517,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 			String prefix=kind;
 			if (prefix.equals("bignolabel"))
 				prefix="";
-			File extpath = Environment.getExternalStorageDirectory();
+			File extpath = getStorage();
 			File metapath = new File(extpath,
 					Config.path+prefix+"meta.dat");
 	
@@ -693,7 +698,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 	}
 	private void deleteStoredFiles(String prefix) throws FatalBackgroundException {
 		
-		File extpath2 = Environment.getExternalStorageDirectory();
+		File extpath2 = getStorage();
 		File metapath = new File(extpath2,
 				Config.path+prefix+"meta.dat");
 		if (metapath.exists())
