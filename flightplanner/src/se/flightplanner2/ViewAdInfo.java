@@ -32,10 +32,8 @@ public class ViewAdInfo extends Activity {
 	SigPoint sp;
 	LatLon latlon;
 	String name="Unknown";
-	String storage;
-	public ViewAdInfo(String storage)
+	public ViewAdInfo()
 	{
-		this.storage=storage;
 	}
 	
 	private void loadChart(String chartname)
@@ -67,7 +65,7 @@ public class ViewAdInfo extends Activity {
 		//map.releaseMemory();
 		startActivity(intent);
 	}
-	private void show_aip(AipText aiptext) {
+	private void show_aip(AipText aiptext,String storage) {
 		//Intent intent = new Intent();
 		try
 		{
@@ -302,6 +300,7 @@ public class ViewAdInfo extends Activity {
 					RookieHelper.showmsg(ViewAdInfo.this, "Click on an airfield on the main map, then select this button.");
 					return;					
 				}
+				final String storage=Storage.getStoragePath(ViewAdInfo.this);
 				
 				final ArrayList<AipText> aipitems=lookup.getAipText(icao);
 				if (aipitems==null)
@@ -316,7 +315,7 @@ public class ViewAdInfo extends Activity {
 				}
 				if (aipitems.size()==1)
 				{
-	        		ViewAdInfo.this.show_aip(aipitems.get(0));
+	        		ViewAdInfo.this.show_aip(aipitems.get(0),storage);
 	        		return;
 				}
 		    	AlertDialog.Builder builder = new AlertDialog.Builder(ViewAdInfo.this);
@@ -329,7 +328,7 @@ public class ViewAdInfo extends Activity {
 		    	    	Intent viewIntent = new Intent(Intent.ACTION_VIEW,
 		    	                Uri.fromFile(aiptext.get_datapath()));
 		    	    	ViewAdInfo.this.startActivity(viewIntent);*/		    	    	
-		        		show_aip(aiptext);
+		        		show_aip(aiptext,storage);
 		    	    	
 		    	    }
 

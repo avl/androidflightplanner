@@ -31,12 +31,7 @@ import android.widget.TextView;
 
 public class ViewRecordings extends Activity implements HandleUpload {
 	
-	private String storage;
-	public ViewRecordings(String storage)
-	{
-		this.storage=storage;
-		extpath = Storage.getStorage(storage);
-	}
+	String storage;
 	File extpath;
 	final File tripdirpath = new File(extpath,
 			Config.path+"triplog/");
@@ -77,6 +72,8 @@ public class ViewRecordings extends Activity implements HandleUpload {
 		getWindowManager().getDefaultDisplay().getMetrics(metrics);
 
         setContentView(R.layout.viewrecordings);
+    	storage=Storage.getStoragePath(this);
+        extpath = Storage.getStorage(storage);
         
         final Button uploadbutton = (Button) findViewById(R.id.upload);
         final Button backbutton = (Button) findViewById(R.id.back);

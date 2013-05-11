@@ -75,10 +75,12 @@ public class ClearancePersistence {
 		if (loc==null || lookup==null)
 			return;
 		final float gs=(float)(loc.getSpeed()*3.6/1.852);
-		if (gs<2)
+		if (gs<4)
 		{
 			++count_standstill;
-			if (count_standstill>20 && SystemClock.elapsedRealtime()-last_update>1000l*30)
+			if (last_update==0)
+				last_update=SystemClock.elapsedRealtime();
+			if (count_standstill>20 && SystemClock.elapsedRealtime()-last_update>1000l*60*10)
 			{				
 				last_update=SystemClock.elapsedRealtime();
 				count_standstill=0;
@@ -97,6 +99,7 @@ public class ClearancePersistence {
 		}
 		else
 		{
+			last_update=SystemClock.elapsedRealtime();
 			count_standstill=0;
 		}
 		

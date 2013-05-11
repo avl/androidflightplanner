@@ -363,11 +363,10 @@ public class PhrasesActivity extends Activity {
 		else
 			curreldec=null;
 	}
-
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-
+		
 		setContentView(R.layout.phrases);
 		layinf = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
 
@@ -426,17 +425,17 @@ public class PhrasesActivity extends Activity {
 				@Override
 				public void onItemSelected(AdapterView<?> arg0, View arg1,
 						int pos, long arg3) {
-					sel_alt = alts.get(pos);
-					store_setting("presel_altitude", sel_alt);
-					Log.i("fplan.presel","Storing "+sel_alt);
+					store_setting("presel_altitude", alts.get(pos));
 					if (pos!=0)
+					{
+						sel_alt = alts.get(pos);
 						spn_lvl.setSelection(0);
+					}
 					update();
 				}
 
 				@Override
 				public void onNothingSelected(AdapterView<?> arg0) {
-					sel_alt = "[altitude]";
 					update();
 				}
 			});
@@ -447,17 +446,17 @@ public class PhrasesActivity extends Activity {
 				@Override
 				public void onItemSelected(AdapterView<?> arg0, View arg1,
 						int pos, long arg3) {
-					sel_alt = lvls.get(pos);
-					store_setting("presel_level", sel_alt);
-					Log.i("fplan.presel","Storing "+sel_alt);
+					store_setting("presel_level", lvls.get(pos));
 					if (pos!=0)
+					{
+						sel_alt = lvls.get(pos);
 						spn_alt.setSelection(0);
+					}
 					update();
 				}
 
 				@Override
-				public void onNothingSelected(AdapterView<?> arg0) {
-					sel_alt = "[altitude]";
+				public void onNothingSelected(AdapterView<?> arg0) {				
 					update();
 				}
 			});
@@ -575,11 +574,8 @@ public class PhrasesActivity extends Activity {
 			int index = 0;
 			boolean found = false;
 			for (String stat : items) {
-				Log.i("fplan.presel", "Applying presel: " + presel
-						+ " to item: " + stat);
 				if (presel.equals(stat)) {
 					spn.setSelection(index);
-					Log.i("fplan.presel","--- match!, set to: "+index+" out of "+spn.getCount());
 					found = true;
 					break;
 				}

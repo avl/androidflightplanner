@@ -1166,7 +1166,7 @@ public class MapDrawer {
 			TransformIf tf, int zoomlevel, Merc screen_center) {
 		double onenmpixels=Project.approx_scale(screen_center.y, zoomlevel, 1);
 		int best_ad_level=adloader.guess_zoomlevel(onenmpixels);
-		Log.i("fplan.bad","Best level: "+best_ad_level);
+		//Log.i("fplan.bad","Best level: "+best_ad_level);
 		adloader.set_level(best_ad_level);
 		
 		adloader.start();

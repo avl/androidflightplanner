@@ -20,6 +20,7 @@ import se.flightplanner2.simpler.AirspaceLayout.Row;
 import se.flightplanner2.simpler.AirspaceLayout.Rows;
 import se.flightplanner2.simpler.Common.Compartment;
 import se.flightplanner2.simpler.FindNearby.FoundAirspace;
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -31,6 +32,7 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.os.Handler;
 import android.os.SystemClock;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -50,6 +52,8 @@ public class SimplerView extends View {
 	private Paint smalltxtpaint;
 	private Paint boxpaint;
 	private Paint boxframepaint;
+	private float onemm;
+	private float fivemm;
 	static final private int border = 3;
 	static final private int margins = 10;
 	private boolean needlayout = true;
@@ -58,7 +62,7 @@ public class SimplerView extends View {
 		return new Common.Rect(r.left, r.top, r.right, r.bottom);
 	}
 
-	public SimplerView(Context context, AirspaceLookupIf lookup,
+	public SimplerView(Activity context, AirspaceLookupIf lookup,
 			LatLon initial_pos, float initial_heading, float init_gs,
 			ViewOwner owner) {
 		super(context);
@@ -67,11 +71,18 @@ public class SimplerView extends View {
 		this.pos = initial_pos;
 		this.hdg = initial_heading;
 		this.gs = init_gs;
+		
+		DisplayMetrics metrics = new DisplayMetrics();
+		context.getWindowManager().getDefaultDisplay().getMetrics(metrics);
+
+		onemm=metrics.xdpi/25.4f;	
+		fivemm=5*onemm;
+		
 		txtpaint = new Paint();
-		txtpaint.setTextSize(22);
+		txtpaint.setTextSize(3.3f*onemm);
 		txtpaint.setAntiAlias(true);
 		smalltxtpaint = new Paint();
-		smalltxtpaint.setTextSize(17);
+		smalltxtpaint.setTextSize(3.0f*onemm);
 		smalltxtpaint.setAntiAlias(true);
 		boxpaint = new Paint();
 		boxpaint.setStyle(Style.FILL);
@@ -151,27 +162,25 @@ public class SimplerView extends View {
 
 	private State state = State.IDLE;
 	private float downx, downy;
-
+	private FoundAirspace was_highlight;
 	@Override
 	public boolean onTouchEvent(MotionEvent ev) {
 
 		float x = ev.getX();
 		float y = ev.getY();
+		Log.i("fplan","onTouch: "+x+","+y+": "+ev.getAction()+" state: "+state);
 		if (ev.getAction() == MotionEvent.ACTION_DOWN
 				|| ev.getAction() == MotionEvent.ACTION_MOVE) {
 			owner.touched();
 			if (state == State.FINGER_DOWN) {
-				if (state == State.FINGER_DOWN) {
-					if (x - downx > 15 || y - downy < -15) {
-						if (clear(downx, downy, false))
-							state = State.DEAD;
-					} else if (x - downx < -15 || y - downy > 15) {
-						if (clear(downx, downy, true))
-							state = State.DEAD;
-					}
+				if (x - downx > fivemm || y - downy < -fivemm) {
+					if (clear(downx, downy, false))
+						state = State.DEAD;
+				} else if (x - downx < -fivemm || y - downy > fivemm) {
+					if (clear(downx, downy, true))
+						state = State.DEAD;
 				}
 			}
-			FoundAirspace was_highlight=highlighted;
 			if (state == State.IDLE) {
 				if (highlighted!=null && dropdown_rect!=null)
 				{
@@ -183,26 +192,13 @@ public class SimplerView extends View {
 				}
 				if (state==State.IDLE)
 				{
-					cancel_any_highlight();
 					downx = x;
 					downy = y;
-					state = State.FINGER_DOWN;
+					was_highlight=highlighted;
+					state=State.FINGER_DOWN;					
 				}
 			}
 
-			if (state != State.DEAD) {
-				highlight_any(x, y);
-				if (was_highlight==highlighted)
-				{
-					show_dropdown=!show_dropdown;
-				}
-				else
-				{
-					show_dropdown=true;
-				}
-			} else {
-				//cancel_any_highlight();
-			}
 		} else if (ev.getAction() == MotionEvent.ACTION_UP) {
 			
 			handler.postDelayed(this.highlight_canceler, 5000);
@@ -212,6 +208,19 @@ public class SimplerView extends View {
 					clear(downx, downy, false);
 				} else if (x - downx < -15 || y - downy > 15) {
 					clear(downx, downy, true);
+				}
+				else
+				{
+					cancel_any_highlight();
+					highlight_any(x, y);
+					if (was_highlight==highlighted)
+					{
+						show_dropdown=!show_dropdown;
+					}
+					else
+					{
+						show_dropdown=true;
+					}					
 				}
 			}
 			state = State.IDLE;
@@ -711,7 +720,7 @@ public class SimplerView extends View {
 
 	private int measureBox(String label, Paint usetxtpaint, Rect drawrect) {
 		usetxtpaint.getTextBounds(label, 0, label.length(), drawrect);
-		return drawrect.height();
+		return (16*drawrect.height())/14+1;
 	}
 
 	private int rgb(int r, int g, int b, int lighten) {

@@ -257,7 +257,7 @@ public class AdChartLoader implements UpdatableUI{
 			ll.lat+=1.0/60.0;
 			Vector px=latlon2pixel(i,ll);
 			float cand_onenmpixels=(float)px.length();
-			Log.i("fplan.bad","onenm-pixels: "+onenmpixels+" canddiate: "+cand_onenmpixels);
+			//Log.i("fplan.bad","onenm-pixels: "+onenmpixels+" canddiate: "+cand_onenmpixels);
 			float delta=(float)Math.abs(cand_onenmpixels-onenmpixels);
 			if (delta<best_delta)
 			{
