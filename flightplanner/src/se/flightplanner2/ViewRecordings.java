@@ -68,12 +68,12 @@ public class ViewRecordings extends Activity implements HandleUpload {
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+    	storage=Storage.getStoragePath(this);
+        extpath = Storage.getStorage(storage);
 		DisplayMetrics metrics = new DisplayMetrics();
 		getWindowManager().getDefaultDisplay().getMetrics(metrics);
 
         setContentView(R.layout.viewrecordings);
-    	storage=Storage.getStoragePath(this);
-        extpath = Storage.getStorage(storage);
         
         final Button uploadbutton = (Button) findViewById(R.id.upload);
         final Button backbutton = (Button) findViewById(R.id.back);
