@@ -252,7 +252,7 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		iMerc merc17=Project.latlon2imerc(latlon,17);
 		try {
 			int altfeet=(int)(lastpos.getAltitude()/0.3048);
-			fplog.log(merc17, lastpos.getTime(), (int)(lastpos.getSpeed()*3.6f/1.852f), lookup,altfeet);
+			fplog.log(merc17, lastpos.getTime(), (int)(lastpos.getSpeed()*3.6f/1.852f), lookup,altfeet,storage);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

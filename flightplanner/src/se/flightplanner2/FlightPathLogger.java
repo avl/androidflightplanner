@@ -58,7 +58,7 @@ public class FlightPathLogger {
 	 * @param nomenclature
 	 * @throws IOException 
 	 */
-	public void log(iMerc merc17,long gps_timestamp_ms,int speedHint,AirspaceLookup lookup,int altitude) throws IOException
+	public void log(iMerc merc17,long gps_timestamp_ms,int speedHint,AirspaceLookup lookup,int altitude,String storage) throws IOException
 	{
 		if (gps_timestamp_ms<86400*10)
 		{
@@ -84,7 +84,7 @@ public class FlightPathLogger {
 			else
 			{
 				//Log.i("fplan.fplog","Starting new chunk");
-				chunk=new Chunk(merc17,gps_timestamp_ms);
+				chunk=new Chunk(merc17,gps_timestamp_ms,storage);
 				chunk.setStartPlace(findPlace(merc17,lookup));
 				chunks.add(chunk);
 				active=true;
@@ -216,8 +216,9 @@ public class FlightPathLogger {
 		
 		
 		private BinaryCodeBuf binbuf;
-		public Chunk(iMerc start17,long stamp)
+		public Chunk(iMerc start17,long stamp,String storage)
 		{
+			this.storage=storage;
 			this.start17=start17;
 			this.startstamp=stamp;
 			this.binbuf=new BinaryCodeBuf();
