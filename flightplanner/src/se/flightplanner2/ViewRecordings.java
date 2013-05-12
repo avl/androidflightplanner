@@ -33,8 +33,7 @@ public class ViewRecordings extends Activity implements HandleUpload {
 	
 	String storage;
 	File extpath;
-	final File tripdirpath = new File(extpath,
-			Config.path+"triplog/");
+	File tripdirpath;
 	FlightPathUploader ful;
 	static private String toreadable(String filename)
 	{
@@ -70,6 +69,8 @@ public class ViewRecordings extends Activity implements HandleUpload {
         super.onCreate(savedInstanceState);
     	storage=Storage.getStoragePath(this);
         extpath = Storage.getStorage(storage);
+        tripdirpath = new File(extpath,
+    			Config.path+"triplog/");
 		DisplayMetrics metrics = new DisplayMetrics();
 		getWindowManager().getDefaultDisplay().getMetrics(metrics);
 
