@@ -56,8 +56,15 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.WindowManager;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.ListAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -831,7 +838,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
         		getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("sideview", false)
         		);
         map.update_tripdata(tripdata,tripstate);
-		
+		map.set_altimeter(getAltimeterSetting(),qnh);
 		map.thisSetContentView(this);
 		map.gps_update(null,false,0);
 
@@ -868,7 +875,6 @@ public class Nav extends Activity implements PositionSubscriberIf,
 							{
 								turn_rate = Project.getTurnRate(speed, bank_angle);
 							}
-							
 							GlobalPosition.pos.setDebugTurn(turn_rate);	
 							GlobalPosition.pos.setDebugSpeed(speed);
 						}
@@ -880,6 +886,37 @@ public class Nav extends Activity implements PositionSubscriberIf,
 						}
 					},
 	        		 sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
+		}
+		if (true /* check altimeter setting*/)
+		{
+			final SensorManager sensorManager=(SensorManager) getSystemService(SENSOR_SERVICE);
+			Sensor sensor=sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE);		
+			if (sensor!=null)
+			{
+		        sensorManager.registerListener(
+		        		new SensorEventListener() {			
+		        			//float test;
+							@Override
+							public void onSensorChanged(SensorEvent event) {
+								double pressure_value = event.values[0];
+								
+								/*test-=20;
+								if (test<-750)
+									test=0;
+								*/
+								//pressure_value+=test;
+								//Log.i("fplan.pressure","Current pressure: "+pressure_value);
+								//double h_self=AltitudeCalculator.getAltitude(1013.0f,pressure_value);
+								//float h_android=sensorManager.getAltitude(1013.0f, (float)pressure_value);
+								//Log.i("fplan.pressure","Android alt: "+h_android/0.3048+" ft, our alt: "+(float)h_self/0.3048+" ft");
+								map.pressure_update(pressure_value);
+							}						
+							@Override
+							public void onAccuracyChanged(Sensor sensor, int accuracy) {
+							}
+						},
+		        		 sensor, SensorManager.SENSOR_DELAY_NORMAL);
+			}
 		}
 		cvr=new CVR(Storage.getStoragePath(this));
 		if (getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("cvr", false))			
@@ -1134,6 +1171,116 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		Log.i("fplan", "Previous airspace: " + airspace);
 		map.enableTerrainMap(false);
 		AppState.terraindownloader.execute(airspace);
+	}
+
+
+
+	int qnh=0;
+	public String getAltimeterSetting()
+	{
+		final String alti = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getString("altimeter","GPS");
+		if (qnh==0 && alti.equals("Baro Alt")) return "GPS";
+		return alti;
+		
+	}
+
+	@Override
+	public void toggleAltimeter() {
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle("Altimeter Setting");
+		String curr=getAltimeterSetting();
+		String[] choices=new String[]{
+				"GPS",
+				"Baro FL",
+				"Baro Alt",
+		};
+		if (curr.equals("GPS"))
+			choices[0]="*"+choices[0];
+		if (curr.equals("Baro FL"))
+			choices[1]="*"+choices[1];
+		if (curr.equals("Baro Alt"))
+			choices[2]="*"+choices[2];
+		builder.setItems(choices, new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int item) {
+				String setting="GPS";
+				switch(item)
+				{
+				case 0:
+					setting="GPS";
+					qnh=0;
+					break;
+				case 1:
+					setting="Baro FL";
+					qnh=0;
+					break;
+				case 2:
+					setting="Baro Alt";
+					break;
+				}
+				SharedPreferences prefs = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE);
+				SharedPreferences.Editor pedit = prefs.edit();
+				pedit.putString("altimeter", setting);
+				pedit.apply();
+				if (setting.equals("Baro Alt"))
+					Nav.this.setQnh();
+				dialog.dismiss();
+				map.set_altimeter(getAltimeterSetting(),qnh);
+				
+			}
+		});
+		AlertDialog diag = builder.create();
+		diag.show();
+	}
+
+
+	protected void setQnh() {
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle("Set QNH");
+
+		final ListView listView=new ListView(this);
+		String[] theList=new String[250];
+		final int lowestQnh=850;
+		for(int i=0;i<250;++i)
+		{
+			String s=""+(lowestQnh+i);
+			if (lowestQnh+i==qnh)
+				s="*"+s;
+			theList[i]=s;
+		}
+		listView.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1,theList));
+		builder.setView(listView);
+		final AlertDialog diag = builder.create();
+		listView.setOnItemClickListener(new OnItemClickListener(){
+			@Override
+			public void onItemClick(AdapterView<?> arg0, View arg1, int item,
+					long arg3) {				
+				Nav.this.qnh=lowestQnh+item;
+				map.set_altimeter(getAltimeterSetting(),Nav.this.qnh);
+				diag.dismiss();
+			}			
+		});
+		/*
+		builder.setItems(choices, new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int item) {
+				Nav.this.qnh=lowest+item;
+				dialog.dismiss();
+				
+			}
+		})
+		*/;
+		diag.show();
+		int presel_qnh=qnh>0 ? qnh : 1013;
+		int presel_idx=presel_qnh-lowestQnh-2;
+		if (presel_idx<0) presel_idx=0;
+		if (presel_idx>=theList.length) presel_idx=theList.length-2;
+		final int final_presel_idx=presel_idx;
+		listView.post(new Runnable(){
+			@Override
+			public void run() {
+				listView.setSelection(final_presel_idx);
+			}
+		});
+		
 	}
 
 }

@@ -22,6 +22,7 @@ public class HelpActivity extends Activity {
 				"pitfalls and gotchas in this program.</p>"+
 				"<h2>Read this First!</h2>"+
 				"<p>First of all, <b>use your own judgement</b>, and be aware that this program will contain bugs and faults.</p>"+
+				"<p>In particular, NEVER use this application as an altimeter. The application *will* crash from time to time, and cannot be relied upon for reliable realtime information. It is not certified.</p>" +
 				"<p>Second, if you end up in a <b>menu you don't recognize</b>, push the back-button on your device until you "+
 				"get back to the main screen.</p>"+
 				"<p>If the main screen <b>doesn't show the map</b> you're used to (=the base map), click the upper right corner to cycle between "+

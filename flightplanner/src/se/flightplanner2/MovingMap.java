@@ -67,7 +67,10 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		public void doShowExtended(Place[] places);
 
 		public void showAirspaces();
+
+		public void toggleAltimeter();
 	}
+	
 	@Override
 	public void doInvalidate() //for GUI-client
 	{
@@ -195,7 +198,9 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 					gps_sat_cnt,gps_sat_fix_cnt,
 					elevbmc,terrwarn,batt,charging,adloader,
 					chosen_ad_maps,chosen_ad_map_i,chosen_ad_map_when,
-					last_cvr_amp,sideview
+					last_cvr_amp,sideview,
+					altimeter_setting,pressure_hpa,
+					qnh
 					);
 			
 			if (mapcache!=null)
@@ -530,6 +535,9 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 	private String[] chosen_ad_maps;
 	private int chosen_ad_map_i;
 	private long chosen_ad_map_when;
+	private double pressure_hpa;
+	private String altimeter_setting;
+	private int qnh;
 	@Override
 	public void selectChart(String chart) {
 		releaseMemory();
@@ -604,6 +612,24 @@ public class MovingMap extends View implements UpdatableUI,GuiClientInterface,Ma
 		
 		doInvalidate();
 		
+	}
+
+	@Override
+	public void pressure_update(double pressure_value) {
+		this.pressure_hpa=pressure_value;
+		invalidate_within(1000);		
+	}
+
+	@Override
+	public void toggleAltimeter() {
+		this.owner.toggleAltimeter();
+	}
+
+	@Override
+	public void set_altimeter(String altimeterSetting,int qnh) {
+		this.altimeter_setting=altimeterSetting;
+		this.qnh=qnh;
+		invalidate_within(1000);		
 	}
 	
 }

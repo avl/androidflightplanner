@@ -41,5 +41,9 @@ public interface MainMapIf {
 
 	public abstract void stop();
 
+	public abstract void pressure_update(double pressure_value);
+
+	public abstract void set_altimeter(String altimeterSetting, int qnh);
+
 
 }

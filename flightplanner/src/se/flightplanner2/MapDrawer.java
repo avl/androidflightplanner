@@ -360,7 +360,7 @@ public class MapDrawer {
 			int gps_sat_cnt, int gps_sat_fix_cnt, ElevBitmapCache elevbmc,
 			boolean terrwarn,int battery,boolean charging,final AdChartLoader adloader, 
 			String[] chosen_ad_maps, int chosen_ad_map_i,long chosen_ad_map_when, int last_cvr_amp,
-			boolean sideview) {
+			boolean sideview, String altimeter_setting, double pressure_hpa,double qnh) {
 
 		
 		
@@ -369,16 +369,47 @@ public class MapDrawer {
 
 		redraw_start = bef;
 		redraw_view = view;
-		int elev_ft = (int) (lastpos.getAltitude() / 0.3048f);
+		int best_altitude_value = (int) (lastpos.getAltitude() / 0.3048f);
+		//int barometric_altitude_value=Integer.MAX_VALUE;
+		
+
+		if (altimeter_setting==null) altimeter_setting="GPS";
+		
+		int display_altitude_value=best_altitude_value;
+		String display_string="msl:";
+		if (altimeter_setting.equals("Baro Alt")
+				|| altimeter_setting.equals("Baro FL"))
+		{
+			double ref_pressure=qnh;
+			if (altimeter_setting.equals("Baro FL"))
+				ref_pressure=1013;
+			if (pressure_hpa<50)
+				display_altitude_value=Integer.MAX_VALUE;
+			else
+				display_altitude_value=(int)(AltitudeCalculator.getAltitude(ref_pressure, pressure_hpa)/0.3048);
+			if (altimeter_setting.equals("Baro Alt"))
+			{
+				if (display_altitude_value<Integer.MAX_VALUE)
+					best_altitude_value=display_altitude_value;
+				display_string="bar:";
+			}
+			else
+			{
+				display_string="";
+			}
+		}
+		
 		//if (Config.debugMode())
 		//	;//elev_ft = 7000 - (int) ((long) ((SystemClock.elapsedRealtime() * 0.001f * 75f)) % 7000);
 		
-		int amsl=Integer.MAX_VALUE;								
-		GetElevation gelev=GlobalGetElev.get_elev;
-		if (gelev!=null)
-		{
-			amsl=elev_ft/*-gelev.get_elev_ft(new LatLon(lastpos))*/;
-		}
+		//int altitude_value=Integer.MAX_VALUE;								
+		//GetElevation gelev=GlobalGetElev.get_elev;
+		//if (gelev!=null)
+		//{
+			//altitude_value=elev_ft/*-gelev.get_elev_ft(new LatLon(lastpos))*/;
+		//}
+		//altitude_value=best_altitude_value;
+		
 
 		double gs_kt = lastpos.getSpeed() * 3.6 / 1.852;
 		if (gs_kt < 10)
@@ -388,7 +419,7 @@ public class MapDrawer {
 		boolean havefix = lastpos.getTime() > 3600 * 24 * 10 * 1000
 				&& SystemClock.uptimeMillis() - last_real_position < 15000;
 
-		elevbmc.start_frame(gui.getZoomlevel(), elev_ft);
+		elevbmc.start_frame(gui.getZoomlevel(), best_altitude_value);
 		TransformIf tf = gui.getTransform();
 		boolean extrainfo = gui.getExtraInfo();
 
@@ -434,6 +465,9 @@ public class MapDrawer {
 	
 		Merc mypos13 = Project.merc2merc(tf.getPos(), zoomlevel, 13);
 
+		
+		
+		
 		Vector arrow = gui.getArrow();
 		Merc screen_center = tf.screen2merc(new Vector(left+sizex / 2, top+sizey / 2));
 		Merc screen_center13 = Project.merc2merc(screen_center, zoomlevel, 13);
@@ -443,6 +477,22 @@ public class MapDrawer {
 		float fivenm = (float) Project.approx_scale(mypos.y, zoomlevel, 5);
 		double tennm13 = Project.approx_scale(screen_center13.y, 13, 10);
 		
+		{
+			int w=right-left;
+			int mid=(right+left)/2;
+			final Rect rect=new Rect(mid-w/5,0,mid+w/5,(int)yheader);
+			clickables.add(new GuiSituation.Clickable() {
+				@Override
+				public Rect getRect() {
+					return rect;
+				}
+	
+				@Override
+				public void onClick() {
+					gui.toggleAltimeter();
+				}
+			});
+		}
 
 		double diagonal13;
 		{
@@ -645,7 +695,7 @@ public class MapDrawer {
 			Merc m2=tf.screen2merc(new Vector((right-left)*0.5,top));
 			float howfar=(float)Project.exacter_distance(Project.merc2latlon(m1, zoomlevel),Project.merc2latlon(m2, zoomlevel));
 			gui.setSideviewInset(lowerinset,howfar);
-			drawInset(canvas,lastpos,right-left,lowerinset,howfar,isUserPresentlyMovingMap,elev_ft,zoomlevel);
+			drawInset(canvas,lastpos,right-left,lowerinset,howfar,isUserPresentlyMovingMap,best_altitude_value,zoomlevel);
 			canvas.restore();
 		}
 		else
@@ -786,9 +836,13 @@ public class MapDrawer {
 		addTextIfFits(canvas, "", "22:22", rledge, "" ,curtime_s,  yledge, smalltextpaint,bigtextpaint);
 		
 		String amsl_txt="--";
-		if (amsl>-9999)
-			amsl_txt=""+amsl;
-		addTextIfFits(canvas, "ETA:", "22:22", r, "msl:",amsl_txt,  yheader, smalltextpaint,bigtextpaint);
+		if (display_altitude_value>-9999 && display_altitude_value<99999)
+		{
+			amsl_txt=""+display_altitude_value;
+			if (altimeter_setting.equals("Baro FL"))
+				amsl_txt="FL"+((display_altitude_value+50)/100);
+		}
+		addTextIfFits(canvas, "ETA:", "22:22", r, display_string,amsl_txt,  yheader, smalltextpaint,bigtextpaint);
 		
 		if (havefix) // if significantly after 1970-0-01
 		{
@@ -1786,11 +1840,13 @@ public class MapDrawer {
 					arrowpaint.setColor(Color.BLACK);
 					canvas.restore();
 					
+					/*
 					arrowpaint.setStrokeWidth(0.7f*x_dpmm);
 					canvas.drawLine((float)0.5f*right, (float)bugvec.y, 0.5f*right, (float)bugvec.y+2.5f*x_dpmm, arrowpaint);
 					arrowpaint.setColor(Color.WHITE);
 					arrowpaint.setStrokeWidth(0.4f*x_dpmm);
 					canvas.drawLine((float)0.5f*right, (float)bugvec.y, 0.5f*right, (float)bugvec.y+2.5f*x_dpmm, arrowpaint);
+					*/
 					
 					int rot=0;
 					if (hdgdelta>1)
@@ -1828,7 +1884,7 @@ public class MapDrawer {
 					canvas.restore();
 
 					arrowpaint.setColor(Color.WHITE);
-					canvas.drawLine((float)0.5f*right, (float)bugvec.y, 0.5f*right, (float)bugvec.y+2.5f*x_dpmm, arrowpaint);
+					//canvas.drawLine((float)0.5f*right, (float)bugvec.y+15, 0.5f*right, (float)bugvec.y+2.5f*x_dpmm, arrowpaint);
 
 					arrowpaint.setStyle(Style.FILL);
 					

@@ -74,7 +74,8 @@ public class GuiSituation
 		void doShowExtended(Place[] places);
 		void showAirspaces();
 		void toggle_map();
-		void clear_map_toggle_list();				
+		void clear_map_toggle_list();
+		void toggleAltimeter();				
 	}
 	public interface Clickable
 	{
@@ -604,6 +605,10 @@ public class GuiSituation
 
 	public boolean getElevOnly() {
 		return elevonly;
+	}
+
+	public void toggleAltimeter() {
+		movingMap.toggleAltimeter();
 	}
 
 
