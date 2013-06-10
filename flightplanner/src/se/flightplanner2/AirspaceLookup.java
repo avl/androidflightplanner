@@ -1,10 +1,16 @@
 package se.flightplanner2;
 
+import java.util.Date;
 import java.text.Collator;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import android.util.Log;
 
@@ -180,18 +186,102 @@ public class AirspaceLookup implements AirspaceLookupIf {
 	{
 		return airspace.getChart(icao);		
 	}
+	Comparator<Pair> comp=new Comparator<Pair>(){
+		@Override
+		public int compare(Pair o1, Pair o2) {
+			if (o1.dist<o2.dist) return -1;
+			if (o1.dist>o2.dist) return +1;
+			return 0;
+		}					
+	};
+	static public class ClosestAirportResult
+	{
+		public float distance;
+		public String icao;
+		public String metar;
+	}
+	public ClosestAirportResult getClosestAirportWithMetar(LatLon ownpos) {
+		
+		ClosestAirportResult res=new ClosestAirportResult();
+		res.distance=1e30f;
+		for(SigPoint p:majorAirports.getall())
+		{			
+			if (p.extra!=null && p.extra.icao!=null && !p.extra.icao.equals("")
+					&& p.extra.metar!=null && !p.extra.metar.equals(""))
+			{
+				float dist=(float) Project.exacter_distance(ownpos, 
+						Project.merc2latlon(p.pos, 13));
+				if (dist<res.distance)
+				{
+					res.distance=dist;
+					res.icao=p.extra.icao;
+					res.metar=p.extra.metar;
+				}
+			}
+		}
+		if (res.icao!=null)
+			return res;
+		else
+			return null;
+	}
+	static public class QnhGuessResult
+	{
+		String descr;
+		int qnh;
+	}
+	public QnhGuessResult GuessQnhFromMetar(String metar,String icao)
+	{
+		Log.i("fplan.regexp","Matching: <"+metar+">");
+		String pattern = "\\s*(\\d{6}).*\\s+Q(\\d{4})\\b.*";
+		Pattern p = Pattern.compile(pattern);
+		Matcher m = p.matcher(metar);
+		
+		if (!m.matches() || m.groupCount()!=2)
+		{
+			Log.i("fplan.regexp","Failed to match, wrong groupcount");
+			return null;
+		}
+		String time=m.group(1);
+		Date now=new Date();
+		int dayofmonth=Integer.parseInt(time.substring(0, 2));
+		int hour=Integer.parseInt(time.substring(2, 4));
+		int minute=Integer.parseInt(time.substring(4, 6));
+		Log.i("fplan.regexp","Parsed "+dayofmonth+" "+hour+" "+minute);
+		//Calendar nowcal=GregorianCalendar.getInstance(TimeZone.getTimeZone("UTC"));
+		Calendar cal = GregorianCalendar.getInstance(TimeZone.getTimeZone("UTC"));
+	    Log.i("fplan.regexp","Now: "+cal);
+		
+	    cal.set(Calendar.DAY_OF_MONTH, dayofmonth);
+	    cal.set(Calendar.HOUR_OF_DAY, hour);
+	    cal.set(Calendar.MINUTE, minute);
+	    Log.i("fplan.regexp","Time of METAR: "+cal);
+	    Date metartime=cal.getTime();
+	    long datediff=((now.getTime()-metartime.getTime())/1000)/(60*60*24);
+	    //If the METAR appears more than 20 days into the future, it is certainly just in the past.
+	    if (datediff<-20)
+	    {
+	    	cal.add(Calendar.MONTH, -1);
+	    }
+	    double timediff=((now.getTime()-metartime.getTime())/1000.0)/(60.0*60.0);
+	    Log.i("fplan.regexp","Metar information is "+timediff+" hours old");
+	    if (timediff>6.0)
+	    	return null;
+	    QnhGuessResult res=new QnhGuessResult();
+
+		int qnh=Integer.parseInt(m.group(2));
+	    res.qnh=qnh;
+	    if (timediff<-5)
+	    	return null;
+	    if (timediff<0)
+	    	timediff=0;
+	    res.descr=" at "+icao+" +"+(int)timediff+"H";
+		return res;
+
+	}
 	public void getAdChartNames(ArrayList<String> icaos,ArrayList<String> humanNames, LatLon location) {
 		
 		ArrayList<Pair> tmp=new ArrayList<Pair>();
 		ArrayList<Pair> closest=new ArrayList<Pair>();
-		Comparator<Pair> comp=new Comparator<Pair>(){
-			@Override
-			public int compare(Pair o1, Pair o2) {
-				if (o1.dist<o2.dist) return -1;
-				if (o1.dist>o2.dist) return +1;
-				return 0;
-			}					
-		};
 		for(SigPoint p:majorAirports.getall())
 		{
 			if (p.extra!=null && p.extra.icao!=null && !p.extra.icao.equals(""))

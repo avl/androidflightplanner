@@ -11,6 +11,8 @@ import java.util.HashMap;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
 
+import se.flightplanner2.AirspaceLookup.ClosestAirportResult;
+import se.flightplanner2.AirspaceLookup.QnhGuessResult;
 import se.flightplanner2.AppState.GuiIf;
 import se.flightplanner2.BackgroundMapDownloader.BackgroundMapDownloadOwner;
 import se.flightplanner2.GlobalPosition.PositionSubscriberIf;
@@ -1210,8 +1212,7 @@ public class Nav extends Activity implements PositionSubscriberIf,
 					qnh=0;
 					break;
 				case 1:
-					setting="Baro FL";
-					qnh=0;
+					setting="Baro FL";					
 					break;
 				case 2:
 					setting="Baro Alt";
@@ -1240,11 +1241,29 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		final ListView listView=new ListView(this);
 		String[] theList=new String[250];
 		final int lowestQnh=850;
+		Log.i("fplan.regexp","Time to guess qnh, based on location: "+last_location);
+		QnhGuessResult guess=null;
+		if (last_location != null)
+		{
+			LatLon latlon = new LatLon(last_location.getLatitude(),
+					last_location.getLongitude());
+
+			ClosestAirportResult qg=lookup.getClosestAirportWithMetar(latlon);
+			if (qg!=null)
+			{
+				Log.i("fplan.regexp","Closest airpo: "+qg.icao+" at "+qg.distance);
+				guess=lookup.GuessQnhFromMetar(qg.metar, qg.icao);
+				Log.i("fplan.regexp","QNH guess: "+guess.qnh+" from: "+guess.descr);
+			}
+		}		
 		for(int i=0;i<250;++i)
 		{
-			String s=""+(lowestQnh+i);
-			if (lowestQnh+i==qnh)
+			int curqnh=lowestQnh+i;
+			String s=""+(curqnh);
+			if (curqnh==qnh)
 				s="*"+s;
+			if (guess!=null && guess.qnh==curqnh)
+				s=s+guess.descr;
 			theList[i]=s;
 		}
 		listView.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1,theList));
