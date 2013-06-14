@@ -1253,7 +1253,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 			{
 				Log.i("fplan.regexp","Closest airpo: "+qg.icao+" at "+qg.distance);
 				guess=lookup.GuessQnhFromMetar(qg.metar, qg.icao);
-				Log.i("fplan.regexp","QNH guess: "+guess.qnh+" from: "+guess.descr);
+				if (guess!=null)
+					Log.i("fplan.regexp","QNH guess: "+guess.qnh+" from: "+guess.descr);
 			}
 		}		
 		for(int i=0;i<250;++i)
