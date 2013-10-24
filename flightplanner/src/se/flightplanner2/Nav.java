@@ -220,6 +220,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 					"se.flightplanner2.cvr", false);
 			final boolean sideview= data.getBooleanExtra(
 					"se.flightplanner2.sideview", false);
+			final boolean nmea_udp= data.getBooleanExtra(
+					"se.flightplanner2.nmea_udp", false);
 			// RookieHelper.showmsg(this,"mapdetail now:"+mapdetail);
 			SharedPreferences prefs = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE);
 			SharedPreferences.Editor pedit = prefs.edit();
@@ -233,6 +235,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 			pedit.putBoolean("autosync", autosync);
 			pedit.putBoolean("cvr", cvr);
 			pedit.putBoolean("sideview", sideview);
+			pedit.putBoolean("nmea_udp", nmea_udp);
+			
 			pedit.commit();
 			if (airspace!=null && autosync)
 			{
@@ -252,6 +256,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getInt("mapdetail", 2),
 					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("northup", false),
 					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("sideview", false));
+			globalposition.enableUdpNmea(
+					getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("nmea_udp", false));
 			if (prevstorage==null)
 				prevstorage="";
 			if (storage==null)
@@ -671,6 +677,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("cvr", false));
 		intent.putExtra("se.flightplanner2.sideview",
 				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("sideview", false));
+		intent.putExtra("se.flightplanner2.nmea_udp",
+				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("nmea_udp", false));
 		// RookieHelper.showmsg(this,"Got mapd"+mapd);
 		intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
 		return intent;
@@ -924,6 +932,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 		if (getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("cvr", false))			
 			cvr.start();
 		
+		globalposition.enableUdpNmea(
+				getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getBoolean("nmea_udp", false));
     }
 
 	@Override

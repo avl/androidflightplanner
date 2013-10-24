@@ -48,6 +48,7 @@
  <CheckBox android:id="@+id/autosync_default" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Automatically sync weather and airspace data 30m and 10m before each scheduled trip."></CheckBox>
  <CheckBox android:id="@+id/cvr_default" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cockpit Voice Recorder. Automatically record all audio to /mnt/sdcard/CVR directory."></CheckBox>
  <CheckBox android:id="@+id/sideview_default" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Elevation profile - show terrain elevation profile along flight path in lower part of screen."></CheckBox>
+ <CheckBox android:id="@+id/nmea_udp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Accept NMEA GPS signals over UDP on port 9877."></CheckBox>
 
  <TextView android:id="@+id/label" 
               android:layout_width="fill_parent" 
