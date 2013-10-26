@@ -138,15 +138,15 @@ public class GlobalPositionImpl implements PositionIf, LocationListener {
 				
 				long now=SystemClock.elapsedRealtime();
 				boolean timeElapsed=(lastUdpGpsClock!=ms);
-				Log.i("udpgps","Last clock: "+lastUdpGpsClock+" now: "+ms);
+				//Log.i("udpgps","Last clock: "+lastUdpGpsClock+" now: "+ms);
 				if (timeElapsed || Math.abs(lastUdpOverride-now)>5000)
 				{
-					Log.i("udpgps","Doing pos update!");
+					//Log.i("udpgps","Doing pos update!");
 					onLocationChangedImpl(loc);
+					lastUdpOverride=now;
 				}
 				
 				lastUdpGpsClock=ms;
-				lastUdpOverride=now;
 				//Log.w("udpgps","Found: "+lat+","+lon);
 			}
 			else
