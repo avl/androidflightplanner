@@ -51,7 +51,8 @@ public class GlobalPositionImpl implements PositionIf, LocationListener {
 	}
 												   //   $GPGGA,032829.00,5921.6877,N,01757.4762,E,1,12,1,303.7,M,,,,*24
 	static final Pattern gpsregex=Pattern.compile(".*\\$GPGGA,(\\d+)\\.(\\d*),(\\d+)\\.?(\\d*),([NS]),(\\d+)\\.?(\\d*),([EW]),[^,]*,[^,]*,[^,]*,(\\d+\\.?\\d*),M.*");
-	private long lastUdpOverride=0; 
+	private long lastUdpOverride=0;
+	private long lastUdpGpsClock=0;
 	@SuppressWarnings("deprecation")
 	private void receiveGpsPacket() throws IOException {
 		ByteBuffer buf=ByteBuffer.allocate(1500);
@@ -85,7 +86,7 @@ public class GlobalPositionImpl implements PositionIf, LocationListener {
 				String subsec="0";
 				if (timesecdec.length()!=0)
 					subsec="0."+timesecdec;
-				//Log.i("udpgps","Parsed "+timehms+" + "+subsec+" as "+hour+"-"+min+"-"+sec+" + "+subsec);
+				///Log.i("udpgps","Parsed "+timehms+" + "+subsec+" as "+hour+"-"+min+"-"+sec+" + "+subsec);
 				double timesec=Double.parseDouble(hour)*3600.0+
 						Double.parseDouble(min)*60.0+
 						Double.parseDouble(sec);
@@ -135,9 +136,17 @@ public class GlobalPositionImpl implements PositionIf, LocationListener {
 				loc.removeBearing();
 				loc.removeSpeed();
 				
-				lastUdpOverride=SystemClock.elapsedRealtime();
-				onLocationChangedImpl(loc);			
+				long now=SystemClock.elapsedRealtime();
+				boolean timeElapsed=(lastUdpGpsClock!=ms);
+				Log.i("udpgps","Last clock: "+lastUdpGpsClock+" now: "+ms);
+				if (timeElapsed || Math.abs(lastUdpOverride-now)>5000)
+				{
+					Log.i("udpgps","Doing pos update!");
+					onLocationChangedImpl(loc);
+				}
 				
+				lastUdpGpsClock=ms;
+				lastUdpOverride=now;
 				//Log.w("udpgps","Found: "+lat+","+lon);
 			}
 			else
@@ -318,7 +327,7 @@ public class GlobalPositionImpl implements PositionIf, LocationListener {
 			
 				channel = DatagramChannel.open();
 				channel.socket().setReuseAddress(true);
-				channel.socket().bind(new InetSocketAddress(9877));
+				channel.socket().bind(new InetSocketAddress(10110));
 				channel.configureBlocking(false);
 				
 				//sock=new DatagramSocket(9877);
