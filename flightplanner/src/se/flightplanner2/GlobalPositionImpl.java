@@ -52,7 +52,6 @@ public class GlobalPositionImpl implements PositionIf, LocationListener {
 												   //   $GPGGA,032829.00,5921.6877,N,01757.4762,E,1,12,1,303.7,M,,,,*24
 	static final Pattern gpsregex=Pattern.compile(".*\\$GPGGA,(\\d+)\\.(\\d*),(\\d+)\\.?(\\d*),([NS]),(\\d+)\\.?(\\d*),([EW]),[^,]*,[^,]*,[^,]*,(\\d+\\.?\\d*),M.*");
 	private long lastUdpOverride=0; 
-	private double lastGpsLat,lastGpsLon;
 	@SuppressWarnings("deprecation")
 	private void receiveGpsPacket() throws IOException {
 		ByteBuffer buf=ByteBuffer.allocate(1500);
@@ -137,11 +136,8 @@ public class GlobalPositionImpl implements PositionIf, LocationListener {
 				loc.removeSpeed();
 				
 				lastUdpOverride=SystemClock.elapsedRealtime();
-				if (Math.abs(lastGpsLat-lat)>1e-9 ||
-						Math.abs(lastGpsLon-lon)>1e-9)
-					onLocationChangedImpl(loc);			
-				lastGpsLat=lat;
-				lastGpsLon=lon;
+				onLocationChangedImpl(loc);			
+				
 				//Log.w("udpgps","Found: "+lat+","+lon);
 			}
 			else
