@@ -103,7 +103,7 @@ public class AirspaceProximityDetector {
 		long now=new Date().getTime();
 		for(AirspaceArea a:allareas)			
 		{
-			if (a.a==0) continue; //invisible airspaces require no clearance
+			if ((a.a&0xff)<15) continue; //invisible airspaces require no clearance
 			if (now-a.cleared<Config.clearance_valid_time) continue;		
 		    SectorResult res=a.poly.sector(boundaheadpie,dist_merc);
 		    Long hysteresis=wearein.get(a);

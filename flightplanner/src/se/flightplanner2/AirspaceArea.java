@@ -31,7 +31,7 @@ public class AirspaceArea implements Serializable
 	}
 	public String toString()
 	{
-		return "AirspaceArea("+name+" size: "+poly.get_area()+" floor: "+floor+" ceiling: "+ceiling+")";
+		return "AirspaceArea("+name+" size: "+poly.get_area()+" floor: "+floor+" ceiling: "+ceiling+" rbg: "+r+" "+g+" "+b+" "+a+")";
 	}
 	/**
 	 * Dynamic information about this airspace area in relation to the single observer

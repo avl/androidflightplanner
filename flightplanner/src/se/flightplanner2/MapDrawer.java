@@ -1287,10 +1287,19 @@ public class MapDrawer {
 		if (onlyWithin(60, isUserPresentlyMovingMap))
 			if (zoomlevel >= 8 && lookup != null) {
 				ArrayList<AirspaceArea> areas = lookup.areas.get_areas(bb13);
+				for(AirspaceArea area : areas)
+				{
+					if (area.name.contains("segel"))
+						area.a=20;
+				}
 				Collections.sort(areas, new Comparator<AirspaceArea>() {
 					@Override
 					public int compare(AirspaceArea object1,
 							AirspaceArea object2) {
+						if ((object1.a & 0xff) < (object2.a & 0xff))
+							return -1;
+						if ((object1.a & 0xff) > (object2.a & 0xff))
+							return 1;						
 						if ((object1.r & 0xff) > (object2.r & 0xff))
 							return -1;
 						if ((object1.r & 0xff) < (object2.r & 0xff))
@@ -1305,6 +1314,7 @@ public class MapDrawer {
 				for (AirspaceArea as : areas) {
 					if (as.a==0)
 						continue;
+					//Log.i("fplan","Drawing: "+as);
 					ArrayList<Vector> vs = new ArrayList<Vector>();
 					for (LatLon latlon : as.points) {
 						Merc m = Project.latlon2merc(latlon, zoomlevel);
