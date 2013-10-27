@@ -1287,11 +1287,6 @@ public class MapDrawer {
 		if (onlyWithin(60, isUserPresentlyMovingMap))
 			if (zoomlevel >= 8 && lookup != null) {
 				ArrayList<AirspaceArea> areas = lookup.areas.get_areas(bb13);
-				for(AirspaceArea area : areas)
-				{
-					if (area.name.contains("segel"))
-						area.a=20;
-				}
 				Collections.sort(areas, new Comparator<AirspaceArea>() {
 					@Override
 					public int compare(AirspaceArea object1,
