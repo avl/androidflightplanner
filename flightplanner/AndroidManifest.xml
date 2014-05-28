@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="se.flightplanner2"
-      android:versionCode="24"
+      android:versionCode="25"
       android:installLocation="preferExternal"
-      android:versionName="3.24">
+      android:versionName="3.25">
       
 	<supports-screens android:anyDensity="true"/> 
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
