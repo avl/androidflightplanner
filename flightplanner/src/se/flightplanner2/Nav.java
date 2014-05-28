@@ -1,6 +1,7 @@
 package se.flightplanner2;
 
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
@@ -18,7 +19,6 @@ import se.flightplanner2.BackgroundMapDownloader.BackgroundMapDownloadOwner;
 import se.flightplanner2.GlobalPosition.PositionSubscriberIf;
 import se.flightplanner2.MovingMap.MovingMapOwner;
 import se.flightplanner2.Project.LatLon;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -769,6 +769,13 @@ public class Nav extends Activity implements PositionSubscriberIf,
 	@Override
     public void onCreate(Bundle savedInstanceState) {
     	super.onCreate(savedInstanceState);
+
+		final String storage = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE).getString("storage","");
+    	File extpath = Storage.getStorage(storage);
+		File aiptextpath = new File(extpath,
+				Config.path);
+		aiptextpath.mkdirs();
+
     	UpgradeFromv1.upgradeIfNeeded();
     	getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
     	
@@ -1230,8 +1237,8 @@ public class Nav extends Activity implements PositionSubscriberIf,
 				}
 				SharedPreferences prefs = getSharedPreferences("se.flightplanner2.prefs",MODE_PRIVATE);
 				SharedPreferences.Editor pedit = prefs.edit();
-				pedit.putString("altimeter", setting);
-				pedit.apply();
+				pedit.putString("altimeter", setting);				
+				pedit.commit();
 				if (setting.equals("Baro Alt"))
 					Nav.this.setQnh();
 				dialog.dismiss();

@@ -92,6 +92,7 @@ public class AdChartLoader implements UpdatableUI{
 		
 		File chartprojpath = new File(extpath,
 				Config.path+chartname+".proj");
+		
 		if (!chartprojpath.exists())
 			return false;
 		DataInputStream ds;
