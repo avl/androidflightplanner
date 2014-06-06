@@ -1,7 +1,6 @@
 package se.flightplanner2;
 
 import java.io.InputStream;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
@@ -30,20 +29,27 @@ import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.CoreProtocolPNames;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 import org.json.JSONObject;
-
 
 import android.util.Log;
 
 public class DataDownloader {
 	static InputStream postRaw(String path,String user, String pass,
-			ArrayList<NameValuePair> nvps,boolean zip) throws Exception {
+			ArrayList<NameValuePair> nvps,boolean zip,int timeoutMs) throws Exception {
 		
 		nvps.add(new BasicNameValuePair("binary","1"));
 		
 		HttpPost req = httpConnect(path, user, pass, nvps, zip);
 		DefaultHttpClient cli=new DefaultHttpClient();
 		HttpResponse resp = cli.execute(req);
+		
+		HttpParams httpParameters = cli.getParams();
+
+		HttpConnectionParams.setConnectionTimeout(httpParameters, 60 * 1000);
+		HttpConnectionParams.setSoTimeout        (httpParameters, timeoutMs);
+		cli.setParams(httpParameters);
 		HttpEntity ent=resp.getEntity();
 		if (ent==null)
 		{

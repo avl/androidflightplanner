@@ -489,7 +489,7 @@ public class Airspace implements Serializable{
 			else
 				nvps.add(new BasicNameValuePair("aipgen",previous.aipgen));
 			nvps.add(new BasicNameValuePair("zip","1"));
-			InputStream rawinp=DataDownloader.postRaw("/api/get_airspaces",null, null, nvps,false);
+			InputStream rawinp=DataDownloader.postRaw("/api/get_airspaces",null, null, nvps,false,15*60*1000);
 			InflaterInputStream dinp=new InflaterInputStream(rawinp);
 			inp=dinp;
 		}

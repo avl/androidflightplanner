@@ -276,6 +276,8 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				res.error="Cancelled";
 				break;					
 			} catch (BackgroundException e) {
+				Log.i("fplan.download","Exception: "+e.toString());
+				e.printStackTrace();
 				publishProgress(e.what);
 				try {
 					Thread.sleep(5000);
@@ -350,7 +352,8 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 									new FileInputStream(chartcksumpath));
 							String actual_cksum=ds.readUTF();
 							Log.i("fplan.ncd","Already have map "+var.chartname+" with cksum "+actual_cksum+" - informing server.");
-							nvps.add(new BasicNameValuePair("chartname_"+var.chartname,actual_cksum));												
+							nvps.add(new BasicNameValuePair("chartname_"+var.chartname,actual_cksum));
+							ds.close();
 						}
 						catch(Throwable e)
 						{
@@ -360,11 +363,14 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				}				
 			}
 			
-			InputStream inp = DataDownloader.postRaw("/api/getnewadchart", user,pass, nvps,false);
+			Log.i("fplan.ncd","AD-Map-download, connecting!");
+			InputStream inp = DataDownloader.postRaw("/api/getnewadchart", user,pass, nvps,false,15*60*1000);
+			Log.i("fplan.ncd","AD-Map-download, connected!");
 			DataInputStream inp2 = new DataInputStream(inp);
 			if (inp2.readInt()!=0xf00d1011)
 				throw new RuntimeException("Bad magic");
 			int version=inp2.readInt();
+			Log.i("fplan.ncd","AD-Map-download, got header from server");
 			if (version!=1 && version!=2 && version!=3 && version!=4) throw new RuntimeException("Bad version number");
 			//lateststamp=inp2.readLong();
 			int numcharts=inp2.readInt();
@@ -400,91 +406,110 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 						
 			
 			nvps.add(new BasicNameValuePair("cksum", chart.cksum));
-			InputStream inp = DataDownloader.postRaw("/api/getadchart", user,pass, nvps,false);
+			Log.i("fplan.ncd","Getting chart:"+chart.chartname);
+			InputStream inp = DataDownloader.postRaw("/api/getadchart", user,pass, nvps,false,60*1000);
+			Log.i("fplan.ncd","Getting chart, connected");
 			DataInputStream inp2=new DataInputStream(inp);
-			if (inp2.readInt()!=0xaabb1234)
-				throw new BackgroundException("Bad magic:");
-			int status=inp2.readInt();
-			if (status==3)
-				continue; //Skip this chart, we don't have a projection for it. This may happen from time to time.
-			if (status==1)
-				throw new FatalBackgroundException("Bad password");
-			if (status!=0)
-				throw new BackgroundException("Failed getting chart:"+status);	
-
-			int version=inp2.readInt();
-			int numlevels=inp2.readInt();
-			if (version!=1 && version!=2) throw new RuntimeException("Bad version number");
-
-			{			
-				DataOutputStream ds=new DataOutputStream(
-						new FileOutputStream(chartprojpath));
-				for(int i=0;i<6;++i)
-					ds.writeDouble(inp2.readDouble());
-				int w=inp2.readInt();
-				int h=inp2.readInt();
-				
-				ds.writeInt(w); //width
-				ds.writeInt(h); //height
-				Log.i("fplan.download","Created chart proj file, width: "+w+" height: "+h);
-				ds.close();
-			}			
-			
-			if (inp2.readInt()!=0xaabbccde)
-				throw new FatalBackgroundException("Bad magic 2");
-			
-			byte[] buf=new byte[4096];
-			String master_cksum=null;
-			for(int i=0;i<numlevels;++i)
+			try
 			{
-				File chartblobpath= new File(extpath,
-						Config.path+chart.chartname+"-"+i+".bin");
-				String cksum=inp2.readUTF();
-				if (master_cksum==null)
-					master_cksum=cksum;
-				else
-					if (!master_cksum.equals(cksum))
-					{
-						Log.i("fplan.download","Chart:"+chart.chartname+" master ck:"+master_cksum+" ck:"+cksum);
-						throw new BackgroundException("Chart changed mid download. Please retry.");
-					}
-				int blobsize=inp2.readInt();
+				if (inp2.readInt()!=0xaabb1234)
+					throw new BackgroundException("Bad magic:");
+				int status=inp2.readInt();
+				if (status==3)
+					continue; //Skip this chart, we don't have a projection for it. This may happen from time to time.
+				if (status==1)
+					throw new FatalBackgroundException("Bad password");
+				if (status!=0)
+					throw new BackgroundException("Failed getting chart:"+status);	
+	
+				int version=inp2.readInt();
+				int numlevels=inp2.readInt();
+				if (version!=1 && version!=2) throw new RuntimeException("Bad version number");
+				Log.i("fplan.ncd","Getting chart, got version, status and other header info");
+	
+				{			
+					DataOutputStream ds=new DataOutputStream(
+							new FileOutputStream(chartprojpath));
+					Log.i("fplan.ncd","Getting chart, reading projection");
+					for(int i=0;i<6;++i)
+						ds.writeDouble(inp2.readDouble());
+					int w=inp2.readInt();
+					int h=inp2.readInt();
+					
+					ds.writeInt(w); //width
+					ds.writeInt(h); //height
+					Log.i("fplan.download","Created chart proj file, width: "+w+" height: "+h);
+					ds.close();
+				}			
 				
-				checkspace(5000000);
+				if (inp2.readInt()!=0xaabbccde)
+					throw new FatalBackgroundException("Bad magic 2");
+				
+				byte[] buf=new byte[4096];
+				String master_cksum=null;
+				for(int i=0;i<numlevels;++i)
+				{
+					Log.i("fplan.ncd","Getting chart, level "+i);
+					File chartblobpath= new File(extpath,
+							Config.path+chart.chartname+"-"+i+".bin");
+					String cksum=inp2.readUTF();
+					if (master_cksum==null)
+						master_cksum=cksum;
+					else
+						if (!master_cksum.equals(cksum))
+						{
+							Log.i("fplan.download","Chart:"+chart.chartname+" master ck:"+master_cksum+" ck:"+cksum);
+							throw new BackgroundException("Chart changed mid download. Please retry.");
+						}
+					int blobsize=inp2.readInt();
+					Log.i("fplan.ncd","Blobsize: "+blobsize+"cksyum: "+cksum);
+					checkspace(5000000);
+					
+					if (blobsize>40000000)
+						throw new RuntimeException("AD Chart is way too large");
+					DataOutputStream ds=new DataOutputStream(
+							new FileOutputStream(chartblobpath));
+					//Log.i("fplan.download","Reading "+blobsize+" byte blob.");
+					while(blobsize>0)
+					{
+						int len=(int)blobsize;
+						if (len>4096)
+							len=4096;
+						Log.i("fplan.ncd","Getting chart, reading "+len+" bytes, remaining: "+blobsize);
+						
+						//inp2.readFully(buf,0,len);
+						int gotActually=inp2.read(buf,0,len);
+						
+						Log.i("fplan.ncd","Getting chart, reading "+len+" bytes, got: "+gotActually);
+	
+						ds.write(buf,0,gotActually);
+						blobsize-=gotActually;
+						Log.i("fplan.ncd","Getting chart, wrote "+gotActually+" bytes to disk");
+					}
+					
+					if (inp2.readInt()!=0xaabbccdf) throw new FatalBackgroundException("Bad magic 3");
+					ds.close();
+					
+				}		
+				if (inp2.readInt()!=0xf111) throw new FatalBackgroundException("Bad magic 4");
+	
+				File chartcksumpath= new File(extpath,
+						Config.path+chart.chartname+".cksum");
 				
 				DataOutputStream ds=new DataOutputStream(
-						new FileOutputStream(chartblobpath));
-				if (blobsize>40000000)
-					throw new RuntimeException("AD Chart is way too large");
-				//Log.i("fplan.download","Reading "+blobsize+" byte blob.");
-				while(blobsize>0)
-				{
-					int len=(int)blobsize;
-					if (len>4096)
-						len=4096;
-					inp2.readFully(buf,0,len);
-					ds.write(buf,0,len);
-					blobsize-=len;
-				}
+						new FileOutputStream(chartcksumpath));
+				ds.writeUTF(chart.cksum);
+				ds.close();
 				
-				if (inp2.readInt()!=0xaabbccdf) throw new FatalBackgroundException("Bad magic 3");
+				res.airspace.report_new_chart(chart.humanreadable,chart.chartname,chart.icao,chart.variant);
 				
-			}		
-			if (inp2.readInt()!=0xf111) throw new FatalBackgroundException("Bad magic 4");
-
-			File chartcksumpath= new File(extpath,
-					Config.path+chart.chartname+".cksum");
-			
-			DataOutputStream ds=new DataOutputStream(
-					new FileOutputStream(chartcksumpath));
-			ds.writeUTF(chart.cksum);
-			ds.close();
-			
-			res.airspace.report_new_chart(chart.humanreadable,chart.chartname,chart.icao,chart.variant);
-			
-			if (SystemClock.elapsedRealtime()-last_chartlist_save>7500)
-				res.airspace.save_chart_list(chartlistpath);
-			
+				if (SystemClock.elapsedRealtime()-last_chartlist_save>7500)
+					res.airspace.save_chart_list(chartlistpath);
+			}			
+			finally
+			{
+				inp2.close();
+			}
 		}
 		
 		res.airspace.save_chart_list(chartlistpath);
@@ -559,7 +584,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				
 				Log.i("fplan.download","About to fetch data at offset "+filelength+" level "+level);
 				inp = DataDownloader.postRaw("/api/getmap", user,pass, nvps,
-						false);
+						false, 60*1000);
 
 				DataInputStream inp2 = new DataInputStream(inp);
 				int magic=inp2.readInt();
@@ -643,13 +668,15 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 				try
 				{
 					
-					byte[] buffer=new byte[1024];
+					byte[] buffer=new byte[16384];
 					int cnt=0;
 					for(;;)
 					{
 						if (Thread.currentThread().isInterrupted())
 							throw new FatalBackgroundException("Cancelled");
+						Log.i("fplan.download","Reading "+buffer.length+" bytes");
 						int readlen=inp2.read(buffer);
+						Log.i("fplan.download","Got: "+readlen+" bytes");
 						if (readlen==-1)
 						{
 							Log.i("fplan.download","Finished writing chunk "+filelength+" level "+level);	
@@ -659,7 +686,7 @@ public class BackgroundMapDownloader extends AsyncTask<Airspace, String, Backgro
 							Thread.sleep(50);
 						else
 							raf.write(buffer,0,readlen);
-						//Log.i("fplan.download","Writing chunk "+filelength+" level "+level+" byte "+cnt+" interrupt:"+Thread.currentThread().isInterrupted());
+						Log.i("fplan.download","Writing chunk "+filelength+" level "+level+" byte "+cnt+" interrupt:"+Thread.currentThread().isInterrupted());
 						cnt+=readlen;
 						perc=(float)100.0f*(totprog+cnt+filelength)/totalsize;
 						long now=SystemClock.uptimeMillis();
